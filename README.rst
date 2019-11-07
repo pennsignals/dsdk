@@ -73,6 +73,10 @@ https://dsdk.readthedocs.io/
 Development
 ===========
 
+Before you start development you'll need to run::
+
+    pip install pre-commit &&  pre-commit install
+
 To run all the tests run::
 
     tox
