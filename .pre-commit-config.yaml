@@ -1,0 +1,29 @@
+exclude: 'tests|ci|docs|setup.py|_version.py'
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v2.3.0
+  hooks:
+  - id: check-case-conflict
+  - id: check-json
+  - id: check-xml
+  - id: check-yaml
+  - id: end-of-file-fixer
+  - id: trailing-whitespace
+- repo: https://github.com/ambv/black
+  rev: 19.3b0
+  hooks:
+  - id: black
+    args: [-q, --line-length=140, --target-version=py37, src, tests]
+- repo: http://github.com/PyCQA/pylint
+  rev: pylint-2.4.2
+  hooks:
+  - id: pylint
+    language: system
+    args: [src]
+- repo: https://gitlab.com/pycqa/flake8
+  rev: 3.7.8
+  hooks:
+  - id: flake8
+    args: [src]
+default_language_version:
+  python: python3
