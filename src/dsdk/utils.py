@@ -1,6 +1,9 @@
 import pickle
+from datetime import datetime
 
 import configargparse
+from pandas import DataFrame
+from pandas import concat as pd_concat
 
 
 def get_base_config():
@@ -54,3 +57,37 @@ def get_mssql_connection(uri):
 def get_model(model_path):
     with open(model_path, "rb") as f:
         return pickle.load(f)
+
+
+def create_new_batch(mongo, date=None):
+    if date is None:
+        date = datetime.now()
+        date = datetime(date.year, date.month, date.day)
+
+    oid = mongo.batch.insert_one({"date": date}).inserted_id
+    return oid
+
+
+def get_res_with_values(q, values, conn):
+    res = conn.execute(q, values)
+    data = res.fetchall()
+    data_d = [dict(r.items()) for r in data]
+    return data_d
+
+
+def chunks(l, n):
+    """Yield successive n-sized chunks from l."""
+    for i in range(0, len(l), n):
+        yield l[i : i + n]  # noqa: E203
+
+
+def chunk_res_with_values(query, ids, conn, chunk_size=10000, params=None):
+    if params is None:
+        params = {}
+    res = []
+    for sub_ids in chunks(ids, chunk_size):
+        print(".", end="")
+        params.update({"ids": sub_ids})
+        res.append(DataFrame(get_res_with_values(query, params, conn)))
+    print("")
+    return pd_concat(res, ignore_index=True)
