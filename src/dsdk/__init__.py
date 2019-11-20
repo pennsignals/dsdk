@@ -81,5 +81,9 @@ class ModelMixin(BaseBatchJob):
 
 
 class Block:
-    def run(self, evidence):
+    def __init__(self):
+        if not hasattr(self, "name"):
+            raise AttributeError("'name' is undefined")
+
+    def run(self):
         raise NotImplementedError
