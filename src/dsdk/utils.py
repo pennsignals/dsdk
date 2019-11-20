@@ -1,4 +1,5 @@
 import pickle
+from collections import OrderedDict
 from datetime import datetime
 
 import configargparse
@@ -91,3 +92,10 @@ def chunk_res_with_values(query, ids, conn, chunk_size=10000, params=None):
         res.append(DataFrame(get_res_with_values(query, params, conn)))
     print("")
     return pd_concat(res, ignore_index=True)
+
+
+class WriteOnceDict(OrderedDict):
+    def __setitem__(self, key, value):
+        if key in self:
+            raise KeyError("{} has already been set".format(key))
+        super(WriteOnceDict, self).__setitem__(key, value)

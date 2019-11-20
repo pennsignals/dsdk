@@ -1,6 +1,7 @@
 __version__ = "0.1.0"
 from datetime import datetime
 
+from .utils import WriteOnceDict
 from .utils import get_base_config
 from .utils import get_model
 from .utils import get_mongo_connection
@@ -15,13 +16,13 @@ class BaseBatchJob:
         self.config = self._configparser.parse_args()
         self.setup()
         self.set_blocks(blocks)
-        self.evidence = []
+        self.evidence = WriteOnceDict()
         self.start_time = datetime.now()
         self.start_date = datetime(
             self.start_time.year, self.start_time.month, self.start_time.day
         )
         for block in self.blocks:
-            self.evidence.append(block.run(self.evidence))
+            self.evidence[block.name] = block.run()
 
     def set_blocks(self, blocks):
         if blocks is None:
