@@ -87,10 +87,8 @@ def chunk_res_with_values(query, ids, conn, chunk_size=10000, params=None):
         params = {}
     res = []
     for sub_ids in chunks(ids, chunk_size):
-        print(".", end="")
         params.update({"ids": sub_ids})
         res.append(DataFrame(get_res_with_values(query, params, conn)))
-    print("")
     return pd_concat(res, ignore_index=True)
 
 
