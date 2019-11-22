@@ -60,12 +60,14 @@ def get_model(model_path):
         return pickle.load(f)
 
 
-def create_new_batch(mongo, date=None):
-    if date is None:
-        date = datetime.now()
-        date = datetime(date.year, date.month, date.day)
+def create_new_batch(mongo, *, time=None, **kwargs):
+    if time is None:
+        time = datetime.utcnow()
 
-    oid = mongo.batch.insert_one({"date": date}).inserted_id
+    document = {"time": time}
+    document.update(kwargs)
+
+    oid = mongo.batch.insert_one(document).inserted_id
     return oid
 
 

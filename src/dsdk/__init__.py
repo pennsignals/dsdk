@@ -14,14 +14,18 @@ class BaseBatchJob:
     def __init__(self, blocks=None):
         self.get_config()
         self.config = self._configparser.parse_args()
+        self.extra_batch_info = {}
         self.setup()
         self.set_blocks(blocks)
         self.evidence = WriteOnceDict()
-        self.start_time = datetime.now()
+        self.start_time = datetime.utcnow()
         self.start_date = datetime(
             self.start_time.year, self.start_time.month, self.start_time.day
         )
+
+    def run(self):
         for block in self.blocks:
+            print(type(block))  # TODO: logging
             self.evidence[block.name] = block.run()
 
     def set_blocks(self, blocks):
@@ -78,6 +82,9 @@ class ModelMixin(BaseBatchJob):
     def setup(self):
         super(ModelMixin, self).setup()
         self.model = get_model(self.config.model)
+        self.extra_batch_info.update(
+            {"model": self.model["name"], "version": self.model["version"]}
+        )
 
 
 class Block:

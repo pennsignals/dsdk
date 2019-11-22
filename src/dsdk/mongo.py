@@ -12,7 +12,9 @@ def needs_batch_id(func):
 
     def wrapper(self, *args, **kwargs):
         if not hasattr(self.batch, "batch_id"):
-            self.batch.batch_id = create_new_batch(self.batch.mongo)
+            self.batch.batch_id = create_new_batch(
+                self.batch.mongo, time=self.batch.start_time, **self.batch.extra_batch_info
+            )
         return func(self, *args, **kwargs)
 
     return wrapper
