@@ -1,5 +1,6 @@
 __version__ = "0.1.0"
 from datetime import datetime
+from urllib.parse import unquote
 
 from .utils import WriteOnceDict
 from .utils import get_base_config
@@ -25,7 +26,7 @@ class BaseBatchJob:
 
     def run(self):
         for block in self.blocks:
-            print(type(block))  # TODO: logging
+            print(type(block).__name__)  # TODO: logging
             self.evidence[block.name] = block.run()
 
     def set_blocks(self, blocks):
@@ -54,7 +55,7 @@ class MongoMixin(BaseBatchJob):
 
     def setup(self):
         super(MongoMixin, self).setup()
-        self.mongo = get_mongo_connection(self.config.mongouri).get_default_database()
+        self.mongo = get_mongo_connection(unquote(self.config.mongouri)).get_default_database()
 
 
 class MssqlMixin(BaseBatchJob):
@@ -69,7 +70,7 @@ class MssqlMixin(BaseBatchJob):
 
     def setup(self):
         super(MssqlMixin, self).setup()
-        self.mssql = get_mssql_connection(self.config.mssqluri)
+        self.mssql = get_mssql_connection(unquote(self.config.mssqluri))
 
 
 class ModelMixin(BaseBatchJob):
