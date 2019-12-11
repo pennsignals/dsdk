@@ -1,8 +1,5 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
-from __future__ import absolute_import
-from __future__ import print_function
-
 import io
 import re
 from glob import glob
@@ -22,7 +19,11 @@ def read(*names, **kwargs):
 
 setup(
     name="dsdk",
-    use_scm_version={"local_scheme": "dirty-tag", "write_to": "src/dsdk/_version.py", "fallback_version": "0.1.0",},
+    use_scm_version={
+        "local_scheme": "dirty-tag",
+        "write_to": "src/dsdk/_version.py",
+        "fallback_version": "0.1.0",
+    },
     license="MIT",
     description="An opinionated library to help deploy data science projects",
     long_description="%s\n%s"
@@ -70,6 +71,7 @@ setup(
     ],
     python_requires=">=3.5",
     install_requires=[
+        "configargparse",
         # eg: 'aspectlib==1.1.1', 'six>=1.7',
     ],
     extras_require={

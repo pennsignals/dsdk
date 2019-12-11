@@ -13,7 +13,7 @@ repos:
   rev: 19.3b0
   hooks:
   - id: black
-    args: [-q, --line-length=140, --target-version=py37, src, tests]
+    args: [-q, --line-length=99, --target-version=py37, src, tests]
 - repo: http://github.com/PyCQA/pylint
   rev: pylint-2.4.2
   hooks:
