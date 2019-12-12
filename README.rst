@@ -19,9 +19,9 @@ Overview
     :target: https://readthedocs.org/projects/dsdk
     :alt: Documentation Status
 
-.. |travis| image:: https://api.travis-ci.org/mdbecker/dsdk.svg?branch=master
+.. |travis| image:: https://api.travis-ci.org/pennsignals/dsdk.svg?branch=master
     :alt: Travis-CI Build Status
-    :target: https://travis-ci.org/mdbecker/dsdk
+    :target: https://travis-ci.org/pennsignals/dsdk
 
 .. |version| image:: https://img.shields.io/pypi/v/dsdk.svg
     :alt: PyPI Package latest release
@@ -39,9 +39,9 @@ Overview
     :alt: Supported implementations
     :target: https://pypi.org/project/dsdk
 
-.. |commits-since| image:: https://img.shields.io/github/commits-since/mdbecker/dsdk/v0.1.0.svg
+.. |commits-since| image:: https://img.shields.io/github/commits-since/pennsignals/dsdk/v0.1.0.svg
     :alt: Commits since latest release
-    :target: https://github.com/mdbecker/dsdk/compare/v0.1.0...master
+    :target: https://github.com/pennsignals/dsdk/compare/v0.1.0...master
 
 
 
@@ -60,7 +60,7 @@ Installation
 
 You can also install the in-development version with::
 
-    pip install https://github.com/mdbecker/dsdk/archive/master.zip
+    pip install https://github.com/pennsignals/dsdk/archive/master.zip
 
 
 Documentation

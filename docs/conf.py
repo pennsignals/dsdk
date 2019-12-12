@@ -31,14 +31,14 @@ except Exception:
 pygments_style = 'trac'
 templates_path = ['.']
 extlinks = {
-    'issue': ('https://github.com/mdbecker/dsdk/issues/%s', '#'),
-    'pr': ('https://github.com/mdbecker/dsdk/pull/%s', 'PR #'),
+    'issue': ('https://github.com/pennsignals/dsdk/issues/%s', '#'),
+    'pr': ('https://github.com/pennsignals/dsdk/pull/%s', 'PR #'),
 }
 import sphinx_py3doc_enhanced_theme
 html_theme = "sphinx_py3doc_enhanced_theme"
 html_theme_path = [sphinx_py3doc_enhanced_theme.get_html_theme_path()]
 html_theme_options = {
-    'githuburl': 'https://github.com/mdbecker/dsdk/'
+    'githuburl': 'https://github.com/pennsignals/dsdk/'
 }
 
 html_use_smartypants = True
