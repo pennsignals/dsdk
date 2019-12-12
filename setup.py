@@ -40,7 +40,7 @@ KEYWORDS = (
     # eg: 'keyword1', 'keyword2', 'keyword3',
 )
 
-SETUP_REQUIRES = ("pytest-runner", "setuptools_scm>=3.3.1")
+SETUP_REQUIRES = ("pytest-runner", "setuptools_scm>=3.3.3")
 
 TESTS_REQUIRE = (
     "black",
@@ -103,7 +103,7 @@ setup(
     },
     include_package_data=True,
     install_requires=INSTALL_REQUIRES,
-    keywords=KEYWORDS,
+    keywords=list(KEYWORDS),
     long_description=long_description(),
     long_description_content_type="text/x-rst",  # "text/markdown"
     packages=find_packages("src"),
