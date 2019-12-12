@@ -33,7 +33,7 @@ setup(
     ),
     author="Michael Becker",
     author_email="mike@beckerfuffle.com",
-    url="https://github.com/mdbecker/dsdk",
+    url="https://github.com/pennsignals/dsdk",
     packages=find_packages("src"),
     package_dir={"": "src"},
     py_modules=[splitext(basename(path))[0] for path in glob("src/*.py")],
@@ -64,7 +64,7 @@ setup(
     project_urls={
         "Documentation": "https://dsdk.readthedocs.io/",
         "Changelog": "https://dsdk.readthedocs.io/en/latest/changelog.html",
-        "Issue Tracker": "https://github.com/mdbecker/dsdk/issues",
+        "Issue Tracker": "https://github.com/pennsignals/dsdk/issues",
     },
     keywords=[
         # eg: 'keyword1', 'keyword2', 'keyword3',
