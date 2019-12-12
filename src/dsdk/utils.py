@@ -1,18 +1,34 @@
+# -*- coding: utf-8 -*-
+"""Utils."""
+
+from __future__ import annotations
 import pickle
 from collections import OrderedDict
 from datetime import datetime
 
-import configargparse
+from configargparse import ArgParser
 from pandas import DataFrame
 from pandas import concat as pd_concat
 
+try:
+    # Since not everyone will use mssql
+    from sqlalchemy import create_engine, Engine
+except ImportError:
+    create_engine = None
+    Engine = None
 
-def get_base_config():
-    """Helper function to get the configuration.
+try:
+    # Since not everyone will use mongo
+    from bson.objectid import ObjectId
+    from pymongo import MongoClient
+except ImportError:
+    ObjectId = None
+    MongoClient = None
 
-    :returns a configargparse.ArgParser
-    """
-    config_parser = configargparse.ArgParser(
+
+def get_base_config() -> ArgParser:
+    """Get the base configuration parser."""
+    config_parser = ArgParser(
         default_config_files=[
             "/local/config.yaml",
             "/secrets/config.yaml",
@@ -22,45 +38,43 @@ def get_base_config():
         ignore_unknown_config_file_keys=True,
     )
     config_parser.add(
-        "-c", "--config", is_config_file=True, help="config file path", env_var="CONFIG_PATH"
+        "-c",
+        "--config",
+        is_config_file=True,
+        help="config file path",
+        env_var="CONFIG_PATH",
     )
     return config_parser
 
 
-def get_mongo_connection(uri):
-    """Helper function to connect to mongodb
+def get_mongo_connection(uri: str) -> MongoClient:
+    """Get mongo connection.
 
     uri (str): e.g.
-    mongodb://user:pass@host1,host2,host3/database?replicaSet=replica&authSource=admin
-
-    :returns a MongoClient
+        mongodb://user:pass@host1,host2,host3/database?replicaSet=replica&authSource=admin
     """
-    # Since not everyone will use mongo
-    from pymongo import MongoClient
-
     return MongoClient(uri)
 
 
-def get_mssql_connection(uri):
-    """Helper function to connect to mssql
+def get_mssql_connection(uri: str) -> Engine:
+    r"""Get mssql connection.
 
-    uri (str): e.g. mssql+pymssql://domain\\user:pass@host:port/database?timeout=timeout
-               domain and timeout are optional. See sqlalchemy docs for additional options.
-
-    :returns a sqlalchemy engine
+    uri (str): e.g.
+        mssql+pymssql://domain\\user:pass@host:port/database?timeout=timeout
+        Domain and timeout are optional. See sqlalchemy docs for
+        additional options.
     """
-    # Since not everyone will use mssql
-    from sqlalchemy import create_engine
-
     return create_engine(uri)
 
 
-def get_model(model_path):
-    with open(model_path, "rb") as f:
-        return pickle.load(f)
+def get_model(model_path: str) -> object:
+    """Get model from path."""
+    with open(model_path, "rb") as fin:
+        return pickle.load(fin)
 
 
-def create_new_batch(mongo, *, time=None, **kwargs):
+def create_new_batch(mongo, *, time=None, **kwargs) -> ObjectId:
+    """Create new batch."""
     if time is None:
         time = datetime.utcnow()
 
@@ -71,8 +85,9 @@ def create_new_batch(mongo, *, time=None, **kwargs):
     return oid
 
 
-def get_res_with_values(q, values, conn):
-    res = conn.execute(q, values)
+def get_res_with_values(query, values, conn) -> list:
+    """Get result from query with values."""
+    res = conn.execute(query, values)
     data = res.fetchall()
     data_d = [dict(r.items()) for r in data]
     return data_d
@@ -84,7 +99,10 @@ def chunks(l, n):
         yield l[i : i + n]  # noqa: E203
 
 
-def chunk_res_with_values(query, ids, conn, chunk_size=10000, params=None):
+def chunk_res_with_values(
+    query, ids, conn, chunk_size=10000, params=None
+) -> DataFrame:
+    """Chunk query result values."""
     if params is None:
         params = {}
     res = []
@@ -95,7 +113,10 @@ def chunk_res_with_values(query, ids, conn, chunk_size=10000, params=None):
 
 
 class WriteOnceDict(OrderedDict):
+    """Write Once Dict."""
+
     def __setitem__(self, key, value):
+        """__setitem__."""
         if key in self:
             raise KeyError("{} has already been set".format(key))
         super(WriteOnceDict, self).__setitem__(key, value)

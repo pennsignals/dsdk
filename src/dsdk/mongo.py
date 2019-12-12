@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""Mongo."""
+
 from functools import partial
 from functools import wraps
 
@@ -13,7 +16,9 @@ def needs_batch_id(func):
     def wrapper(self, *args, **kwargs):
         if not hasattr(self.batch, "batch_id"):
             self.batch.batch_id = create_new_batch(
-                self.batch.mongo, time=self.batch.start_time, **self.batch.extra_batch_info
+                self.batch.mongo,
+                time=self.batch.start_time,
+                **self.batch.extra_batch_info,
             )
         return func(self, *args, **kwargs)
 
@@ -22,6 +27,7 @@ def needs_batch_id(func):
 
 # TODO: optional parameter to specify fields that aren't retained
 def store_evidence(func=None, *, exclude_cols=None):
+    """Store evidence."""
     if exclude_cols is None:
         exclude_cols = []
     exclude_cols = frozenset(exclude_cols)
@@ -35,13 +41,21 @@ def store_evidence(func=None, *, exclude_cols=None):
         if isinstance(evidence, DataFrame):
             # TODO: We need to check column types and convert as needed
             evidence["batch_id"] = self.batch.batch_id
-            evidence_keep = evidence[[c for c in evidence.columns if c not in exclude_cols]]
-            res = self.batch.mongo[self.name].insert_many(evidence_keep.to_dict(orient="records"))
-            assert evidence_keep.shape[0] == len(res.inserted_ids)  # TODO: Better exception
+            evidence_keep = evidence[
+                [c for c in evidence.columns if c not in exclude_cols]
+            ]
+            res = self.batch.mongo[self.name].insert_many(
+                evidence_keep.to_dict(orient="records")
+            )
+            assert evidence_keep.shape[0] == len(
+                res.inserted_ids
+            )  # TODO: Better exception
             evidence.drop(columns=["batch_id"], inplace=True)
         else:
             raise NotImplementedError(
-                "Serialization is not implemented for type {}".format(type(evidence))
+                "Serialization is not implemented for type {}".format(
+                    type(evidence)
+                )
             )  # TODO: Is there a better way to handle this?
         return evidence
 
