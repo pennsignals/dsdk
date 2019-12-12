@@ -12,12 +12,12 @@ from .utils import get_mssql_connection
 class BaseBatchJob:
     """Base class for all batch jobs."""
 
-    def __init__(self, blocks=None):
+    def __init__(self, pipeline=None):
         self.get_config()
         self.config = self._configparser.parse_args()
         self.extra_batch_info = {}
         self.setup()
-        self.set_blocks(blocks)
+        self.set_pipeline(pipeline)
         self.evidence = WriteOnceDict()
         self.start_time = datetime.utcnow()
         self.start_date = datetime(
@@ -25,15 +25,15 @@ class BaseBatchJob:
         )
 
     def run(self):
-        for block in self.blocks:
+        for block in self.pipeline:
             print(type(block).__name__)  # TODO: logging
             self.evidence[block.name] = block.run()
 
-    def set_blocks(self, blocks):
-        if blocks is None:
-            blocks = []
-        self.blocks = blocks
-        for block in self.blocks:
+    def set_pipeline(self, pipeline):
+        if pipeline is None:
+            pipeline = []
+        self.pipeline = pipeline
+        for block in self.pipeline:
             block.batch = self
 
     def get_config(self):
