@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 """DSDK."""
 
 import io
@@ -9,6 +8,8 @@ from glob import glob
 from os.path import basename, dirname, join, splitext
 
 from setuptools import find_packages, setup
+
+CHECK_REQUIRES = ("docutils", "pygments", "readme-renderer")
 
 CLASSIFIERS = (
     # complete classifier list:
@@ -19,30 +20,24 @@ CLASSIFIERS = (
     "Operating System :: Unix",
     "Operating System :: POSIX",
     "Operating System :: Microsoft :: Windows",
-    "Programming Language :: Python",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.6",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: Implementation :: CPython",
-    "Programming Language :: Python :: Implementation :: PyPy",
     "Topic :: Utilities",
 )
 
+DOC_REQUIRES = "sphinx"
+
 INSTALL_REQUIRES = (
-    "configargparse",
+    "configargparse>=0.15.2",
+    "numpy>=1.17.4",
     "pip>=19.3.1",
-    "pandas",
+    "pandas>=0.25.3",
     "setuptools>=42.0.2",
+    "wheel>=0.33.6",
 )
 
-KEYWORDS = (
-    # eg: 'keyword1', 'keyword2', 'keyword3',
-)
-
-SETUP_REQUIRES = ("pytest-runner", "setuptools_scm>=3.3.3")
-
-TESTS_REQUIRE = (
+LINT_REQUIRES = (
     "black",
     "flake8",
     "flake8-bugbear",
@@ -52,15 +47,19 @@ TESTS_REQUIRE = (
     "flake8-logging-format",
     "flake8-mutable",
     "flake8-sorted-keys",
+    "isort",
     "pep8-naming",
     "pre-commit",
     "pylint",
-    "pytest",
-    "pytest-cov",
-    "pytest-flake8",
-    "pytest-mock",
-    "pytest-pylint",
 )
+
+KEYWORDS = (
+    # eg: 'keyword1', 'keyword2', 'keyword3',
+)
+
+SETUP_REQUIRES = ("pytest-runner", "setuptools_scm>=3.3.3")
+
+TEST_REQUIRES = ("coverage", "pytest", "pytest-cov")
 
 
 def read(*names, **kwargs):
@@ -96,10 +95,10 @@ setup(
     classifiers=list(CLASSIFIERS),
     py_modules=py_modules(),
     extras_require={
-        "test": TESTS_REQUIRE,
-        # eg:
-        #   'rst': ['docutils>=0.11'],
-        #   ':python_version=="2.6"': ['argparse'],
+        "check": CHECK_REQUIRES,
+        "doc": DOC_REQUIRES,
+        "lint": LINT_REQUIRES,
+        "test": TEST_REQUIRES,
     },
     include_package_data=True,
     install_requires=INSTALL_REQUIRES,
@@ -115,6 +114,7 @@ setup(
     },
     python_requires=">=3.7",
     setup_requires=SETUP_REQUIRES,
+    tests_require=LINT_REQUIRES + TEST_REQUIRES,
     url="https://github.com/pennsignals/dsdk",
     use_scm_version={"fallback_version": "0.1.0", "local_scheme": "dirty-tag"},
     zip_safe=False,

@@ -2,6 +2,7 @@
 """Utils."""
 
 from __future__ import annotations
+
 import pickle
 from collections import OrderedDict
 from datetime import datetime

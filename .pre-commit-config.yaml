@@ -30,16 +30,15 @@ repos:
   hooks:
   - id: black
     args: [-q, --line-length=79, --target-version=py36]
-- repo: http://github.com/PyCQA/pylint
+- repo: https://github.com/PyCQA/pylint
   rev: pylint-2.4.4
   hooks:
   - id: pylint
     language: system
-    args:
-     - --rcfile=.pylintrc
 - repo: https://gitlab.com/pycqa/flake8
   rev: 3.7.8
   hooks:
   - id: flake8
+    language: system
 default_language_version:
   python: python3

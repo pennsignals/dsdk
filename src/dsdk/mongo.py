@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """Mongo."""
 
-from functools import partial
-from functools import wraps
+from functools import partial, wraps
 
 from pandas import DataFrame
 

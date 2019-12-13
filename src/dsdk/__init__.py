@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
-"""DSDK."""
+"""Data Science Deployment Kit."""
 
 from datetime import datetime
 from urllib.parse import unquote
 
-from .utils import WriteOnceDict
-from .utils import get_base_config
-from .utils import get_model
-from .utils import get_mongo_connection
-from .utils import get_mssql_connection
+from .utils import (
+    WriteOnceDict,
+    get_base_config,
+    get_model,
+    get_mongo_connection,
+    get_mssql_connection,
+)
 
 
 class BaseBatchJob:
@@ -54,6 +56,7 @@ class MongoMixin(BaseBatchJob):
     """Mongo Mixin."""
 
     def get_config(self):
+        """Get config."""
         super(MongoMixin, self).get_config()
         self._configparser.add(
             "--mongouri",
@@ -63,6 +66,7 @@ class MongoMixin(BaseBatchJob):
         )
 
     def setup(self):
+        """Setup."""
         super(MongoMixin, self).setup()
         self.mongo = get_mongo_connection(
             unquote(self.config.mongouri)
@@ -73,6 +77,7 @@ class MssqlMixin(BaseBatchJob):
     """Mssql Mixin."""
 
     def get_config(self):
+        """Get config."""
         super(MssqlMixin, self).get_config()
         self._configparser.add(
             "--mssqluri",
@@ -82,6 +87,7 @@ class MssqlMixin(BaseBatchJob):
         )
 
     def setup(self):
+        """Setup."""
         super(MssqlMixin, self).setup()
         self.mssql = get_mssql_connection(unquote(self.config.mssqluri))
 
@@ -90,6 +96,7 @@ class ModelMixin(BaseBatchJob):
     """Model Mixin."""
 
     def get_config(self):
+        """Get config."""
         super(ModelMixin, self).get_config()
         self._configparser.add(
             "--model",
@@ -99,6 +106,7 @@ class ModelMixin(BaseBatchJob):
         )
 
     def setup(self):
+        """Setup."""
         super(ModelMixin, self).setup()
         self.model = get_model(self.config.model)
         self.extra_batch_info.update(

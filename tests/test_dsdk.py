@@ -5,8 +5,7 @@ from unittest.mock import Mock
 
 import configargparse
 
-from dsdk import BaseBatchJob
-from dsdk import Block
+from dsdk import BaseBatchJob, Block
 
 
 def test_batch(monkeypatch):
