@@ -30,9 +30,9 @@ DOC_REQUIRES = "sphinx"
 
 INSTALL_REQUIRES = (
     "configargparse>=0.15.2",
-    "numpy>=1.17.4",
+    "numpy>=1.17.0",
     "pip>=19.3.1",
-    "pandas>=0.25.3",
+    "pandas>=0.23.4",
     "setuptools>=42.0.2",
     "wheel>=0.33.6",
 )
