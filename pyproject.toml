@@ -1,6 +1,8 @@
 [build-system]
 requires = [
-    "setuptools>=30.3.0",
+    "setuptools>=42.0.2",
+    "setuptools_scm[toml]>=3.3.3",
     "wheel",
-    "setuptools_scm>=3.3.1",
 ]
+
+[tools.setuptools_scm]

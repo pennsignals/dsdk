@@ -1,18 +1,23 @@
-__version__ = "0.1.0"
+# -*- coding: utf-8 -*-
+"""Data Science Deployment Kit."""
+
 from datetime import datetime
 from urllib.parse import unquote
 
-from .utils import WriteOnceDict
-from .utils import get_base_config
-from .utils import get_model
-from .utils import get_mongo_connection
-from .utils import get_mssql_connection
+from .utils import (
+    WriteOnceDict,
+    get_base_config,
+    get_model,
+    get_mongo_connection,
+    get_mssql_connection,
+)
 
 
 class BaseBatchJob:
     """Base class for all batch jobs."""
 
     def __init__(self, pipeline=None):
+        """__init__."""
         self.get_config()
         self.config = self._configparser.parse_args()
         self.extra_batch_info = {}
@@ -25,11 +30,13 @@ class BaseBatchJob:
         )
 
     def run(self):
+        """Run."""
         for block in self.pipeline:
             print(type(block).__name__)  # TODO: logging
             self.evidence[block.name] = block.run()
 
     def set_pipeline(self, pipeline):
+        """Set pipeline."""
         if pipeline is None:
             pipeline = []
         self.pipeline = pipeline
@@ -37,14 +44,19 @@ class BaseBatchJob:
             block.batch = self
 
     def get_config(self):
+        """Get config."""
         self._configparser = get_base_config()
 
     def setup(self):
-        pass
+        """Setup."""
+        pass  # pylint: disable=unnecessary-pass
 
 
 class MongoMixin(BaseBatchJob):
+    """Mongo Mixin."""
+
     def get_config(self):
+        """Get config."""
         super(MongoMixin, self).get_config()
         self._configparser.add(
             "--mongouri",
@@ -54,12 +66,18 @@ class MongoMixin(BaseBatchJob):
         )
 
     def setup(self):
+        """Setup."""
         super(MongoMixin, self).setup()
-        self.mongo = get_mongo_connection(unquote(self.config.mongouri)).get_default_database()
+        self.mongo = get_mongo_connection(
+            unquote(self.config.mongouri)
+        ).get_default_database()
 
 
 class MssqlMixin(BaseBatchJob):
+    """Mssql Mixin."""
+
     def get_config(self):
+        """Get config."""
         super(MssqlMixin, self).get_config()
         self._configparser.add(
             "--mssqluri",
@@ -69,18 +87,26 @@ class MssqlMixin(BaseBatchJob):
         )
 
     def setup(self):
+        """Setup."""
         super(MssqlMixin, self).setup()
         self.mssql = get_mssql_connection(unquote(self.config.mssqluri))
 
 
 class ModelMixin(BaseBatchJob):
+    """Model Mixin."""
+
     def get_config(self):
+        """Get config."""
         super(ModelMixin, self).get_config()
         self._configparser.add(
-            "--model", required=True, help="Path to pickled sklearn model", env_var="MODEL_PATH"
+            "--model",
+            required=True,
+            help="Path to pickled sklearn model",
+            env_var="MODEL_PATH",
         )
 
     def setup(self):
+        """Setup."""
         super(ModelMixin, self).setup()
         self.model = get_model(self.config.model)
         self.extra_batch_info.update(
@@ -88,10 +114,14 @@ class ModelMixin(BaseBatchJob):
         )
 
 
-class Block:
+class Block:  # pylint: disable=too-few-public-methods
+    """Block."""
+
     def __init__(self):
+        """__init__."""
         if not hasattr(self, "name"):
             raise AttributeError("'name' is undefined")
 
     def run(self):
+        """Run."""
         raise NotImplementedError

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
@@ -41,11 +42,12 @@ def exec_in_env():
         check_call([join(bin_path, "pip"), "install", "jinja2", "tox"])
     python_executable = join(bin_path, "python")
     if not os.path.exists(python_executable):
-        python_executable += '.exe'
+        python_executable += ".exe"
 
     print("Re-executing with: {0}".format(python_executable))
     print("+ exec", python_executable, __file__, "--no-env")
     os.execv(python_executable, [python_executable, __file__, "--no-env"])
+
 
 def main():
     import jinja2
@@ -56,7 +58,7 @@ def main():
         loader=jinja2.FileSystemLoader(join(base_path, "ci", "templates")),
         trim_blocks=True,
         lstrip_blocks=True,
-        keep_trailing_newline=True
+        keep_trailing_newline=True,
     )
 
     tox_environments = [
@@ -66,13 +68,22 @@ def main():
         # This uses sys.executable the same way that the call in
         # cookiecutter-pylibrary/hooks/post_gen_project.py
         # invokes this bootstrap.py itself.
-        for line in subprocess.check_output([sys.executable, '-m', 'tox', '--listenvs'], universal_newlines=True).splitlines()
+        for line in subprocess.check_output(
+            [sys.executable, "-m", "tox", "--listenvs"],
+            universal_newlines=True,
+        ).splitlines()
     ]
-    tox_environments = [line for line in tox_environments if line.startswith('py')]
+    tox_environments = [
+        line for line in tox_environments if line.startswith("py")
+    ]
 
     for name in os.listdir(join("ci", "templates")):
         with open(join(base_path, name), "w") as fh:
-            fh.write(jinja.get_template(name).render(tox_environments=tox_environments))
+            fh.write(
+                jinja.get_template(name).render(
+                    tox_environments=tox_environments
+                )
+            )
         print("Wrote {}".format(name))
     print("DONE.")
 
@@ -86,4 +97,3 @@ if __name__ == "__main__":
     else:
         print("Unexpected arguments {0}".format(args), file=sys.stderr)
         sys.exit(1)
-

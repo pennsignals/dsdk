@@ -35,7 +35,7 @@ If you are proposing a feature:
 Development
 ===========
 
-To set up `dsdk` for local development:
+To set up ``dsdk`` for local development:
 
 1. Fork `dsdk <https://github.com/pennsignals/dsdk>`_
    (look for the "Fork" button).

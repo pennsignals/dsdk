@@ -1,15 +1,15 @@
 [BASIC]
-good-names=df,e,f,i,ok,logger
+good-names=a,b,c,d,df,i,l,logger,n,tz
 
 [MASTER]
-ignore = _version.py,__init__.py
+ignore=ci,docs
 
 [MESSAGES CONTROL]
-disable=C0330
+disable=duplicate-code,C0330
 
 [MISCELLANEOUS]
 # List of note tags to take in consideration, separated by a comma.
-notes=FIXME,XXX,TODO
+notes=FIXME,XXX
 
 [SIMILARITIES]
 
@@ -24,11 +24,3 @@ ignore-docstrings=yes
 
 # Ignore imports when computing similarities.
 ignore-imports=yes
-
-[FORMAT]
-
-# Maximum number of characters on a single line.
-max-line-length=140
-
-# Maximum number of lines in a module
-max-module-lines=1000

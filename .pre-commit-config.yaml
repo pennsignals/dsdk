@@ -1,29 +1,44 @@
-exclude: 'tests|ci|docs|setup.py|_version.py'
+exclude: 'ci|docs'
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v2.3.0
   hooks:
+  - id: check-added-large-files
   - id: check-case-conflict
+  - id: check-docstring-first
+  - id: check-executables-have-shebangs
   - id: check-json
+  - id: check-merge-conflict
+  - id: check-toml
+  - id: check-symlinks
   - id: check-xml
   - id: check-yaml
+    exclude: 'ci/templates/*'
   - id: end-of-file-fixer
+  - id: fix-encoding-pragma
+  - id: mixed-line-ending
+  - id: requirements-txt-fixer
   - id: trailing-whitespace
+- repo: http://github.com/pre-commit/pygrep-hooks
+  rev: v1.4.2
+  hooks:
+  - id: python-check-blanket-noqa
+  - id: python-use-type-annotations
+  - id: rst-backticks
 - repo: https://github.com/ambv/black
   rev: 19.3b0
   hooks:
   - id: black
-    args: [-q, --line-length=99, --target-version=py37, src, tests]
-- repo: http://github.com/PyCQA/pylint
-  rev: pylint-2.4.2
+    args: [-q, --line-length=79, --target-version=py36]
+- repo: https://github.com/PyCQA/pylint
+  rev: pylint-2.4.4
   hooks:
   - id: pylint
     language: system
-    args: [src]
 - repo: https://gitlab.com/pycqa/flake8
   rev: 3.7.8
   hooks:
   - id: flake8
-    args: [src]
+    language: system
 default_language_version:
   python: python3
