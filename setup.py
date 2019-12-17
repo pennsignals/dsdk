@@ -48,6 +48,7 @@ LINT_REQUIRES = (
     "flake8-mutable",
     "flake8-sorted-keys",
     "isort",
+    "mypy",
     "pep8-naming",
     "pre-commit",
     "pylint",
