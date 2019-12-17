@@ -5,4 +5,15 @@ requires = [
     "wheel",
 ]
 
-[tools.setuptools_scm]
+[tool.black]
+line-length = 79
+target-version = ["py37","py38"]
+
+[tool.isort]
+include_trailing_comma = true
+line_length = 79
+multi_line_output = 3
+known_first_party = ["dsdk"]
+default_section = "THIRDPARTY"
+
+[tool.setuptools_scm]
