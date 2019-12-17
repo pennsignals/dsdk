@@ -59,7 +59,7 @@ KEYWORDS = (
 
 SETUP_REQUIRES = ("pytest-runner", "setuptools_scm>=3.3.3")
 
-TEST_REQUIRES = ("coverage", "pytest", "pytest-cov")
+TEST_REQUIRES = ("coverage", "pytest", "pytest-cov", "tox")
 
 
 def read(*names, **kwargs):
