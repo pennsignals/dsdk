@@ -94,10 +94,10 @@ def get_res_with_values(query, values, conn) -> list:
     return data_d
 
 
-def chunks(l, n):
+def chunks(lst, n):
     """Yield successive n-sized chunks from l."""
-    for i in range(0, len(l), n):
-        yield l[i : i + n]  # noqa: E203
+    for i in range(0, len(lst), n):
+        yield lst[i : i + n]  # noqa: E203
 
 
 def chunk_res_with_values(
