@@ -13,7 +13,8 @@ from pandas import concat as pd_concat
 
 try:
     # Since not everyone will use mssql
-    from sqlalchemy import create_engine, Engine
+    from sqlalchemy import create_engine
+    from sqlalchemy.engine.base import Engine
 except ImportError:
     create_engine = None
     Engine = None
