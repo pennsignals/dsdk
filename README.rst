@@ -21,7 +21,7 @@ Overview
 
 .. |travis| image:: https://api.travis-ci.org/pennsignals/dsdk.svg?branch=master
     :alt: Travis-CI Build Status
-    :target: https://travis-ci.org/pennsignals/dsdk
+    :target: https://travis-ci.com/pennsignals/dsdk
 
 .. |version| image:: https://img.shields.io/pypi/v/dsdk.svg
     :alt: PyPI Package latest release
