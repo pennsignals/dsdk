@@ -28,10 +28,13 @@ before_install:
   - uname -a
   - lsb_release -a || true
 install:
-  - python -mpip install --progress-bar=off tox -rci/requirements.txt
+  - python -mpip install --progress-bar=off .[test]
   - virtualenv --version
+  - coverage --version
   - easy_install --version
   - pip --version
+  - pre-commit --version
+  - pytest --version
   - tox --version
 script:
   - tox -v
