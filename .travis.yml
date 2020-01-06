@@ -28,13 +28,10 @@ before_install:
   - uname -a
   - lsb_release -a || true
 install:
-  - python -mpip install --progress-bar=off .[test]
+  - python -mpip install --progress-bar=off pip>=19.3.1 setuptools>=42.0.2 tox virtualenv>=16.7.8
   - virtualenv --version
-  - coverage --version
   - easy_install --version
   - pip --version
-  - pre-commit --version
-  - pytest --version
   - tox --version
 script:
   - tox -v
