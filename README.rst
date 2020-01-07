@@ -19,7 +19,7 @@ Overview
     :target: https://readthedocs.org/projects/dsdk
     :alt: Documentation Status
 
-.. |travis| image:: https://api.travis-ci.org/pennsignals/dsdk.svg?branch=master
+.. |travis| image:: https://api.travis-ci.com/pennsignals/dsdk.svg?branch=master
     :alt: Travis-CI Build Status
     :target: https://travis-ci.com/pennsignals/dsdk
 
