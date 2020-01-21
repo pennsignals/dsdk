@@ -6,6 +6,7 @@ from __future__ import annotations
 import pickle
 from collections import OrderedDict
 from datetime import datetime
+from warnings import warn
 
 from configargparse import ArgParser
 from pandas import DataFrame
@@ -55,6 +56,7 @@ def get_mongo_connection(uri: str) -> MongoClient:
     uri (str): e.g.
         mongodb://user:pass@host1,host2,host3/database?replicaSet=replica&authSource=admin
     """
+    warn("Use dsdk.mongo:open_database.", DeprecationWarning)
     return MongoClient(uri)
 
 

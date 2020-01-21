@@ -1,0 +1,86 @@
+version: "3.7"
+
+configs:
+  freetds:
+    file: ./mssql/etc/freetds.conf
+  localtime:
+    file: ./etc/localtime
+  timezone:
+    file: ./etc/time
+
+volumes:
+  mssql-data:
+  mongo-data:
+  postgres-data:
+
+  mongo:
+    image: mongo:4.0.13-xenial
+    configs:
+    - source: localtime
+      target: /etc/localtime
+    - source: timezone
+      target: /etc/timezone
+    expose:
+    - "27017"
+    ports:
+    - "27017:27017"
+    restart: always
+    stop_signal: SIGINT
+    volumes:
+    - mongo-data:/data/db  # durable data
+    command: [--noauth, --smallfiles, --quiet]
+
+
+# mssql for test
+# MSSQL_COLLATION: LATIN1_GENERAL_100_CI_AS_SC
+
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2019-GA-ubuntu-16.0.4
+    configs:
+    - source: localtime
+      target: /etc/localtime
+    - source: timezone
+      target: /etc/timezone
+    environment:
+      ACCEPT_EULA: Y
+      MSSQL_PID: Developer
+      MSSQL_COLLATION: LATIN1_GENERAL_100_CI_AS_SC_UTF8
+      MSSQL_SA_PASSWORD: YourStrong!Passw0rd
+    expose:
+    - "1433"
+    ports:
+    - "1433:1433"
+    stop_signal: SIGINT
+    secrets:
+    - secrets
+    volumes:
+    - mssql-data:/var/opt/mssql/data  # durable
+
+  postgres:
+    image: alpine-3.10-postgres-mongo-tds
+    build:
+      context: ./
+      dockerfile: ./postgres.dockerfile
+      args:
+        MONGO_FDW: 1
+        TDS_FDW: 1
+    configs:
+    - source: localtime
+      target: /etc/localtime
+    - source: timezone
+      target: /etc/timezone
+    - source: freetds
+      target: /etc/freetds.conf
+    links:
+    - mongo
+    - mssql
+    expose:
+    - "5432"
+    ports:
+    - "5432:5432"
+    restart: always
+    stop_signal: SIGINT
+    secrets:
+    - secrets
+    volumes:
+    - postgres-data:/usr/local/pgsql/data  # durable
