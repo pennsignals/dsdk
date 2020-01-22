@@ -6,6 +6,10 @@ from __future__ import annotations
 import pickle
 from collections import OrderedDict
 from datetime import datetime
+from functools import wraps
+from logging import NullHandler, getLogger
+from time import sleep as default_sleep
+from typing import Callable, Sequence
 from warnings import warn
 
 from configargparse import ArgParser
@@ -27,6 +31,10 @@ try:
 except ImportError:
     ObjectId = None
     MongoClient = None
+
+
+logger = getLogger(__name__)
+logger.addHandler(NullHandler())
 
 
 def get_base_config() -> ArgParser:
@@ -124,3 +132,48 @@ class WriteOnceDict(OrderedDict):
         if key in self:
             raise KeyError("{} has already been set".format(key))
         super(WriteOnceDict, self).__setitem__(key, value)
+
+
+def retry(
+    exceptions: Sequence[Exception],
+    retries: int = 5,
+    delay: float = 1.0,
+    backoff: float = 1.5,
+    sleep: Callable = default_sleep,
+):
+    """
+    Retry calling the decorated function using an exponential backoff.
+
+    Args:
+        exceptions: The exception to check. may be a tuple of
+            exceptions to check.
+        retries: Number of times to retry before giving up.
+        delay: Initial delay between retries in seconds.
+        backoff: Backoff multiplier (e.g. value of 2 will double the delay
+            each retry).
+    """
+    delay = float(delay)
+    backoff = float(backoff)
+
+    def wrapper(func):
+        @wraps(func)
+        def wrapped(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except exceptions as exception:
+                logger.exception(exception)
+                wait = delay
+                for _ in range(retries):
+                    message = f"Retrying in {wait:.2f} seconds..."
+                    logger.warning(message)
+                    sleep(wait)
+                    wait *= backoff
+                    try:
+                        return func(*args, **kwargs)
+                    except exceptions as exception:
+                        logger.exception(exception)
+                raise
+
+        return wrapped
+
+    return wrapper
