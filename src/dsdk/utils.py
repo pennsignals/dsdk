@@ -137,7 +137,7 @@ class WriteOnceDict(OrderedDict):
 def retry(
     exceptions: Sequence[Exception],
     retries: int = 5,
-    delay: int = 1,
+    delay: float = 1.0,
     backoff: float = 1.5,
     sleep: Callable = default_sleep,
 ):
@@ -152,6 +152,8 @@ def retry(
         backoff: Backoff multiplier (e.g. value of 2 will double the delay
             each retry).
     """
+    delay = float(delay)
+    backoff = float(backoff)
 
     def wrapper(func):
         @wraps(func)
