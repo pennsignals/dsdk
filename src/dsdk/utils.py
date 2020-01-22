@@ -164,7 +164,7 @@ def retry(
                 logger.exception(exception)
                 wait = delay
                 for _ in range(retries):
-                    message = f"Retrying in {wait} seconds..."
+                    message = f"Retrying in {wait:.2f} seconds..."
                     logger.warning(message)
                     sleep(wait)
                     wait *= backoff
