@@ -85,15 +85,15 @@ def store_evidence(func=None, *, exclude_cols=None):
 
     @wraps(func)
     @needs_batch_id
-    def wrapper(self, *args, **kwargs):
-        evidence = func(self, *args, **kwargs)
+    def wrapper(self, batch, *args, **kwargs):
+        evidence = func(self, batch, *args, **kwargs)
         if isinstance(evidence, DataFrame):
             # TODO: We need to check column types and convert as needed
-            evidence["batch_id"] = self.batch.batch_id
+            evidence["batch_id"] = batch.batch_id
             evidence_keep = evidence[
                 [c for c in evidence.columns if c not in exclude_cols]
             ]
-            res = self.batch.mongo[self.name].insert_many(
+            res = batch.mongo[self.name].insert_many(
                 evidence_keep.to_dict(orient="records")
             )
             assert evidence_keep.shape[0] == len(
