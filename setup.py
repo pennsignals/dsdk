@@ -117,6 +117,6 @@ setup(
     setup_requires=SETUP_REQUIRES,
     tests_require=LINT_REQUIRES + TEST_REQUIRES,
     url="https://github.com/pennsignals/dsdk",
-    use_scm_version={"fallback_version": "0.1.0", "local_scheme": "dirty-tag"},
+    use_scm_version={"local_scheme": "dirty-tag"},
     zip_safe=False,
 )
