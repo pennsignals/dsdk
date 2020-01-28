@@ -5,22 +5,22 @@ from unittest.mock import Mock
 
 import configargparse
 
-from dsdk import BaseBatchJob, Block
+from dsdk import BaseBatchJob, Task
 from dsdk.utils import retry
 
 
 def test_batch(monkeypatch):
     """Test batch."""
 
-    class _TestBlock(Block):  # pylint: disable=too-few-public-methods
+    class _TestTask(Task):  # pylint: disable=too-few-public-methods
         name = "test"
 
-        def run(self):
+        def run(self, batch):
             return 42
 
     monkeypatch.setattr(configargparse, "ArgParser", Mock)
 
-    batch = BaseBatchJob([_TestBlock()])
+    batch = BaseBatchJob([_TestTask()])
     batch.run()
     assert len(batch.evidence) == 1
     assert batch.evidence["test"] == 42
