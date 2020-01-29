@@ -62,14 +62,12 @@ def open_database(
 def needs_batch_id(func):
     """Wrapper used to create a batch if it doesn't already exist."""
 
-    def wrapper(self, *args, **kwargs):
-        if not hasattr(self.batch, "batch_id"):
-            self.batch.batch_id = create_new_batch(
-                self.batch.mongo,
-                time=self.batch.start_time,
-                **self.batch.extra_batch_info,
+    def wrapper(self, batch, *args, **kwargs):
+        if not hasattr(batch, "batch_id"):
+            batch.batch_id = create_new_batch(
+                batch.mongo, time=batch.start_time, **batch.extra_batch_info
             )
-        return func(self, *args, **kwargs)
+        return func(self, batch, *args, **kwargs)
 
     return wrapper
 
