@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Data Science Deployment Kit."""
 
-from datetime import datetime, timezone
+from datetime import datetime
 from urllib.parse import unquote
 
 from .utils import (
@@ -24,12 +24,13 @@ class BaseBatchJob:
         self.extra_batch_info = {}
         self.setup()
         self.evidence = WriteOnceDict()
-        self.start_time = start_time = datetime.now(timezone.utc)
+        # datetime.now(timezone.utc)
+        self.start_time = start_time = datetime.utcnow()
         self.start_date = datetime(
             start_time.year,
             start_time.month,
             start_time.day,
-            tzinfo=timezone.utc,
+            # tzinfo=timezone.utc,
         )
 
     def check(self):
