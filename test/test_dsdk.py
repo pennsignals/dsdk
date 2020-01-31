@@ -5,23 +5,20 @@ from unittest.mock import Mock
 
 import configargparse
 
-from dsdk import BaseBatchJob, Task
-from dsdk.utils import retry
+from dsdk import Batch, Service, Task, retry
 
 
 def test_batch(monkeypatch):
     """Test batch."""
 
-    class _TestTask(Task):  # pylint: disable=too-few-public-methods
-        name = "test"
-
-        def run(self, batch):
+    class _MockTask(Task):  # pylint: disable=too-few-public-methods
+        def run(self, batch: Batch, service: Service):
             return 42
 
     monkeypatch.setattr(configargparse, "ArgParser", Mock)
 
-    batch = BaseBatchJob([_TestTask()])
-    batch.run()
+    service = Service((_MockTask(name="test"),))
+    batch = service.run()
     assert len(batch.evidence) == 1
     assert batch.evidence["test"] == 42
 

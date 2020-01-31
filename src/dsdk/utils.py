@@ -3,98 +3,17 @@
 
 from __future__ import annotations
 
-import pickle
 from collections import OrderedDict
-from datetime import datetime
 from functools import wraps
 from logging import NullHandler, getLogger
 from time import sleep as default_sleep
 from typing import Callable, Sequence
-from warnings import warn
 
-from configargparse import ArgParser
 from pandas import DataFrame
 from pandas import concat as pd_concat
 
-try:
-    # Since not everyone will use mssql
-    from sqlalchemy import create_engine
-    from sqlalchemy.engine.base import Engine
-except ImportError:
-    create_engine = None
-    Engine = None
-
-try:
-    # Since not everyone will use mongo
-    from bson.objectid import ObjectId
-    from pymongo import MongoClient
-except ImportError:
-    ObjectId = None
-    MongoClient = None
-
-
 logger = getLogger(__name__)
 logger.addHandler(NullHandler())
-
-
-def get_base_config() -> ArgParser:
-    """Get the base configuration parser."""
-    config_parser = ArgParser(
-        default_config_files=[
-            "/local/config.yaml",
-            "/secrets/config.yaml",
-            "secrets.yaml",
-            "local.yaml",
-        ],
-        ignore_unknown_config_file_keys=True,
-    )
-    config_parser.add(
-        "-c",
-        "--config",
-        is_config_file=True,
-        help="config file path",
-        env_var="CONFIG_PATH",
-    )
-    return config_parser
-
-
-def get_mongo_connection(uri: str) -> MongoClient:
-    """Get mongo connection.
-
-    uri (str): e.g.
-        mongodb://user:pass@host1,host2,host3/database?replicaSet=replica&authSource=admin
-    """
-    warn("Use dsdk.mongo:open_database.", DeprecationWarning)
-    return MongoClient(uri)
-
-
-def get_mssql_connection(uri: str) -> Engine:
-    r"""Get mssql connection.
-
-    uri (str): e.g.
-        mssql+pymssql://domain\\user:pass@host:port/database?timeout=timeout
-        Domain and timeout are optional. See sqlalchemy docs for
-        additional options.
-    """
-    return create_engine(uri)
-
-
-def get_model(model_path: str) -> object:
-    """Get model from path."""
-    with open(model_path, "rb") as fin:
-        return pickle.load(fin)
-
-
-def create_new_batch(mongo, *, time=None, **kwargs) -> ObjectId:
-    """Create new batch."""
-    if time is None:
-        time = datetime.utcnow()
-
-    document = {"time": time}
-    document.update(kwargs)
-
-    oid = mongo.batch.insert_one(document).inserted_id
-    return oid
 
 
 def get_res_with_values(query, values, conn) -> list:
