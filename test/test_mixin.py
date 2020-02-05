@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import ABC
 from argparse import ArgumentParser
 from json import dump as json_dump
 from json import load as json_load
@@ -55,14 +55,17 @@ class Service:  # pylint: disable=too-few-public-methods
         parser: Optional[ArgumentParser] = None,
     ) -> None:
         """__init__."""
+        self.service_i = i
         self.cfg = cfg
         self.parser = parser
-        if parser:  # parsing arguments must be optional
+        # parsing arguments must be optional
+        if parser:
             self.inject_args(parser)
             if not argv:
                 argv = sys_argv[1:]
             parser.parse_args(argv)
-        self.service_i = i
+
+        # self.cfg is not optional
         assert self.cfg is not None
 
     def inject_args(self, parser: ArgumentParser) -> None:
@@ -85,14 +88,15 @@ else:
 class ModelMixin(Mixin):  # pylint: disable=too-few-public-methods
     """Model Mixin."""
 
-    @abstractmethod
     def __init__(
         self, *, i: int = 0, model: Optional[Dict[str, Any]] = None, **kwargs
     ) -> None:
         """__init__."""
+        self.model_i = i
         self.model = model
         super().__init__(i=i + 1, **kwargs)
-        self.model_i = i
+
+        # self.model is not optional
         assert self.model is not None
 
     def inject_args(self, parser: ArgumentParser) -> None:
@@ -110,14 +114,15 @@ class ModelMixin(Mixin):  # pylint: disable=too-few-public-methods
 class MongoMixin(Mixin):  # pylint: disable=too-few-public-methods
     """Mongo Mixin."""
 
-    @abstractmethod
     def __init__(
         self, *, i: int = 0, mongo_uri: Optional[str] = None, **kwargs
     ):
         """__init__."""
+        self.mongo_i = i
         self.mongo_uri = mongo_uri
         super().__init__(i=i + 1, **kwargs)
-        self.mongo_i = i
+
+        # self.mongo_uri is not optional
         assert self.mongo_uri is not None
 
     def inject_args(self, parser: ArgumentParser) -> None:
@@ -132,6 +137,7 @@ class MongoMixin(Mixin):  # pylint: disable=too-few-public-methods
 
 
 # Service must be last in inheritence
+#    to ensure mixin methods are all called.
 class App(
     MongoMixin, ModelMixin, Service
 ):  # pylint: disable=too-few-public-methods
@@ -139,8 +145,10 @@ class App(
 
     def __init__(self, *, i: int = 0, **kwargs):
         """__init__."""
-        super().__init__(i=i + 1, **kwargs)
         self.app_i = i
+        super().__init__(i=i + 1, **kwargs)
+
+        # Assert correct order of initialization
         assert self.app_i == 0
         assert self.mongo_i == 1
         assert self.model_i == 2
