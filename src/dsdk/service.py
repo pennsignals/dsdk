@@ -67,9 +67,18 @@ class Service:
     def run(self) -> Batch:
         """Run."""
         self.check()
+        # maybe just have tasks recv and return batch
+        # have first task create and open-write the batch
+        #   removes the special code to self.info/model info
+        #   that involves two mixins
+        # last task close-write the batch
         batch = self.new_batch()
+
         for task in self.pipeline:
             logger.info(task.name)
+            # evidence is custom due to exclude columns
+            #    per task, so have task call service.store_evidence(...)
+            #    instead of returning evidence
             batch.evidence[task.name] = task.run(batch, self)
         return batch
 
