@@ -123,12 +123,16 @@ class Service:
         self.check()
         with self.open_batch() as batch:
             for task in self.pipeline:
+                # TODO eliminate name
+                #      allow tasks to be any Callable
+                #      log inside the task instead
                 logger.info(task.name)
                 task(batch, self)
             return batch
 
     def check(self) -> None:
         """Check."""
+        # TODO add smoke test for each database mixin.
 
     def inject_arguments(  # pylint: disable=no-self-use,protected-access
         self, parser: ArgumentParser
@@ -148,8 +152,8 @@ class Service:
         )
 
     @contextmanager
-    def open_batch(  # pylint: disable=no-self-use
-        self, key: Any = None
+    def open_batch(  # pylint: disable=no-self-use,unused-argument
+        self, key: Any = None, model: Optional[Model] = None
     ) -> Generator[Batch, None, None]:
         """Open batch."""
         record = Interval(on=datetime.now(timezone.utc), end=None)

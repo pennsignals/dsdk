@@ -51,9 +51,13 @@ class Mixin(BaseMixin):
             return mssql_uri
 
         parser.add(
-            "--mssqluri",
+            "--mssql-uri",
             required=True,
-            help="MSSQL URI used to connect to a MSSQL database",
+            help=(
+                "MSSQL URI used to connect to a MSSQL database: "
+                "mssql+pymssql://USER:PASS@HOST:PORT/DATABASE?timeout=TIMEOUT "
+                "Url encode all parts: USER (domain slash), PASS in particular"
+            ),
             env_var="MSSQL_URI",
             type=_inject_mssql_uri,
         )

@@ -25,7 +25,7 @@ else:
 class Mixin(BaseMixin):
     """Mixin."""
 
-    def __init__(self, *, model: Optional[Model], **kwargs):
+    def __init__(self, *, model: Optional[Model] = None, **kwargs):
         """__init__."""
         # inferred type of self.model must not be optional...
         self.model = cast(Model, model)

@@ -69,7 +69,12 @@ class Mixin(BaseMixin):
         parser.add(
             "--mongo-uri",
             required=True,
-            help="Mongo URI used to connect to a Mongo database",
+            help=(
+                "Mongo URI used to connect to a Mongo database: "
+                "mongodb://USER:PASS@HOST1,HOST2,.../DATABASE?"
+                "replicaset=REPLICASET&authsource=admin "
+                "Url encode all parts: PASS in particular"
+            ),
             env_var="MONGO_URI",
             type=_inject_mongo_uri,
         )
@@ -84,22 +89,19 @@ class Mixin(BaseMixin):
 class EvidenceMixin(Mixin):
     """Evidence Mixin."""
 
-    model: Optional[Model] = None
-
     def __init__(self, **kwargs):
         """__init__."""
         super().__init__(**kwargs)
 
-        # self.model is not optional
-        assert self.model is not None
-
     @contextmanager
-    def open_batch(self, key: Any = None) -> Generator[Batch, None, None]:
+    def open_batch(
+        self, key: Any = None, model: Optional[Model] = None
+    ) -> Generator[Batch, None, None]:
         """Open batch."""
         if key is None:
             key = ObjectId()
         with super().open_batch(key) as batch:
-            doc = batch.as_insert_doc(self.model)  # <- model dependency
+            doc = batch.as_insert_doc(model)  # <- model dependency
             with self.open_mongo() as database:
                 insert_one(database.batches, doc)
 

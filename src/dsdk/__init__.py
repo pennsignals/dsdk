@@ -2,6 +2,7 @@
 """Data Science Deployment Kit."""
 
 from .model import Mixin as ModelMixin
+from .mongo import EvidenceMixin as MongoEvidenceMixin
 from .mongo import Mixin as MongoMixin
 from .mssql import Mixin as MssqlMixin
 from .service import Batch, Model, Service, Task
@@ -20,6 +21,7 @@ __all__ = (
     "Model",
     "ModelMixin",
     "MongoMixin",
+    "MongoEvidenceMixin",
     "MssqlMixin",
     "Service",
     "Task",
