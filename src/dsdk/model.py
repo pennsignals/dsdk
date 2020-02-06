@@ -3,41 +3,50 @@
 
 from __future__ import annotations
 
+from abc import ABC
 from logging import NullHandler, getLogger
-from pickle import load
-from typing import Dict
+from typing import TYPE_CHECKING, Optional, cast
 
 from configargparse import ArgParser as ArgumentParser
-from configargparse import Namespace
 
-from .service import Service
+from .service import Model, Service
+from .utils import load_pickle_file
 
 logger = getLogger(__name__)
 logger.addHandler(NullHandler())
 
 
-def get_model(model_path: str) -> Dict:
-    """Get model from path."""
-    with open(model_path, "rb") as fin:
-        return load(fin)
+if TYPE_CHECKING:
+    BaseMixin = Service
+else:
+    BaseMixin = ABC
 
 
-class Mixin(Service):
+class Mixin(BaseMixin):
     """Mixin."""
 
-    @classmethod
-    def add_arguments(cls, parser: ArgumentParser) -> None:
-        """Add arguments."""
-        super().add_arguments(parser)
+    def __init__(self, *, model: Optional[Model], **kwargs):
+        """__init__."""
+        # inferred type of self.model must not be optional...
+        self.model = cast(Model, model)
+        super().__init__(**kwargs)
+
+        # ... because self.model is not optional
+        assert self.model is not None
+
+    def inject_arguments(self, parser: ArgumentParser) -> None:
+        """Inject arguments."""
+        super().inject_arguments(parser)
+
+        def _inject_model(path: str) -> Model:
+            model = cast(Model, load_pickle_file(path))
+            self.model = model
+            return model
+
         parser.add(
             "--model",
             required=True,
-            help="Path to pickled sklearn model",
+            help="Path to pickled model",
             env_var="MODEL_PATH",
+            type=_inject_model,
         )
-
-    def setup(self, args: Namespace) -> None:
-        """Setup."""
-        super().setup(args)
-        self.model = model = get_model(args.model)
-        self.info.update({"model": model["name"], "version": model["version"]})

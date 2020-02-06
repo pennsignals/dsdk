@@ -3,117 +3,132 @@
 
 from __future__ import annotations
 
-from argparse import Namespace
+from abc import ABC
 from contextlib import contextmanager
-from datetime import datetime
-from functools import partial, wraps
 from logging import NullHandler, getLogger
-from typing import Any, Sequence
-from warnings import warn
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Generator,
+    Optional,
+    Sequence,
+    cast,
+)
 
 from configargparse import ArgParser as ArgumentParser
 from pandas import DataFrame
 
-from .service import Batch, Service
+from .service import Batch, Model, Service
+from .utils import retry
 
 try:
     # Since not everyone will use mongo
     from bson.objectid import ObjectId
     from pymongo import MongoClient
+    from pymongo.collection import Collection
     from pymongo.database import Database
+    from pymongo.errors import AutoReconnect
 except ImportError:
     MongoClient = None
     ObjectId = None
     Database = None
+    AutoReconnect = None
 
 
 logger = getLogger(__name__)
 logger.addHandler(NullHandler())
 
 
-def create_new_batch(mongo, *, time=None, **kwargs) -> ObjectId:
-    """Create new batch."""
-    warn("Use dsdk.mongo.EvidenceMixin or a component.", DeprecationWarning)
-    # TODO batch must be stores *after* work is done.
-    # TODO why allow unvalidated time to be passed in?
-    #    Start (and missing end) of the running interval shouldn't fudgable.
-    # TODO interval suggests a contextmanager.
-    if time is None:
-        # TODO is non-naive time serializable?
-        # TODO does non-naive time work with Dataframe times, NaT?
-        # TODO remove naive time
-        time = datetime.utcnow()
-        # time = datetime.now(timezone.utc)
-
-    document = {"time": time}
-    document.update(kwargs)
-
-    oid = mongo.batch.insert_one(document).inserted_id
-    return oid
+if TYPE_CHECKING:
+    BaseMixin = Service
+else:
+    BaseMixin = ABC
 
 
-class Mixin(Service):  # pylint: disable=abstract-method
+class Mixin(BaseMixin):
     """Mixin."""
 
-    @classmethod
-    def add_arguments(cls, parser: ArgumentParser) -> None:
-        """Add arguments."""
-        super().add_arguments(parser)
+    def __init__(self, *, mongo_uri: Optional[str] = None, **kwargs):
+        """__init__."""
+        # inferred type of self._mongo_uri must not be optional...
+        self._mongo_uri = cast(str, mongo_uri)
+        super().__init__(**kwargs)
+
+        # ... because self._mongo_uri is not optional
+        assert self._mongo_uri is not None
+
+    def inject_arguments(self, parser: ArgumentParser) -> None:
+        """Inject arguments."""
+        super().inject_arguments(parser)
+
+        def _inject_mongo_uri(mongo_uri: str) -> str:
+            self._mongo_uri = mongo_uri
+            return mongo_uri
+
         parser.add(
-            "--mongouri",
+            "--mongo-uri",
             required=True,
-            help="Mongo URI used to connect to MongoDB",
+            help="Mongo URI used to connect to a Mongo database",
             env_var="MONGO_URI",
+            type=_inject_mongo_uri,
         )
 
-    def setup(self, args: Namespace) -> None:
-        """Setup."""
-        warn("Use dsdk.mongo:open_database.", DeprecationWarning)
-        super().setup(args)
-        self.mongo = MongoClient(args.mongouri).get_database()
+    @contextmanager
+    def open_mongo(self) -> Generator:
+        """Open mongo."""
+        with open_database(self._mongo_uri) as database:
+            yield database
 
 
 class EvidenceMixin(Mixin):
     """Evidence Mixin."""
 
-    def new_batch(self):
-        """New batch."""
-        return Batch(ObjectId(), self.info)
+    model: Optional[Model] = None
 
-    def store_batch(self, batch: Batch):
-        """Store batch."""
-        raise NotImplementedError()
+    def __init__(self, **kwargs):
+        """__init__."""
+        super().__init__(**kwargs)
+
+        # self.model is not optional
+        assert self.model is not None
+
+    @contextmanager
+    def open_batch(self, key: Any = None) -> Generator[Batch, None, None]:
+        """Open batch."""
+        if key is None:
+            key = ObjectId()
+        with super().open_batch(key) as batch:
+            doc = batch.as_insert_doc(self.model)  # <- model dependency
+            with self.open_mongo() as database:
+                insert_one(database.batches, doc)
+
+            yield batch
+
+            key, doc = batch.as_update_doc()
+            with self.open_mongo() as database:
+                update_one(database.batches, key, doc)
 
     def store_evidence(
         self,
-        name: str,
         batch: Batch,
-        evidence: Any,
+        key: str,
+        df: DataFrame,
         exclude: Sequence[str] = (),
-    ):
+    ) -> None:
         """Store Evidence."""
-        if isinstance(evidence, DataFrame):
-            # TODO We need to check column types and convert as needed
-            # TODO Find a way to add batch__id without mutating,
-            #      unmutating evidence
-            evidence["batch_id"] = batch.batch_id
-            columns = evidence[
-                [c for c in evidence.columns if c not in exclude]
-            ]
-            res = self.mongo[name].insert_many(
-                columns.to_dict(orient="records")
-            )
+        # TODO We need to check column types and convert as needed
+        # TODO Find a way to add batch_id without mutating df
+        df["batch_id"] = batch.key
+        columns = df[[c for c in df.columns if c not in exclude]]
+        docs = columns.to_dict(orient="records")
+        with self.open_mongo() as database:
+            result = insert_many(database[key], docs)
             assert columns.shape[0] == len(
-                res.inserted_ids
+                result.inserted_ids
             )  # TODO: Better exception
-            evidence.drop(columns=["batch_id"], inplace=True)
-        else:
-            raise NotImplementedError(
-                "Serialization is not implemented for type {}".format(
-                    type(evidence)
-                )
-            )  # TODO: Is there a better way to handle this?
-        batch.evidence[name] = evidence
+        df.drop(columns=["batch_id"], inplace=True)
+        super().store_evidence(batch, key, df, exclude)
 
 
 @contextmanager
@@ -130,6 +145,7 @@ def open_database(
     Like any uri, components (like user and pass) must be urlencoded to
         prevent special characters (like the slash following user's
         domain or an '@' in a password') from creating an invalid uri.
+    Do not urlencode the entire uri.
     """
     with MongoClient(
         uri,
@@ -142,63 +158,33 @@ def open_database(
         # is_master to force lazy connection open
         is_master = client.admin.command("ismaster")
         logger.debug(
-            '{"open_database: {"name": "%s", "is_master": "%s"}}',
+            '{"opened_mongo_database: {"name": "%s", "is_master": "%s"}}',
             database.name,
             is_master,
         )
         try:
             yield database
         finally:
-            logger.debug('{"close_database: {"name": "%s"}}', database.name)
-
-
-def needs_batch_id(func):
-    """Wrapper used to create a batch if it doesn't already exist."""
-    warn("Use dsdk.Service.run to create the batch.", DeprecationWarning)
-
-    def wrapper(self, batch, *args, **kwargs):
-        if not hasattr(batch, "batch_id"):
-            batch.batch_id = create_new_batch(
-                batch.mongo, time=batch.start_time, **batch.extra_batch_info
+            logger.debug(
+                '{"close_mongo_database: {"name": "%s"}}', database.name
             )
-        return func(self, batch, *args, **kwargs)
-
-    return wrapper
 
 
-def store_evidence(func=None, *, exclude_cols=None):
-    """Store evidence."""
-    warn("Use dsdk.mongo.EvidenceMixin.store_evidence.", DeprecationWarning)
+@retry(AutoReconnect)
+def insert_one(collection: Collection, doc: Dict[str, Any]):
+    """Insert one with retry."""
+    return collection.insert_one(doc)
 
-    if exclude_cols is None:
-        exclude_cols = []
-    exclude_cols = frozenset(exclude_cols)
-    if func is None:
-        return partial(store_evidence, exclude_cols=exclude_cols)
 
-    @wraps(func)
-    @needs_batch_id
-    def wrapper(self, batch, *args, **kwargs):
-        evidence = func(self, batch, *args, **kwargs)
-        if isinstance(evidence, DataFrame):
-            # TODO: We need to check column types and convert as needed
-            evidence["batch_id"] = batch.batch_id
-            evidence_keep = evidence[
-                [c for c in evidence.columns if c not in exclude_cols]
-            ]
-            res = batch.mongo[self.name].insert_many(
-                evidence_keep.to_dict(orient="records")
-            )
-            assert evidence_keep.shape[0] == len(
-                res.inserted_ids
-            )  # TODO: Better exception
-            evidence.drop(columns=["batch_id"], inplace=True)
-        else:
-            raise NotImplementedError(
-                "Serialization is not implemented for type {}".format(
-                    type(evidence)
-                )
-            )  # TODO: Is there a better way to handle this?
-        return evidence
+@retry(AutoReconnect)
+def insert_many(collection: Collection, docs: Sequence[Dict[str, Any]]):
+    """Insert many with retry."""
+    return collection.insert_many(docs)
 
-    return wrapper
+
+@retry(AutoReconnect)
+def update_one(
+    collection: Collection, key: Dict[str, Any], doc: Dict[str, Any]
+):
+    """Update one with retry."""
+    return collection.update_one(key, doc)

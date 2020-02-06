@@ -1,26 +1,24 @@
 # -*- coding: utf-8 -*-
 """Test dsdk."""
 
-from unittest.mock import Mock
-
-import configargparse
+from pandas import DataFrame
 
 from dsdk import Batch, Service, Task, retry
 
 
-def test_batch(monkeypatch):
-    """Test batch."""
+def test_batch_evidence():
+    """Test batch evidence."""
+
+    df = DataFrame()
 
     class _MockTask(Task):  # pylint: disable=too-few-public-methods
-        def run(self, batch: Batch, service: Service):
-            return 42
+        def __call__(self, batch: Batch, service: Service) -> None:
+            service.store_evidence(batch, "test", df)
 
-    monkeypatch.setattr(configargparse, "ArgParser", Mock)
-
-    service = Service((_MockTask(name="test"),))
-    batch = service.run()
+    service = Service(pipeline=(_MockTask(name="test"),))
+    batch = service()
     assert len(batch.evidence) == 1
-    assert batch.evidence["test"] == 42
+    assert batch.evidence["test"] is df
 
 
 def test_retry_other_exception():

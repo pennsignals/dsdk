@@ -3,53 +3,63 @@
 
 from __future__ import annotations
 
+from abc import ABC
+from contextlib import contextmanager
 from logging import NullHandler, getLogger
-from urllib.parse import unquote
+from typing import TYPE_CHECKING, Generator, Optional, cast
 
 from configargparse import ArgParser as ArgumentParser
-from configargparse import Namespace
 
 from .service import Service
 
 try:
     # Since not everyone will use mssql
     from sqlalchemy import create_engine
-    from sqlalchemy.engine.base import Engine
 except ImportError:
     create_engine = None
-    Engine = None
 
 
 logger = getLogger(__name__)
 logger.addHandler(NullHandler())
 
 
-def get_mssql_connection(uri: str) -> Engine:
-    r"""Get mssql connection.
-
-    uri: mssql+pymssql://domain\\user:pass@host:port/database?timeout=timeout
-
-        Domain and timeout are optional. See sqlalchemy docs for
-        additional options.
-    """
-    return create_engine(uri)
+if TYPE_CHECKING:
+    BaseMixin = Service
+else:
+    BaseMixin = ABC
 
 
-class Mixin(Service):
+class Mixin(BaseMixin):
     """Mixin."""
 
-    @classmethod
-    def add_arguments(cls, parser: ArgumentParser) -> None:
-        """Add arguments."""
-        super().add_arguments(parser)
+    def __init__(self, *, mssql_uri: Optional[str] = None, **kwargs):
+        """__init__."""
+        # inferred type of self._mssql_uri must not be optional...
+        self._mssql_uri = cast(str, mssql_uri)
+        super().__init__(**kwargs)
+
+        # ... because self._mssql_uri is not optional
+        assert self._mssql_uri is not None
+        self._mssql = create_engine(self._mssql_uri)
+
+    def inject_arguments(self, parser: ArgumentParser) -> None:
+        """Inject arguments."""
+        super().inject_arguments(parser)
+
+        def _inject_mssql_uri(mssql_uri: str) -> str:
+            self._mssql_uri = mssql_uri
+            return mssql_uri
+
         parser.add(
             "--mssqluri",
             required=True,
-            help="MS SQL URI used to connect to MS SQL Server",
+            help="MSSQL URI used to connect to a MSSQL database",
             env_var="MSSQL_URI",
+            type=_inject_mssql_uri,
         )
 
-    def setup(self, args: Namespace):
-        """Setup."""
-        super().setup(args)
-        self.mssql = get_mssql_connection(unquote(args.mssqluri))
+    @contextmanager
+    def open_mssql(self) -> Generator:
+        """Open mssql."""
+        with self._mssql.connect() as con:
+            yield con

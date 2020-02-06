@@ -3,11 +3,14 @@
 
 from __future__ import annotations
 
-from collections import OrderedDict
 from functools import wraps
+from json import dump as json_dump
+from json import load as json_load
 from logging import NullHandler, getLogger
+from pickle import dump as pickle_dump
+from pickle import load as pickle_load
 from time import sleep as default_sleep
-from typing import Callable, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from pandas import DataFrame
 from pandas import concat as pd_concat
@@ -16,41 +19,84 @@ logger = getLogger(__name__)
 logger.addHandler(NullHandler())
 
 
-def get_res_with_values(query, values, conn) -> list:
-    """Get result from query with values."""
-    res = conn.execute(query, values)
-    data = res.fetchall()
-    data_d = [dict(r.items()) for r in data]
-    return data_d
-
-
-def chunks(lst, n):
+def chunks(sequence: Sequence[Any], n: int):
     """Yield successive n-sized chunks from l."""
-    for i in range(0, len(lst), n):
-        yield lst[i : i + n]  # noqa: E203
+    for i in range(0, len(sequence), n):
+        yield sequence[i : i + n]
+
+
+def dump_json_file(obj: Any, path: str) -> None:
+    """Dump json to file."""
+    with open(path, "w") as fout:
+        json_dump(obj, fout)
+
+
+def dump_pickle_file(obj: Any, path: str) -> None:
+    """Dump pickle to file."""
+    with open(path, "wb") as fout:
+        pickle_dump(obj, fout)
+
+
+def load_json_file(path: str) -> object:
+    """Load json from file."""
+    with open(path, "r") as fin:
+        return json_load(fin)
+
+
+def load_pickle_file(path: str) -> object:
+    """Load pickle from file."""
+    with open(path, "rb") as fin:
+        return pickle_load(fin)
+
+
+def df_from_query_by_ids(
+    con,  # TODO type annotation for con
+    query: str,
+    ids: Sequence[Any],
+    parameters: Optional[Dict[str, Any]] = None,
+    size: int = 10000,
+) -> DataFrame:
+    """Return DataFrame from query by ids."""
+    if parameters is None:
+        parameters = {}
+    return pd_concat(
+        [
+            DataFrame(
+                [
+                    dict(each.items())
+                    for each in con.execute(
+                        query, {"ids": chunk, **parameters}
+                    ).fetchall()
+                ]
+            )
+            for chunk in chunks(ids, size)
+        ],
+        ignore_index=True,
+    )
+
+
+def get_res_with_values(query, values, con) -> List[Dict[str, Any]]:
+    """Get result from query with values."""
+    result = con.execute(query, values)
+    return [dict(each.items()) for each in result.fetchall()]
 
 
 def chunk_res_with_values(
-    query, ids, conn, chunk_size=10000, params=None
+    query: str,
+    ids: Sequence[Any],
+    con,
+    size: int = 10000,
+    params: Optional[Dict[str, Any]] = None,
 ) -> DataFrame:
     """Chunk query result values."""
     if params is None:
         params = {}
-    res = []
-    for sub_ids in chunks(ids, chunk_size):
-        params.update({"ids": sub_ids})
-        res.append(DataFrame(get_res_with_values(query, params, conn)))
-    return pd_concat(res, ignore_index=True)
-
-
-class WriteOnceDict(OrderedDict):
-    """Write Once Dict."""
-
-    def __setitem__(self, key, value):
-        """__setitem__."""
-        if key in self:
-            raise KeyError("{} has already been set".format(key))
-        super(WriteOnceDict, self).__setitem__(key, value)
+    result = []
+    for chunk in chunks(ids, size):
+        params.update({"ids": chunk})
+        result.append(DataFrame(get_res_with_values(query, params, con)))
+    del params["ids"]
+    return pd_concat(result, ignore_index=True)
 
 
 def retry(
