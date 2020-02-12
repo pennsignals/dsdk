@@ -54,13 +54,21 @@ LINT_REQUIRES = (
     "pylint",
 )
 
+MONGO_REQUIRES = ("pymongo",)
+
+MSSQL_REQUIRES = ("pymssql<3.0",)
+
 KEYWORDS = (
     # eg: 'keyword1', 'keyword2', 'keyword3',
 )
 
 SETUP_REQUIRES = ("pytest-runner", "setuptools_scm>=3.3.3")
 
-TEST_REQUIRES = ("coverage", "pytest", "pytest-cov", "tox")
+TEST_REQUIRES = (
+    ("coverage", "pytest", "pytest-cov", "tox")
+    + MONGO_REQUIRES
+    + MSSQL_REQUIRES
+)
 
 
 def read(*names, **kwargs):
@@ -99,6 +107,8 @@ setup(
         "check": CHECK_REQUIRES,
         "doc": DOC_REQUIRES,
         "lint": LINT_REQUIRES,
+        "mongo": MONGO_REQUIRES,
+        "mssql": MSSQL_REQUIRES,
         "test": TEST_REQUIRES,
     },
     include_package_data=True,
