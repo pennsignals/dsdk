@@ -24,7 +24,7 @@ matrix:
 #         - TOXPYTHON=pypy3
 #       python: 'pypy3'
 before_install:
-  - sudo apt-get install freetds freetds-dev
+  - sudo apt-get install freetds-bin freetds-dev
   - echo -e "\n
     [global]\n
     use ntlmv2 = yes\n
