@@ -26,7 +26,7 @@ matrix:
 before_install:
   - echo -e "\n[global]\nuse ntlmv2 = yes\ntds version = 7.3" >> /tmp/freetds.conf
   - sudo cp /tmp/freetds.conf /etc/
-  - cat
+  - cat /etc/freetds.conf
   - python --version
   - uname -a
   - lsb_release -a || true
