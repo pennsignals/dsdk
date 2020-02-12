@@ -43,8 +43,8 @@ def test_mixin_with_parser():
     model_path = "./model.pkl"
     dump_pickle_file(model, model_path)
 
-    mongo_uri = "mongodb://mongo?test"
-    mssql_uri = "mssql+pymssql://mssql?test"
+    mongo_uri = "mongodb://mongo/database?authsource=admin"
+    mssql_uri = "mssql+pymssql://user:pass@mssql:1433/database"
 
     class _Extract(Task):  # pylint: disable=too-few-public-methods
         def __call__(self, batch: Batch, service: Service) -> None:
