@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 """Test dsdk."""
 
+from sys import version_info
+from typing import Any, Dict
+
 from configargparse import ArgParser as ArgumentParser
 from pandas import DataFrame
+from pytest import mark
 
 from dsdk import (
     Batch,
@@ -16,6 +20,21 @@ from dsdk import (
     dump_pickle_file,
     retry,
 )
+
+
+class _Extract(Task):  # pylint: disable=too-few-public-methods
+    def __call__(self, batch: Batch, service: Service) -> None:
+        pass
+
+
+class _Transform(Task):  # pylint: disable=too-few-public-methods
+    def __call__(self, batch: Batch, service: Service) -> None:
+        pass
+
+
+class _Predict(Task):  # pylint: disable=too-few-public-methods
+    def __call__(self, batch: Batch, service: Service) -> None:
+        pass
 
 
 def test_batch_evidence():
@@ -33,10 +52,10 @@ def test_batch_evidence():
     assert batch.evidence["test"] is df
 
 
-def test_mixin_with_parser():
-    """Test mixin with parser."""
+def mongo_mixin_parser_kwargs() -> Dict[str, Any]:
+    """Mongo mixin with parser."""
     config_path = "./config.json"
-    config = {}
+    config: Dict[str, Any] = {}
     dump_json_file(config, config_path)
 
     model = Model(name="test", version="0.0.1")
@@ -44,24 +63,52 @@ def test_mixin_with_parser():
     dump_pickle_file(model, model_path)
 
     mongo_uri = "mongodb://mongo/database?authsource=admin"
-    mssql_uri = "mssql+pymssql://user:pass@mssql:1433/database"
 
-    class _Extract(Task):  # pylint: disable=too-few-public-methods
-        def __call__(self, batch: Batch, service: Service) -> None:
-            pass
+    argv = [
+        "--config",
+        config_path,
+        "--model",
+        model_path,
+        "--mongo-uri",
+        mongo_uri,
+    ]
+    parser = ArgumentParser()
+    return {"argv": argv, "parser": parser}
 
-    class _Transform(Task):  # pylint: disable=too-few-public-methods
-        def __call__(self, batch: Batch, service: Service) -> None:
-            pass
 
-    class _Predict(Task):  # pylint: disable=too-few-public-methods
-        def __call__(self, batch: Batch, service: Service) -> None:
-            pass
+def mongo_mixin_kwargs() -> Dict[str, Any]:
+    """Return mongo mixin kwargs."""
+    model = Model(name="test", version="0.0.1")
+    mongo_uri = "mongodb://mongo/database?authsource=admin"
 
-    class _App(MongoEvidenceMixin, MssqlMixin, ModelMixin, Service):
+    return {"model": model, "mongo_uri": mongo_uri}
+
+
+@mark.parametrize(
+    "kwargs", [mongo_mixin_parser_kwargs(), mongo_mixin_kwargs()]
+)
+def test_mongo_mixin(kwargs: Dict[str, Any]) -> None:
+    """Test mongo mixin."""
+
+    class _App(MongoEvidenceMixin, ModelMixin, Service):
         def __init__(self, **kwargs):
             pipeline = (_Extract, _Transform, _Predict)
             super().__init__(pipeline=pipeline, **kwargs)
+
+    _ = _App(**kwargs)
+
+
+def pymssql_mixin_parser_kwargs():
+    """Return pymssql mixin parser kwargs."""
+    config_path = "./config.json"
+    config: Dict[str, Any] = {}
+    dump_json_file(config, config_path)
+
+    model = Model(name="test", version="0.0.1")
+    model_path = "./model.pkl"
+    dump_pickle_file(model, model_path)
+
+    mssql_uri = "mssql+pymssql://mssql?test"
 
     argv = [
         "--config",
@@ -70,37 +117,34 @@ def test_mixin_with_parser():
         model_path,
         "--mssql-uri",
         mssql_uri,
-        "--mongo-uri",
-        mongo_uri,
     ]
     parser = ArgumentParser()
-    _ = _App(parser=parser, argv=argv)
+    return {"argv": argv, "parser": parser}
 
 
-def test_mixin_without_parser():
-    """Test mixin without parser."""
+def pymssql_mixin_kwargs():
+    """Return pymssql mixin kwargs."""
     model = Model(name="test", version="0.0.1")
-    mongo_uri = "mongodb://mongo?test"
     mssql_uri = "mssql+pymssql://mssql?test"
 
-    class _Extract(Task):  # pylint: disable=too-few-public-methods
-        def __call__(self, batch: Batch, service: Service) -> None:
-            pass
+    return {"model": model, "mssql_uri": mssql_uri}
 
-    class _Transform(Task):  # pylint: disable=too-few-public-methods
-        def __call__(self, batch: Batch, service: Service) -> None:
-            pass
 
-    class _Predict(Task):  # pylint: disable=too-few-public-methods
-        def __call__(self, batch: Batch, service: Service) -> None:
-            pass
+@mark.skipif(
+    version_info >= (3, 8), reason="pymssql not supported >= python 3.8"
+)
+@mark.parametrize(
+    "kwargs", [pymssql_mixin_parser_kwargs(), pymssql_mixin_kwargs()]
+)
+def test_pymssql_mixin(kwargs: Dict[str, Any]) -> None:
+    """Test mssql mixin."""
 
-    class _App(MongoEvidenceMixin, MssqlMixin, ModelMixin, Service):
+    class _App(MssqlMixin, ModelMixin, Service):
         def __init__(self, **kwargs):
             pipeline = (_Extract, _Transform, _Predict)
             super().__init__(pipeline=pipeline, **kwargs)
 
-    _ = _App(model=model, mongo_uri=mongo_uri, mssql_uri=mssql_uri)
+    _ = _App(**kwargs)
 
 
 def test_retry_other_exception():
