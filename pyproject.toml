@@ -1,9 +1,21 @@
+[project]
+name = "dsdk"
+authors = [
+    "Michael Becker",
+    "Corey Chivers",
+    "Jason Lubken"
+]
+license = "MIT"
+python = "^3.7"
+readme = "README.rst"
+
 [build-system]
 requires = [
-    "setuptools>=42.0.2",
+    "setuptools>=42.8.0",
     "setuptools_scm[toml]>=3.3.3",
     "wheel",
 ]
+build-backend = "setuptools.build_meta"
 
 [tool.black]
 line-length = 79
