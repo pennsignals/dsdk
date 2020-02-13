@@ -52,6 +52,7 @@ LINT_REQUIRES = (
     "pep8-naming",
     "pre-commit",
     "pylint",
+    "pytest",  # lint of tests fails without import
 )
 
 MONGO_REQUIRES = ("pymongo",)
