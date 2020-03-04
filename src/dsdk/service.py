@@ -81,7 +81,7 @@ class Batch:  # pylint: disable=too-few-public-methods
 
     def as_update_doc(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """As update doc."""
-        return ({"_id": self.key}, {"record": self.record.as_doc()})
+        return ({"_id": self.key}, {"$set": {"record": self.record.as_doc()}})
 
 
 class Evidence(OrderedDict):
