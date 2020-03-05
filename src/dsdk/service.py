@@ -174,11 +174,9 @@ class Service:
 class Task:  # pylint: disable=too-few-public-methods
     """Task."""
 
-    def __init__(self, name: Optional[str] = None) -> None:
+    def __init__(self, name: str) -> None:
         """__init__."""
-        if not name:
-            name = self.__class__.__name__
-        self.name = cast(str, name)
+        self.name = name
 
     def __call__(self, batch: Batch, service: Service) -> None:
         """__call__."""
