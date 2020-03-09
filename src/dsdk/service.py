@@ -12,7 +12,6 @@ from typing import Any, Dict, Generator, Optional, Sequence, Tuple, cast
 
 from configargparse import ArgParser as ArgumentParser
 from configargparse import Namespace
-from pandas import DataFrame
 
 logger = getLogger(__name__)
 logger.addHandler(NullHandler())
@@ -123,10 +122,6 @@ class Service:
         self.check()
         with self.open_batch() as batch:
             for task in self.pipeline:
-                # TODO eliminate name
-                #      allow tasks to be any Callable
-                #      log inside the task instead
-                logger.info(task.name)
                 task(batch, self)
             return batch
 
@@ -161,22 +156,17 @@ class Service:
         record.end = datetime.now(timezone.utc)
 
     def store_evidence(  # pylint: disable=no-self-use,unused-argument
-        self,
-        batch: Batch,
-        key: str,
-        df: DataFrame,
-        exclude: Sequence[str] = (),
+        self, batch: Batch, *args, exclude: Sequence[str] = ()
     ) -> None:
         """Store evidence."""
-        batch.evidence[key] = df
+        pairs = args
+        while pairs:
+            key, df, *pairs = pairs  # type: ignore
+            batch.evidence[key] = df
 
 
 class Task:  # pylint: disable=too-few-public-methods
     """Task."""
-
-    def __init__(self, name: str) -> None:
-        """__init__."""
-        self.name = name
 
     def __call__(self, batch: Batch, service: Service) -> None:
         """__call__."""

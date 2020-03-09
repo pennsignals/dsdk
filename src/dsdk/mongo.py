@@ -17,7 +17,6 @@ from typing import (
 )
 
 from configargparse import ArgParser as ArgumentParser
-from pandas import DataFrame
 
 from .service import Batch, Model, Service
 from .utils import retry
@@ -112,25 +111,24 @@ class EvidenceMixin(Mixin):
                 update_one(database.batches, key, doc)
 
     def store_evidence(
-        self,
-        batch: Batch,
-        key: str,
-        df: DataFrame,
-        exclude: Sequence[str] = (),
+        self, batch: Batch, *args, exclude: Sequence[str] = ()
     ) -> None:
         """Store Evidence."""
-        # TODO We need to check column types and convert as needed
-        # TODO Find a way to add batch_id without mutating df
-        df["batch_id"] = batch.key
-        columns = df[[c for c in df.columns if c not in exclude]]
-        docs = columns.to_dict(orient="records")
-        with self.open_mongo() as database:
-            result = insert_many(database[key], docs)
-            assert columns.shape[0] == len(
-                result.inserted_ids
-            )  # TODO: Better exception
-        df.drop(columns=["batch_id"], inplace=True)
-        super().store_evidence(batch, key, df, exclude)
+        super().store_evidence(batch, *args, exclude)
+        pairs = args
+        while pairs:
+            key, df, *pairs = pairs  # type: ignore
+            # TODO We need to check column types and convert as needed
+            # TODO Find a way to add batch_id without mutating df
+            df["batch_id"] = batch.key
+            columns = df[[c for c in df.columns if c not in exclude]]
+            docs = columns.to_dict(orient="records")
+            with self.open_mongo() as database:
+                result = insert_many(database[key], docs)
+                assert columns.shape[0] == len(
+                    result.inserted_ids
+                )  # TODO: Better exception
+            df.drop(columns=["batch_id"], inplace=True)
 
 
 @contextmanager
