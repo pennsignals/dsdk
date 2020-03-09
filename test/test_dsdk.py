@@ -46,7 +46,7 @@ def test_batch_evidence():
         def __call__(self, batch: Batch, service: Service) -> None:
             service.store_evidence(batch, "test", df)
 
-    service = Service(pipeline=(_MockTask(name="test"),))
+    service = Service(pipeline=(_MockTask(),))
     batch = service()
     assert len(batch.evidence) == 1
     assert batch.evidence["test"] is df
