@@ -159,9 +159,8 @@ class Service:
         self, batch: Batch, *args, exclude: Sequence[str] = ()
     ) -> None:
         """Store evidence."""
-        pairs = args
-        while pairs:
-            key, df, *pairs = pairs  # type: ignore
+        while args:
+            key, df, *args = args  # type: ignore
             batch.evidence[key] = df
 
 

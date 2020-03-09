@@ -115,9 +115,8 @@ class EvidenceMixin(Mixin):
     ) -> None:
         """Store Evidence."""
         super().store_evidence(batch, *args, exclude)
-        pairs = args
-        while pairs:
-            key, df, *pairs = pairs  # type: ignore
+        while args:
+            key, df, *args = args  # type: ignore
             # TODO We need to check column types and convert as needed
             # TODO Find a way to add batch_id without mutating df
             df["batch_id"] = batch.key
