@@ -4,8 +4,7 @@
 
 import io
 import re
-from glob import glob
-from os.path import basename, dirname, join, splitext
+from os.path import dirname, join
 
 from setuptools import find_packages, setup
 
@@ -87,11 +86,6 @@ def long_description():
     )
 
 
-def py_modules():
-    """Py Modules."""
-    return tuple(splitext(basename(path))[0] for path in glob("src/*.py"))
-
-
 setup(
     name="dsdk",
     license="MIT",
@@ -99,7 +93,6 @@ setup(
     author="Michael Becker",
     author_email="mike@beckerfuffle.com",
     classifiers=list(CLASSIFIERS),
-    py_modules=py_modules(),
     extras_require={
         "check": CHECK_REQUIRES,
         "doc": DOC_REQUIRES,
