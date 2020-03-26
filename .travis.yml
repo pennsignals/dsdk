@@ -13,17 +13,20 @@ matrix:
 #     - python: '3.7'
 #       env:
 #         - TOXENV=docs
-    - env:
+    - python: '3.7'
+      env:
         - TOXENV=py37
-      python: '3.7'
-    - env:
+    - python: '3.8'
+      env:
         - TOXENV=py38
-      python: '3.8'
 #     - env:
 #         - TOXENV=pypy3
 #         - TOXPYTHON=pypy3
 #       python: 'pypy3'
 before_install:
+  - echo -e "\n[global]\nuse ntlmv2 = yes\ntds version = 7.3" >> /tmp/freetds.conf
+  - sudo cp /tmp/freetds.conf /etc/
+  - cat /etc/freetds.conf
   - python --version
   - uname -a
   - lsb_release -a || true

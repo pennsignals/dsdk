@@ -4,8 +4,7 @@
 
 import io
 import re
-from glob import glob
-from os.path import basename, dirname, join, splitext
+from os.path import dirname, join
 
 from setuptools import find_packages, setup
 
@@ -52,7 +51,12 @@ LINT_REQUIRES = (
     "pep8-naming",
     "pre-commit",
     "pylint",
+    "pytest",  # lint of tests fails without import
 )
+
+MONGO_REQUIRES = ("pymongo",)
+
+MSSQL_REQUIRES = ("pymssql<3.0", "sqlalchemy")
 
 KEYWORDS = (
     # eg: 'keyword1', 'keyword2', 'keyword3',
@@ -82,11 +86,6 @@ def long_description():
     )
 
 
-def py_modules():
-    """Py Modules."""
-    return tuple(splitext(basename(path))[0] for path in glob("src/*.py"))
-
-
 setup(
     name="dsdk",
     license="MIT",
@@ -94,11 +93,12 @@ setup(
     author="Michael Becker",
     author_email="mike@beckerfuffle.com",
     classifiers=list(CLASSIFIERS),
-    py_modules=py_modules(),
     extras_require={
         "check": CHECK_REQUIRES,
         "doc": DOC_REQUIRES,
         "lint": LINT_REQUIRES,
+        "mongo": MONGO_REQUIRES,
+        "mssql": MSSQL_REQUIRES,
         "test": TEST_REQUIRES,
     },
     include_package_data=True,
@@ -117,6 +117,6 @@ setup(
     setup_requires=SETUP_REQUIRES,
     tests_require=LINT_REQUIRES + TEST_REQUIRES,
     url="https://github.com/pennsignals/dsdk",
-    use_scm_version={"fallback_version": "0.1.0", "local_scheme": "dirty-tag"},
+    use_scm_version={"local_scheme": "dirty-tag"},
     zip_safe=False,
 )

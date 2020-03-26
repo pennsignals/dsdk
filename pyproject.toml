@@ -1,13 +1,42 @@
+[project]
+name = "dsdk"
+authors = [
+    "Michael Becker",
+    "Corey Chivers",
+    "Jason Lubken"
+]
+license = "MIT"
+python = "^3.7"
+readme = "README.rst"
+
 [build-system]
 requires = [
-    "setuptools>=42.0.2",
+    "setuptools>=42.8.0",
     "setuptools_scm[toml]>=3.3.3",
     "wheel",
 ]
+build-backend = "setuptools.build_meta"
 
 [tool.black]
 line-length = 79
 target-version = ["py37","py38"]
+
+[tool.coverage.paths]
+source = ["src", "*/site-packages"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "raise NotImplementedError()",
+    "pragma: nocover",
+    "if __name__ == .__main__.:",
+]
+precision = 2
+show_missing = true
+
+[tool.coverage.run]
+branch = true
+source = ["dsdk", "test"]
+parallel = true
 
 [tool.isort]
 include_trailing_comma = true
