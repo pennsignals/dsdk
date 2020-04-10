@@ -1,5 +1,5 @@
 [BASIC]
-good-names=a,b,c,d,df,i,l,logger,n,on,tz
+good-names=a,b,c,d,df,i,logger,n,tz
 
 [MASTER]
 ignore=ci,docs
