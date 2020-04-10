@@ -56,7 +56,7 @@ LINT_REQUIRES = (
 
 MONGO_REQUIRES = ("pymongo",)
 
-MSSQL_REQUIRES = ("pymssql<3.0", "sqlalchemy")
+MSSQL_REQUIRES = ("cython", "pymssql<3.0", "sqlalchemy")
 
 KEYWORDS = (
     # eg: 'keyword1', 'keyword2', 'keyword3',

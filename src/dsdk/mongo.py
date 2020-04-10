@@ -110,11 +110,10 @@ class EvidenceMixin(Mixin):
             with self.open_mongo() as database:
                 update_one(database.batches, key, doc)
 
-    def store_evidence(
-        self, batch: Batch, *args, exclude: Sequence[str] = ()
-    ) -> None:
+    def store_evidence(self, batch: Batch, *args, **kwargs) -> None:
         """Store Evidence."""
-        super().store_evidence(batch, *args, exclude)
+        super().store_evidence(batch, *args, **kwargs)
+        exclude = kwargs.get("exclude", ())
         while args:
             key, df, *args = args  # type: ignore
             # TODO We need to check column types and convert as needed

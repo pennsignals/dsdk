@@ -156,7 +156,7 @@ class Service:
         record.end = datetime.now(timezone.utc)
 
     def store_evidence(  # pylint: disable=no-self-use,unused-argument
-        self, batch: Batch, *args, exclude: Sequence[str] = ()
+        self, batch: Batch, *args, **kwargs
     ) -> None:
         """Store evidence."""
         while args:
