@@ -58,6 +58,7 @@ docs/_build
 *~
 .*.sw[po]
 .build
+.vscode
 .ve
 .env
 .cache

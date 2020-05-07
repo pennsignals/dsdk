@@ -103,12 +103,13 @@ class EvidenceMixin(Mixin):
             doc = batch.as_insert_doc(model)  # <- model dependency
             with self.open_mongo() as database:
                 insert_one(database.batches, doc)
-
+                logger.info('{"mongo": "insert"}')
             yield batch
 
             key, doc = batch.as_update_doc()
             with self.open_mongo() as database:
                 update_one(database.batches, key, doc)
+                logger.info('{"mongo": "update"}')
 
     def store_evidence(self, batch: Batch, *args, **kwargs) -> None:
         """Store Evidence."""
