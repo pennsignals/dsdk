@@ -102,14 +102,22 @@ class EvidenceMixin(Mixin):
         with super().open_batch(key) as batch:
             doc = batch.as_insert_doc(model)  # <- model dependency
             with self.open_mongo() as database:
-                insert_one(database.batches, doc)
-                logger.info('{"mongo": "insert"}')
+                key = insert_one(database.batches, doc)
+                logger.info(
+                    '{"mongo.insert": {"database": "%s", "collection": "%s"}}',
+                    database.name,
+                    database.collection.name,
+                )
             yield batch
 
             key, doc = batch.as_update_doc()
             with self.open_mongo() as database:
                 update_one(database.batches, key, doc)
-                logger.info('{"mongo": "update"}')
+                logger.info(
+                    '{"mongo.update": {"database": "%s", "collection": "%s"}}',
+                    database.name,
+                    database.collection.name,
+                )
 
     def store_evidence(self, batch: Batch, *args, **kwargs) -> None:
         """Store Evidence."""
@@ -126,8 +134,21 @@ class EvidenceMixin(Mixin):
                 result = insert_many(database[key], docs)
                 assert columns.shape[0] == len(
                     result.inserted_ids
-                )  # TODO: Better exception
+                ), logger.error(
+                    '{"mongo.insert_many": {"database": "%s", "collection": "%s", \
+                        "message": "columns.shape[0] != len(results.inserted_ids)"}}',
+                    database.name,
+                    database.collection.name,
+                )
+
+                # TODO: Better exception
             df.drop(columns=["batch_id"], inplace=True)
+            logger.info(
+                '{"mongo.insert_many": {"database": "%s", "collection": "%s", "count": %s"}}',
+                database.name,
+                database.collection.name,
+                len(df.index),
+            )
 
 
 @contextmanager
