@@ -123,6 +123,7 @@ class Service:
         with self.open_batch() as batch:
             for task in self.pipeline:
                 task(batch, self)
+            logger.info('{"check": "pipeline", "%s"}',','.join(map(str, self.pipeline)))
             return batch
 
     def check(self) -> None:
@@ -154,6 +155,7 @@ class Service:
         record = Interval(on=datetime.now(timezone.utc), end=None)
         yield Batch(key, record)
         record.end = datetime.now(timezone.utc)
+        logger.info('{"batch.open": "batch", "key": "%s"}',key)
 
     def store_evidence(  # pylint: disable=no-self-use,unused-argument
         self, batch: Batch, *args, **kwargs
@@ -162,7 +164,7 @@ class Service:
         while args:
             key, df, *args = args  # type: ignore
             batch.evidence[key] = df
-
+        logger.info('{"store.evidence": "batch", "key": "%s", "count": "%s"}',key, len(batch.evidence))
 
 class Task:  # pylint: disable=too-few-public-methods
     """Task."""

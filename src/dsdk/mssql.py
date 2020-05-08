@@ -67,3 +67,4 @@ class Mixin(BaseMixin):
         """Open mssql."""
         with self._mssql.connect() as con:
             yield con
+            logger.info('{"mssql" "connect"}')
