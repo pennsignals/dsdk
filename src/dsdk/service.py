@@ -6,15 +6,22 @@ from __future__ import annotations
 from collections import OrderedDict
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from logging import NullHandler, getLogger
+from logging import NullHandler, getLogger, basicConfig, LoggerAdapter, INFO
 from sys import argv as sys_argv
 from typing import Any, Dict, Generator, Optional, Sequence, Tuple, cast
 
 from configargparse import ArgParser as ArgumentParser
 from configargparse import Namespace
 
+# TODO Add import calling function from parent application
+extra = {'callingfunc':''}
 logger = getLogger(__name__)
+FORMAT = '%(asctime)-15s - %(name)s - %(levelname)s {"callingfunc": "%(callingfunc)s", "module": "%(module)s", "function": "%(funcName)s", %(message)s}' 
+basicConfig(format=FORMAT)
+logger.setLevel(INFO)
+# Add extra kwargs to message format
 logger.addHandler(NullHandler())
+logger = LoggerAdapter(logger, extra)
 
 
 class Interval:  # pylint: disable=too-few-public-methods
@@ -123,7 +130,7 @@ class Service:
         with self.open_batch() as batch:
             for task in self.pipeline:
                 task(batch, self)
-            logger.info('{"check": "pipeline", "%s"}',','.join(map(str, self.pipeline)))
+            logger.info('"%s"',', '.join(map(lambda s: str(s).split(' ')[0][1:], self.pipeline)))
             return batch
 
     def check(self) -> None:
@@ -155,7 +162,7 @@ class Service:
         record = Interval(on=datetime.now(timezone.utc), end=None)
         yield Batch(key, record)
         record.end = datetime.now(timezone.utc)
-        logger.info('{"batch.open": "batch", "key": "%s"}',key)
+        logger.info('"key": "%s"',key)
 
     def store_evidence(  # pylint: disable=no-self-use,unused-argument
         self, batch: Batch, *args, **kwargs
@@ -164,7 +171,7 @@ class Service:
         while args:
             key, df, *args = args  # type: ignore
             batch.evidence[key] = df
-        logger.info('{"store.evidence": "batch", "key": "%s", "count": "%s"}',key, len(batch.evidence))
+        logger.info('"key": "%s", "count": "%s"}',key, len(batch.evidence))
 
 class Task:  # pylint: disable=too-few-public-methods
     """Task."""

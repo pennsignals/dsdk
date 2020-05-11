@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from abc import ABC
 from contextlib import contextmanager
-from logging import NullHandler, getLogger
+from logging import NullHandler, getLogger, basicConfig, LoggerAdapter, INFO
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -34,9 +34,15 @@ except ImportError:
     Database = None
     AutoReconnect = None
 
-
+# TODO Add import calling function from parent application
+extra = {'callingfunc':''}
 logger = getLogger(__name__)
+FORMAT = '%(asctime)-15s - %(name)s - %(levelname)s {"callingfunc": "%(callingfunc)s", "module": "%(module)s", "function": "%(funcName)s", %(message)s}' 
+basicConfig(format=FORMAT)
+logger.setLevel(INFO)
+# Add extra kwargs to message format
 logger.addHandler(NullHandler())
+logger = LoggerAdapter(logger, extra)
 
 
 if TYPE_CHECKING:
@@ -104,7 +110,7 @@ class EvidenceMixin(Mixin):
             with self.open_mongo() as database:
                 key = insert_one(database.batches, doc)
                 logger.info(
-                    '{"mongo.insert": {"database": "%s", "collection": "%s"}}',
+                    '"action": "insert": "database": "%s", "collection": "%s"',
                     database.name,
                     database.collection.name,
                 )
@@ -114,7 +120,7 @@ class EvidenceMixin(Mixin):
             with self.open_mongo() as database:
                 update_one(database.batches, key, doc)
                 logger.info(
-                    '{"mongo.update": {"database": "%s", "collection": "%s"}}',
+                    '"action": "update", "database": "%s", "collection": "%s"',
                     database.name,
                     database.collection.name,
                 )
@@ -135,8 +141,8 @@ class EvidenceMixin(Mixin):
                 assert columns.shape[0] == len(
                     result.inserted_ids
                 ), logger.error(
-                    '{"mongo.insert_many": {"database": "%s", "collection": "%s", \
-                        "message": "columns.shape[0] != len(results.inserted_ids)"}}',
+                    '"action" "insert_many", "database": "%s", "collection": "%s", \
+                        "message": "columns.shape[0] != len(results.inserted_ids)"',
                     database.name,
                     database.collection.name,
                 )
@@ -144,7 +150,7 @@ class EvidenceMixin(Mixin):
                 # TODO: Better exception
             df.drop(columns=["batch_id"], inplace=True)
             logger.info(
-                '{"mongo.insert_many": {"database": "%s", "collection": "%s", "count": %s"}}',
+                '"action": "insert_many", "database": "%s", "collection": "%s", "count": %s"',
                 database.name,
                 database.collection.name,
                 len(df.index),
