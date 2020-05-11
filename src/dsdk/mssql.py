@@ -5,7 +5,14 @@ from __future__ import annotations
 
 from abc import ABC
 from contextlib import contextmanager
-from logging import INFO, LoggerAdapter, NullHandler, basicConfig, getLogger
+from logging import (
+    INFO,
+    Logger,
+    LoggerAdapter,
+    NullHandler,
+    basicConfig,
+    getLogger,
+)
 from typing import TYPE_CHECKING, Generator, Optional, cast
 
 from configargparse import ArgParser as ArgumentParser
@@ -19,14 +26,16 @@ except ImportError:
     create_engine = None
 
 # TODO Add import calling function from parent application
-extra = {"callingfunc": ""}
+EXTRA = {"callingfunc": ""}
 logger = getLogger(__name__)
-FORMAT = '%(asctime)-15s - %(name)s - %(levelname)s - {"callingfunc": "%(callingfunc)s", "module": "%(module)s", "function": "%(funcName)s", %(message)s}'
+FORMAT = '%(asctime)-15s - %(name)s - %(levelname)s - {"callingfunc": \
+    "%(callingfunc)s", "module": "%(module)s", "function": "%(funcName)s", \
+        %(message)s}'
 basicConfig(format=FORMAT)
 logger.setLevel(INFO)
 # Add extra kwargs to message format
 logger.addHandler(NullHandler())
-logger = LoggerAdapter(logger, extra)
+logger = cast(Logger, LoggerAdapter(logger, EXTRA))
 
 
 if TYPE_CHECKING:

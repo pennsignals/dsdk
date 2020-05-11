@@ -5,7 +5,14 @@ from __future__ import annotations
 
 from abc import ABC
 from contextlib import contextmanager
-from logging import INFO, LoggerAdapter, NullHandler, basicConfig, getLogger
+from logging import (
+    INFO,
+    Logger,
+    LoggerAdapter,
+    NullHandler,
+    basicConfig,
+    getLogger,
+)
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -35,14 +42,16 @@ except ImportError:
     AutoReconnect = None
 
 # TODO Add import calling function from parent application
-extra = {"callingfunc": ""}
+EXTRA = {"callingfunc": ""}
 logger = getLogger(__name__)
-FORMAT = '%(asctime)-15s - %(name)s - %(levelname)s - {"callingfunc": "%(callingfunc)s", "module": "%(module)s", "function": "%(funcName)s", %(message)s}'
+FORMAT = '%(asctime)-15s - %(name)s - %(levelname)s - {"callingfunc": \
+    "%(callingfunc)s", "module": "%(module)s", "function": "%(funcName)s", \
+        %(message)s}'
 basicConfig(format=FORMAT)
 logger.setLevel(INFO)
 # Add extra kwargs to message format
 logger.addHandler(NullHandler())
-logger = LoggerAdapter(logger, extra)
+logger = cast(Logger, LoggerAdapter(logger, EXTRA))
 
 
 if TYPE_CHECKING:
@@ -138,19 +147,18 @@ class EvidenceMixin(Mixin):
             docs = columns.to_dict(orient="records")
             with self.open_mongo() as database:
                 result = insert_many(database[key], docs)
-                assert columns.shape[0] == len(
-                    result.inserted_ids
-                ), logger.error(
-                    '"action" "insert_many", "database": "%s", "collection": "%s", \
-                        "message": "columns.shape[0] != len(results.inserted_ids)"',
-                    database.name,
-                    database.collection.name,
+                assert columns.shape[0] == len(result.inserted_ids), (
+                    '"action" "insert_many", "database": "%s", "collection": \
+                        "%s", "message": "columns.shape[0] != \
+                            len(results.inserted_ids)"'
+                    % (database.name, database.collection.name)
                 )
 
                 # TODO: Better exception
             df.drop(columns=["batch_id"], inplace=True)
             logger.info(
-                '"action": "insert_many", "database": "%s", "collection": "%s", "count": %s"',
+                '"action": "insert_many", "database": "%s", \
+                    "collection": "%s", "count": %s"',
                 database.name,
                 database.collection.name,
                 len(df.index),
