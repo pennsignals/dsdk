@@ -6,31 +6,16 @@ from __future__ import annotations
 from collections import OrderedDict
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from logging import (
-    INFO,
-    Logger,
-    LoggerAdapter,
-    NullHandler,
-    basicConfig,
-    getLogger,
-)
+from logging import INFO
 from sys import argv as sys_argv
 from typing import Any, Dict, Generator, Optional, Sequence, Tuple, cast
 
 from configargparse import ArgParser as ArgumentParser
 from configargparse import Namespace
 
-# TODO Add import calling function from parent application
-EXTRA = {"callingfunc": ""}
-logger = getLogger(__name__)
-FORMAT = '%(asctime)-15s - %(name)s - %(levelname)s - {"callingfunc": \
-    "%(callingfunc)s", "module": "%(module)s", "function": "%(funcName)s", \
-        %(message)s}'
-basicConfig(format=FORMAT)
-logger.setLevel(INFO)
-# Add extra kwargs to message format
-logger.addHandler(NullHandler())
-logger = cast(Logger, LoggerAdapter(logger, EXTRA))
+from .utils import get_logger
+
+logger = get_logger(__file__, INFO)
 
 
 class Interval:  # pylint: disable=too-few-public-methods

@@ -5,14 +5,7 @@ from __future__ import annotations
 
 from abc import ABC
 from contextlib import contextmanager
-from logging import (
-    INFO,
-    Logger,
-    LoggerAdapter,
-    NullHandler,
-    basicConfig,
-    getLogger,
-)
+from logging import INFO
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -26,7 +19,7 @@ from typing import (
 from configargparse import ArgParser as ArgumentParser
 
 from .service import Batch, Model, Service
-from .utils import retry
+from .utils import get_logger, retry
 
 try:
     # Since not everyone will use mongo
@@ -41,17 +34,7 @@ except ImportError:
     Database = None
     AutoReconnect = None
 
-# TODO Add import calling function from parent application
-EXTRA = {"callingfunc": ""}
-logger = getLogger(__name__)
-FORMAT = '%(asctime)-15s - %(name)s - %(levelname)s - {"callingfunc": \
-    "%(callingfunc)s", "module": "%(module)s", "function": "%(funcName)s", \
-        %(message)s}'
-basicConfig(format=FORMAT)
-logger.setLevel(INFO)
-# Add extra kwargs to message format
-logger.addHandler(NullHandler())
-logger = cast(Logger, LoggerAdapter(logger, EXTRA))
+logger = get_logger(__name__, INFO)
 
 
 if TYPE_CHECKING:
