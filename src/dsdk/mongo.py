@@ -158,7 +158,7 @@ class EvidenceMixin(Mixin):
             df.drop(columns=["batch_id"], inplace=True)
             logger.info(
                 '"action": "insert_many", "database": "%s", \
-                    "collection": "%s", "count": %s"',
+                    "collection": "%s", "count": %s',
                 database.name,
                 database.collection.name,
                 len(df.index),

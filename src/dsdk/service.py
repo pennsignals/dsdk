@@ -140,7 +140,7 @@ class Service:
             for task in self.pipeline:
                 task(batch, self)
             logger.info(
-                '"pipeline:" "%s"',
+                '"pipeline": "%s"',
                 ", ".join(
                     map(lambda s: str(s).split(" ")[0][1:], self.pipeline)
                 ),
@@ -185,7 +185,7 @@ class Service:
         while args:
             key, df, *args = args  # type: ignore
             batch.evidence[key] = df
-        logger.info('"key": "%s", "count": "%s"}', key, len(batch.evidence))
+        logger.info('"key": "%s", "count": %s', key, len(batch.evidence))
 
 
 class Task:  # pylint: disable=too-few-public-methods
