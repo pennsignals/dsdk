@@ -6,17 +6,54 @@ from __future__ import annotations
 from functools import wraps
 from json import dump as json_dump
 from json import load as json_load
-from logging import NullHandler, getLogger
+from logging import INFO, Formatter, LoggerAdapter, StreamHandler, getLogger
 from pickle import dump as pickle_dump
 from pickle import load as pickle_load
+from sys import stdout
 from time import sleep as default_sleep
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from pandas import DataFrame
 from pandas import concat as pd_concat
 
-logger = getLogger(__name__)
-logger.addHandler(NullHandler())
+
+def get_logger(name, level=INFO):
+    """Get logger.
+
+    Actual handlers are typically set by the application.
+    Libraries (like DSDK) typically use a NullHandler, so that the application
+        logger configuration is used.
+
+    Use this function to hide the logger implementation/config for now.
+    Show that the conventions demonstrated here work for the applications.
+    """
+    # TODO Pass calling function from parent application
+    defaults = {"callingfunc": ""}
+    formatter_string = " - ".join(
+        (
+            "%(asctime)-15s",
+            "%(name)s",
+            "%(levelname)s",
+            ", ".join(
+                (
+                    '{"callingfunc": "%(callingfunc)s"',
+                    '"module": "%(module)s"',
+                    '"function": "%(funcName)s"',
+                    "%(message)s}",
+                )
+            ),
+        )
+    )
+    handler = StreamHandler(stdout)
+    handler.setLevel(level)
+    handler.setFormatter(Formatter(formatter_string))
+    result = getLogger(name)
+    result.propagate = False
+    result.addHandler(handler)
+    return LoggerAdapter(result, defaults)
+
+
+logger = get_logger(__name__)
 
 
 def chunks(sequence: Sequence[Any], n: int):

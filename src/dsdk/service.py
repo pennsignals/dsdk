@@ -6,31 +6,16 @@ from __future__ import annotations
 from collections import OrderedDict
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from logging import (
-    INFO,
-    Logger,
-    LoggerAdapter,
-    NullHandler,
-    basicConfig,
-    getLogger,
-)
+from logging import INFO
 from sys import argv as sys_argv
 from typing import Any, Dict, Generator, Optional, Sequence, Tuple, cast
 
 from configargparse import ArgParser as ArgumentParser
 from configargparse import Namespace
 
-# TODO Add import calling function from parent application
-EXTRA = {"callingfunc": ""}
-logger = getLogger(__name__)
-FORMAT = '%(asctime)-15s - %(name)s - %(levelname)s - {"callingfunc": \
-    "%(callingfunc)s", "module": "%(module)s", "function": "%(funcName)s", \
-        %(message)s}'
-basicConfig(format=FORMAT)
-logger.setLevel(INFO)
-# Add extra kwargs to message format
-logger.addHandler(NullHandler())
-logger = cast(Logger, LoggerAdapter(logger, EXTRA))
+from .utils import get_logger
+
+logger = get_logger(__name__, INFO)
 
 
 class Interval:  # pylint: disable=too-few-public-methods
@@ -176,7 +161,7 @@ class Service:
         record = Interval(on=datetime.now(timezone.utc), end=None)
         yield Batch(key, record)
         record.end = datetime.now(timezone.utc)
-        logger.info('"key": "%s"', key)
+        logger.info(f'"action": "open_batch", ' f'"key": "{key}"')
 
     def store_evidence(  # pylint: disable=no-self-use,unused-argument
         self, batch: Batch, *args, **kwargs
@@ -185,7 +170,11 @@ class Service:
         while args:
             key, df, *args = args  # type: ignore
             batch.evidence[key] = df
-        logger.info('"key": "%s", "count": %s', key, len(batch.evidence))
+        logger.info(
+            f'"action": "store_evidence", '
+            f'"key": "{key}", '
+            f'"count": {len(batch.evidence)}'
+        )
 
 
 class Task:  # pylint: disable=too-few-public-methods

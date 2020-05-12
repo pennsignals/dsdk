@@ -4,32 +4,15 @@
 from __future__ import annotations
 
 from abc import ABC
-from logging import (
-    INFO,
-    Logger,
-    LoggerAdapter,
-    NullHandler,
-    basicConfig,
-    getLogger,
-)
+from logging import INFO
 from typing import TYPE_CHECKING, Optional, cast
 
 from configargparse import ArgParser as ArgumentParser
 
 from .service import Model, Service
-from .utils import load_pickle_file
+from .utils import get_logger, load_pickle_file
 
-# TODO Add import calling function from parent application
-EXTRA = {"callingfunc": ""}
-logger = getLogger(__name__)
-FORMAT = '%(asctime)-15s - %(name)s - %(levelname)s - {"callingfunc": \
-    "%(callingfunc)s", "module": "%(module)s", "function": "%(funcName)s", \
-        %(message)s}'
-basicConfig(format=FORMAT)
-logger.setLevel(INFO)
-# Add extra kwargs to message format
-logger.addHandler(NullHandler())
-logger = cast(Logger, LoggerAdapter(logger, EXTRA))
+logger = get_logger(__name__, INFO)
 
 
 if TYPE_CHECKING:
