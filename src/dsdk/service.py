@@ -173,7 +173,7 @@ class Service:
         logger.info(
             f'"action": "store_evidence", '
             f'"key": "{key}", '
-            f'"count": "{len(batch.evidence)}"'
+            f'"count": {len(batch.evidence)}'
         )
 
 
