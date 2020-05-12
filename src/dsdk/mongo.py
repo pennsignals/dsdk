@@ -42,10 +42,10 @@ except ImportError:
     AutoReconnect = None
 
 # TODO Add import calling function from parent application
-EXTRA = {"callingfunc": "callingfunc"}
+EXTRA = {"callingfunc": ""}
 logger = getLogger(__name__)
 FORMAT = '%(asctime)-15s - %(name)s - %(levelname)s - {"callingfunc": \
-    %(callingfunc)s, "module": %(module)s, "function": %(funcName)s, \
+    "%(callingfunc)s", "module": "%(module)s", "function": "%(funcName)s", \
         %(message)s}'
 basicConfig(format=FORMAT)
 logger.setLevel(INFO)
