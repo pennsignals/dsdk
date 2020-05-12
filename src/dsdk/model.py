@@ -23,8 +23,8 @@ from .utils import load_pickle_file
 EXTRA = {"callingfunc": ""}
 logger = getLogger(__name__)
 FORMAT = '%(asctime)-15s - %(name)s - %(levelname)s - {"callingfunc": \
-    "%(callingfunc)s", "module": "%(module)s", "function": "%(funcName)s", \
-    %(message)s}'
+    %(callingfunc)s, "module": %(module)s, "function": %(funcName)s, \
+        %(message)s}'
 basicConfig(format=FORMAT)
 logger.setLevel(INFO)
 # Add extra kwargs to message format
