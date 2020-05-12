@@ -13,7 +13,7 @@ from configargparse import ArgParser as ArgumentParser
 from .service import Service
 from .utils import get_logger
 
-logger = get_logger(__file__, INFO)
+logger = get_logger(__name__, INFO)
 
 try:
     # Since not everyone will use mssql

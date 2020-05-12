@@ -15,7 +15,7 @@ from configargparse import Namespace
 
 from .utils import get_logger
 
-logger = get_logger(__file__, INFO)
+logger = get_logger(__name__, INFO)
 
 
 class Interval:  # pylint: disable=too-few-public-methods
@@ -161,7 +161,7 @@ class Service:
         record = Interval(on=datetime.now(timezone.utc), end=None)
         yield Batch(key, record)
         record.end = datetime.now(timezone.utc)
-        logger.info('"key": "%s"', key)
+        logger.info(f'"action": "open_batch", ' f'"key": "{key}"')
 
     def store_evidence(  # pylint: disable=no-self-use,unused-argument
         self, batch: Batch, *args, **kwargs
@@ -170,7 +170,11 @@ class Service:
         while args:
             key, df, *args = args  # type: ignore
             batch.evidence[key] = df
-        logger.info('"key": "%s", "count": %s', key, len(batch.evidence))
+        logger.info(
+            f'"action": "store_evidence", '
+            f'"key": "{key}", '
+            f'"count": "{len(batch.evidence)}"'
+        )
 
 
 class Task:  # pylint: disable=too-few-public-methods

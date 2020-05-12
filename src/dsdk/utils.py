@@ -48,11 +48,12 @@ def get_logger(name, level=INFO):
     handler.setLevel(level)
     handler.setFormatter(Formatter(formatter_string))
     result = getLogger(name)
+    result.propagate = False
     result.addHandler(handler)
     return LoggerAdapter(result, defaults)
 
 
-logger = get_logger(__file__)
+logger = get_logger(__name__)
 
 
 def chunks(sequence: Sequence[Any], n: int):

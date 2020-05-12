@@ -102,9 +102,9 @@ class EvidenceMixin(Mixin):
             with self.open_mongo() as database:
                 key = insert_one(database.batches, doc)
                 logger.info(
-                    '"action": "insert", "database": "%s", "collection": "%s"',
-                    database.name,
-                    database.collection.name,
+                    f'"action": "insert", '
+                    f'"database": "{database.name}", '
+                    f'"collection": "{database.collection.name}"'
                 )
             yield batch
 
@@ -112,9 +112,9 @@ class EvidenceMixin(Mixin):
         with self.open_mongo() as database:
             update_one(database.batches, key, doc)
             logger.info(
-                '"action": "update", "database": "%s", "collection": "%s"',
-                database.name,
-                database.collection.name,
+                f'"action": "update", '
+                f'"database": "{database.name}", '
+                f'"collection": "{database.collection.name}"'
             )
 
     def store_evidence(self, batch: Batch, *args, **kwargs) -> None:
@@ -140,11 +140,10 @@ class EvidenceMixin(Mixin):
                 # TODO: Better exception
             df.drop(columns=["batch_id"], inplace=True)
             logger.info(
-                '"action": "insert_many", "database": "%s", \
-                    "collection": "%s", "count": %s',
-                database.name,
-                database.collection.name,
-                len(df.index),
+                f'"action": "insert_many", '
+                f'"database": "{database.name}", '
+                f'"collection": "{database.collection.name}", '
+                f'"count": {len(df.index)}'
             )
 
 

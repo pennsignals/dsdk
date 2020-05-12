@@ -12,7 +12,7 @@ from configargparse import ArgParser as ArgumentParser
 from .service import Model, Service
 from .utils import get_logger, load_pickle_file
 
-logger = get_logger(__file__, INFO)
+logger = get_logger(__name__, INFO)
 
 
 if TYPE_CHECKING:
