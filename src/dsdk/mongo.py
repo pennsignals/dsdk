@@ -119,7 +119,7 @@ class EvidenceMixin(Mixin):
             with self.open_mongo() as database:
                 key = insert_one(database.batches, doc)
                 logger.info(
-                    '"action": "insert": "database": "%s", "collection": "%s"',
+                    '"action": "insert", "database": "%s", "collection": "%s"',
                     database.name,
                     database.collection.name,
                 )
