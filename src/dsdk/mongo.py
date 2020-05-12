@@ -125,14 +125,14 @@ class EvidenceMixin(Mixin):
                 )
             yield batch
 
-            key, doc = batch.as_update_doc()
-            with self.open_mongo() as database:
-                update_one(database.batches, key, doc)
-                logger.info(
-                    '"action": "update", "database": "%s", "collection": "%s"',
-                    database.name,
-                    database.collection.name,
-                )
+        key, doc = batch.as_update_doc()
+        with self.open_mongo() as database:
+            update_one(database.batches, key, doc)
+            logger.info(
+                '"action": "update", "database": "%s", "collection": "%s"',
+                database.name,
+                database.collection.name,
+            )
 
     def store_evidence(self, batch: Batch, *args, **kwargs) -> None:
         """Store Evidence."""
