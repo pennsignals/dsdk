@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from abc import ABC
 from contextlib import contextmanager
-from logging import NullHandler, getLogger
+from logging import INFO
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -19,7 +19,7 @@ from typing import (
 from configargparse import ArgParser as ArgumentParser
 
 from .service import Batch, Model, Service
-from .utils import retry
+from .utils import get_logger, retry
 
 try:
     # Since not everyone will use mongo
@@ -34,9 +34,7 @@ except ImportError:
     Database = None
     AutoReconnect = None
 
-
-logger = getLogger(__name__)
-logger.addHandler(NullHandler())
+logger = get_logger(__name__, INFO)
 
 
 if TYPE_CHECKING:
@@ -102,13 +100,22 @@ class EvidenceMixin(Mixin):
         with super().open_batch(key) as batch:
             doc = batch.as_insert_doc(model)  # <- model dependency
             with self.open_mongo() as database:
-                insert_one(database.batches, doc)
-
+                key = insert_one(database.batches, doc)
+                logger.info(
+                    f'"action": "insert", '
+                    f'"database": "{database.name}", '
+                    f'"collection": "{database.collection.name}"'
+                )
             yield batch
 
         key, doc = batch.as_update_doc()
         with self.open_mongo() as database:
             update_one(database.batches, key, doc)
+            logger.info(
+                f'"action": "update", '
+                f'"database": "{database.name}", '
+                f'"collection": "{database.collection.name}"'
+            )
 
     def store_evidence(self, batch: Batch, *args, **kwargs) -> None:
         """Store Evidence."""
@@ -123,10 +130,21 @@ class EvidenceMixin(Mixin):
             docs = columns.to_dict(orient="records")
             with self.open_mongo() as database:
                 result = insert_many(database[key], docs)
-                assert columns.shape[0] == len(
-                    result.inserted_ids
-                )  # TODO: Better exception
+                assert columns.shape[0] == len(result.inserted_ids), (
+                    '"action" "insert_many", "database": "%s", "collection": \
+                        "%s", "message": "columns.shape[0] != \
+                            len(results.inserted_ids)"'
+                    % (database.name, database.collection.name)
+                )
+
+                # TODO: Better exception
             df.drop(columns=["batch_id"], inplace=True)
+            logger.info(
+                f'"action": "insert_many", '
+                f'"database": "{database.name}", '
+                f'"collection": "{database.collection.name}", '
+                f'"count": {len(df.index)}'
+            )
 
 
 @contextmanager

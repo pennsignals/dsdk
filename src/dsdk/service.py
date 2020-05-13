@@ -6,15 +6,16 @@ from __future__ import annotations
 from collections import OrderedDict
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from logging import NullHandler, getLogger
+from logging import INFO
 from sys import argv as sys_argv
 from typing import Any, Dict, Generator, Optional, Sequence, Tuple, cast
 
 from configargparse import ArgParser as ArgumentParser
 from configargparse import Namespace
 
-logger = getLogger(__name__)
-logger.addHandler(NullHandler())
+from .utils import get_logger
+
+logger = get_logger(__name__, INFO)
 
 
 class Interval:  # pylint: disable=too-few-public-methods
@@ -123,6 +124,12 @@ class Service:
         with self.open_batch() as batch:
             for task in self.pipeline:
                 task(batch, self)
+            logger.info(
+                '"pipeline": "%s"',
+                ", ".join(
+                    map(lambda s: str(s).split(" ")[0][1:], self.pipeline)
+                ),
+            )
             return batch
 
     def check(self) -> None:
@@ -154,6 +161,7 @@ class Service:
         record = Interval(on=datetime.now(timezone.utc), end=None)
         yield Batch(key, record)
         record.end = datetime.now(timezone.utc)
+        logger.info(f'"action": "open_batch", ' f'"key": "{key}"')
 
     def store_evidence(  # pylint: disable=no-self-use,unused-argument
         self, batch: Batch, *args, **kwargs
@@ -162,6 +170,11 @@ class Service:
         while args:
             key, df, *args = args  # type: ignore
             batch.evidence[key] = df
+        logger.info(
+            f'"action": "store_evidence", '
+            f'"key": "{key}", '
+            f'"count": {len(batch.evidence)}'
+        )
 
 
 class Task:  # pylint: disable=too-few-public-methods

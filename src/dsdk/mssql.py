@@ -5,22 +5,21 @@ from __future__ import annotations
 
 from abc import ABC
 from contextlib import contextmanager
-from logging import NullHandler, getLogger
+from logging import INFO
 from typing import TYPE_CHECKING, Generator, Optional, cast
 
 from configargparse import ArgParser as ArgumentParser
 
 from .service import Service
+from .utils import get_logger
+
+logger = get_logger(__name__, INFO)
 
 try:
     # Since not everyone will use mssql
     from sqlalchemy import create_engine
 except ImportError:
     create_engine = None
-
-
-logger = getLogger(__name__)
-logger.addHandler(NullHandler())
 
 
 if TYPE_CHECKING:
@@ -67,3 +66,4 @@ class Mixin(BaseMixin):
         """Open mssql."""
         with self._mssql.connect() as con:
             yield con
+            logger.info('"action": "connect"')
