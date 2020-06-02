@@ -6,7 +6,7 @@ from __future__ import annotations
 from functools import wraps
 from json import dump as json_dump
 from json import load as json_load
-from logging import INFO, Formatter, LoggerAdapter, StreamHandler, getLogger
+from logging import INFO, Formatter, StreamHandler, getLogger
 from pickle import dump as pickle_dump
 from pickle import load as pickle_load
 from sys import stdout
@@ -27,21 +27,12 @@ def get_logger(name, level=INFO):
     Use this function to hide the logger implementation/config for now.
     Show that the conventions demonstrated here work for the applications.
     """
-    # TODO Pass calling function from parent application
-    defaults = {"callingfunc": ""}
     formatter_string = " - ".join(
         (
             "%(asctime)-15s",
-            "%(name)s",
             "%(levelname)s",
-            ", ".join(
-                (
-                    '{"callingfunc": "%(callingfunc)s"',
-                    '"module": "%(module)s"',
-                    '"function": "%(funcName)s"',
-                    "%(message)s}",
-                )
-            ),
+            "%(name)s.%(funcName)s",
+            "%(message)s",
         )
     )
     handler = StreamHandler(stdout)
@@ -50,7 +41,7 @@ def get_logger(name, level=INFO):
     result = getLogger(name)
     result.propagate = False
     result.addHandler(handler)
-    return LoggerAdapter(result, defaults)
+    return result
 
 
 logger = get_logger(__name__)
