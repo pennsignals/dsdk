@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Generator, Optional, cast
 
 from configargparse import ArgParser as ArgumentParser
 
-from .service import Service
+from .service import Service, Task
 from .utils import get_logger
 
 logger = get_logger(__name__, INFO)
@@ -18,8 +18,10 @@ logger = get_logger(__name__, INFO)
 try:
     # Since not everyone will use mssql
     from sqlalchemy import create_engine
+    from sqlalchemy.exc import DatabaseError, InterfaceError
 except ImportError:
     create_engine = None
+    DatabaseError = InterfaceError = Exception
 
 
 if TYPE_CHECKING:
@@ -67,3 +69,70 @@ class Mixin(BaseMixin):
         with self._mssql.connect() as con:
             yield con
             logger.info('"action": "connect"')
+
+
+class TablePriviledgeCheck(Task):  # pylint: disable=too-few-public-methods
+    """Table priviledge check."""
+
+    CONNECT = """
+select 1 as n
+"""
+
+    EXTANT = """
+select 1 as n where exists (select 1 as n from {table})
+"""
+
+    KEY = "table_priviledge_check"
+
+    ON = "".join(("{", f'"key": "{KEY}.on"', "}"))
+
+    END = "".join(("{", f'"key": "{KEY}.end"', "}"))
+
+    COLUMN_PRIVILEDGE = "".join(
+        (
+            "{",
+            ", ".join(
+                (f'"key": "{KEY}.column_priviledge_warning"', '"value": "%s"')
+            ),
+            "}",
+        )
+    )
+
+    FAILED = "".join(
+        ("{", ", ".join((f'"key": "{KEY}.failed"', '"value": "%s"')), "}")
+    )
+
+    FAILURES = "".join(
+        ("{", ", ".join((f'"key": "{KEY}.failures"', '"value": "%s"')), "}")
+    )
+
+    def __init__(self, tables):
+        """__init__."""
+        self.tables = tables
+
+    def __call__(self, batch, service):
+        """__call__."""
+        logger.info(self.ON)
+        with service.open_mssql() as con:
+            # force lazy connection open.
+            cur = con.execute(self.CONNECT)
+            for _ in cur.fetchall():
+                pass
+            failures = []
+            for table in self.tables:
+                sql = self.EXTANT.format(table=table)
+                try:
+                    cur = con.execute(sql)
+                    for _ in cur.fetchall():
+                        pass
+                except (DatabaseError, InterfaceError) as error:
+                    number, *_ = error.orig.args
+                    # column privileges are a non-standard breaking "feature"
+                    if number == 230:
+                        logger.info(self.COLUMN_PRIVILEDGE, table)
+                        continue
+                    logger.warning(self.FAILED, table)
+                    failures.append(table)
+            if bool(failures):
+                raise RuntimeError(self.FAILURES, failures)
+        logger.info(self.END)
