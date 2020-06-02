@@ -144,7 +144,7 @@ class EvidenceMixin(Mixin):
             with self.open_mongo() as database:
                 collection = database[key]
                 result = insert_many(collection, docs)
-                actual = len(result.inserted.ids)
+                actual = len(result.inserted_ids)
                 expected = columns.shape[0]
                 assert actual == expected, self.RESULTSET_ERROR % (
                     database.name,
