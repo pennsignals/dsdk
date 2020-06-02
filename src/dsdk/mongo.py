@@ -157,8 +157,13 @@ class EvidenceMixin(Mixin):
             df.drop(columns=["batch_id"], inplace=True)
 
 
-OPEN = '{"key": "mongo.open", "database": "%s",  "is_master": "%s" }'
-CLOSE = '{"key": "mongo.close", "database": "%s"}'
+OPEN = "".join(
+    ("{", ", ".join(('"key": "mongo.open"', '"database": "%s"',)), "}",)
+)
+
+CLOSE = "".join(
+    ("{", ", ".join(('"key": "mongo.close"', '"database": "%s"',)), "}",)
+)
 
 
 @contextmanager
@@ -186,8 +191,8 @@ def open_database(
     ) as client:
         database = client.get_database()
         # force lazy connection open
-        is_master = client.admin.command("ismaster")
-        logger.info(OPEN, database.name, is_master)
+        client.admin.command("ismaster")
+        logger.info(OPEN, database.name)
         try:
             yield database
         finally:

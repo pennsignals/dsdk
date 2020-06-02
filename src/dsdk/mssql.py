@@ -73,9 +73,9 @@ class Mixin(BaseMixin):
             type=_inject_mssql_uri,
         )
 
-    OPEN = "".join(("{", ", ".join(('"key": "mssql.open"')), "}"))
+    OPEN = "".join(("{", ", ".join(('"key": "mssql.open"',)), "}"))
 
-    CLOSE = "".join(("{", ", ".join(('"key": "mssql.close"')), "}"))
+    CLOSE = "".join(("{", ", ".join(('"key": "mssql.close"',)), "}"))
 
     CONNECT = """
 select 1 as n
