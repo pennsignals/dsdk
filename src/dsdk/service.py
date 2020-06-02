@@ -118,16 +118,16 @@ class Service:
         # ... because self.pipeline is not optional
         assert self.pipeline is not None
 
-    TASK_BEGIN = "".join(
-        ("{", ", ".join(('"key": "task.begin"', '"task": "%s"')), "}")
+    TASK_ON = "".join(
+        ("{", ", ".join(('"key": "task.on"', '"task": "%s"')), "}")
     )
 
     TASK_END = "".join(
         ("{", ", ".join(('"key": "task.end"', '"task": "%s"')), "}")
     )
 
-    PIPELINE_BEGIN = "".join(
-        ("{", ", ".join(('"key": "pipeline.end"', '"pipeline": "%s"')), "}")
+    PIPELINE_ON = "".join(
+        ("{", ", ".join(('"key": "pipeline.on"', '"pipeline": "%s"')), "}")
     )
 
     PIPELINE_END = "".join(
@@ -137,9 +137,9 @@ class Service:
     def __call__(self) -> Batch:
         """Run."""
         with self.open_batch() as batch:
-            logger.info(self.PIPELINE_BEGIN, self.__class__.__name__)
+            logger.info(self.PIPELINE_ON, self.__class__.__name__)
             for task in self.pipeline:
-                logger.info(self.TASK_BEGIN, task.__class__.__name__)
+                logger.info(self.TASK_ON, task.__class__.__name__)
                 task(batch, self)
                 logger.info(self.TASK_END, task.__class__.__name__)
             logger.info(self.PIPELINE_END, self.__class__.__name__)
