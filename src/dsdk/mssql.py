@@ -71,8 +71,8 @@ class Mixin(BaseMixin):
             logger.info('"action": "connect"')
 
 
-class TablePriviledgeCheck(Task):  # pylint: disable=too-few-public-methods
-    """Table priviledge check."""
+class CheckTablePriviledges(Task):  # pylint: disable=too-few-public-methods
+    """Check table priviledges."""
 
     CONNECT = """
 select 1 as n
