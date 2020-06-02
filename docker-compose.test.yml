@@ -1,0 +1,13 @@
+version: "3.7"
+services:
+
+  test:
+    image: test
+    build:
+      context: .
+      dockerfile: dockerfile
+      target: test
+    volumes:
+    - ./local:/local:ro
+    - ./model:/model:ro
+    - ./secrets:/secrets:ro

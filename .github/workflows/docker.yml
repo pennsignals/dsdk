@@ -1,0 +1,56 @@
+on:
+  release:
+    type: [ created ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: checkout
+      uses: actions/checkout@v2
+
+    - name: version
+      run: |
+        # Tagged release
+        if [[ ${{ github.ref }} == refs/tags/* ]]; then
+          # Strip git ref prefix from $VERSION
+          TAGNAME=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          # Strip "v" prefix from tag name
+          VERSION=$(echo $TAGNAME | sed -e 's/^v//')
+        else
+          VERSION=${{ github.sha }}
+        fi
+        echo "::set-env name=VERSION::$VERSION"
+        echo "Version: $VERSION"
+
+        export DOCKER_BUILDKIT=1
+
+    - name: lint
+      run: |
+        docker-compose -f docker-compose.lint.yml up
+        docker-compose -f docker-compose.lint.yml down
+
+    - name: test
+      run: |
+        docker-compose -f docker-compose.test.yml up
+        docker-compose -f docker-compose.test.yml down
+
+    - name: image
+      run: |
+        VERSION="${{ env.VERSION }}"
+        TARGETS="lint test"
+
+        echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
+
+        for TARGET in $TARGETS
+        do
+          docker build -f dockerfile . --target $TARGET -t $TARGET
+          IMAGE=$(docker inspect --format '{{ .Config.Env }}' $TARGET | tr -d '[]' | tr ' ' '\n' | grep IMAGE | sed 's/^.*=//')
+          echo "Image: $IMAGE"
+          PUSH="docker.pkg.github.com/${{ github.repository }}/$IMAGE:$VERSION"
+          echo "Push: $PUSH"
+          docker tag $TARGET $PUSH
+          docker push $PUSH
+        done
