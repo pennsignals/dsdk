@@ -21,7 +21,7 @@ COPY test ./test
 RUN \
     chmod +x /usr/bin/tini && \
     apt-get -qq update --fix-missing && \
-    apt-get -qq install -y --no-install-recommends git && \
+    apt-get -qq install -y --no-install-recommends git > /dev/null && \
     pip install ${IFLAGS} "." && \
     apt-get -qq clean && \
     apt-get -qq autoremove -y --purge && \
