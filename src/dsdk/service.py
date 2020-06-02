@@ -118,17 +118,31 @@ class Service:
         # ... because self.pipeline is not optional
         assert self.pipeline is not None
 
+    TASK_BEGIN = "".join(
+        ("{", ", ".join(('"key": "task.begin"', '"task": "%s"')), "}")
+    )
+
+    TASK_END = "".join(
+        ("{", ", ".join(('"key": "task.end"', '"task": "%s"')), "}")
+    )
+
+    PIPELINE_BEGIN = "".join(
+        ("{", ", ".join(('"key": "pipeline.end"', '"pipeline": "%s"')), "}")
+    )
+
+    PIPELINE_END = "".join(
+        ("{", ", ".join(('"key": "pipeline.end"', '"pipeline": "%s"')), "}")
+    )
+
     def __call__(self) -> Batch:
         """Run."""
         with self.open_batch() as batch:
+            logger.info(self.PIPELINE_BEGIN, self.__class__.__name__)
             for task in self.pipeline:
+                logger.info(self.TASK_BEGIN, task.__class__.__name__)
                 task(batch, self)
-            logger.info(
-                '"pipeline": "%s"',
-                ", ".join(
-                    map(lambda s: str(s).split(" ")[0][1:], self.pipeline)
-                ),
-            )
+                logger.info(self.TASK_END, task.__class__.__name__)
+            logger.info(self.PIPELINE_END, self.__class__.__name__)
             return batch
 
     def inject_arguments(  # pylint: disable=no-self-use,protected-access
@@ -137,7 +151,11 @@ class Service:
         """Inject arguments."""
         parser._default_config_files = [
             "/local/config.yaml",
+            "/local/config.yml",
+            "/local/.yml",
             "/secrets/config.yaml",
+            "/secrets/config.yml",
+            "/secrets/.yml",
         ]
         parser._ignore_unknown_config_file_keys = True
         parser.add(
@@ -148,28 +166,33 @@ class Service:
             env_var="CONFIG",  # make ENV match default metavar
         )
 
+    BATCH_OPEN = "".join(
+        ("{", ", ".join(('"key": "batch.open"', '"on": "%s"')), "}")
+    )
+
+    BATCH_CLOSE = "".join(
+        ("{", ", ".join(('"key": "batch.close"', '"end": "%s"')), "}")
+    )
+
     @contextmanager
     def open_batch(  # pylint: disable=no-self-use,unused-argument
         self, key: Any = None, model: Optional[Model] = None
     ) -> Generator[Batch, None, None]:
         """Open batch."""
         record = Interval(on=datetime.now(timezone.utc), end=None)
+        logger.info(self.BATCH_OPEN, record.on)
         yield Batch(key, record)
         record.end = datetime.now(timezone.utc)
-        logger.info(f'"action": "open_batch", ' f'"key": "{key}"')
+        logger.info(self.BATCH_CLOSE, record.end)
 
     def store_evidence(  # pylint: disable=no-self-use,unused-argument
         self, batch: Batch, *args, **kwargs
     ) -> None:
         """Store evidence."""
+        # TODO It isn't really evidence if it isn't written to the data store.
         while args:
             key, df, *args = args  # type: ignore
             batch.evidence[key] = df
-        logger.info(
-            f'"action": "store_evidence", '
-            f'"key": "{key}", '
-            f'"count": {len(batch.evidence)}'
-        )
 
 
 class Task:  # pylint: disable=too-few-public-methods

@@ -197,7 +197,13 @@ def open_database(
 INSERT_ONE = "".join(
     (
         "{",
-        ", ".join(('"key": "mongo.insert_one"', '"collection": "%s.%s"')),
+        ", ".join(
+            (
+                '"key": "mongo.insert_one"',
+                '"collection": "%s.%s"',
+                '"id": "%s"',
+            )
+        ),
         "}",
     )
 )
@@ -207,7 +213,12 @@ INSERT_ONE = "".join(
 def insert_one(collection: Collection, doc: Dict[str, Any]):
     """Insert one with retry."""
     result = collection.insert_one(doc)
-    logger.info(INSERT_ONE, collection.database.name, collection.name)
+    logger.info(
+        INSERT_ONE,
+        collection.database.name,
+        collection.name,
+        result.inserted_id,
+    )
     return result
 
 
@@ -242,7 +253,13 @@ def insert_many(collection: Collection, docs: Sequence[Dict[str, Any]]):
 UPDATE_ONE = "".join(
     (
         "{",
-        ", ".join(('"key": "mongo.update_one"', '"collection": "%s.%s"')),
+        ", ".join(
+            (
+                '"key": "mongo.update_one"',
+                '"collection": "%s.%s"',
+                '"id": "%s"',
+            )
+        ),
         "}",
     )
 )
@@ -254,5 +271,10 @@ def update_one(
 ):
     """Update one with retry."""
     result = collection.update_one(key, doc)
-    logger.info(UPDATE_ONE, collection.database.name, collection.name)
+    logger.info(
+        UPDATE_ONE,
+        collection.database.name,
+        collection.name,
+        result.inserted_id,
+    )
     return result
