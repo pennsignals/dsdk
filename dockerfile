@@ -20,11 +20,11 @@ COPY src ./src
 COPY test ./test
 RUN \
     chmod +x /usr/bin/tini && \
-    apt-get update --fix-missing && \
-    apt-get install -y --no-install-recommends git && \
+    apt-get -qq update --fix-missing && \
+    apt-get -qq install -y --no-install-recommends git && \
     pip install ${IFLAGS} "." && \
-    apt-get clean && \
-    apt-get autoremove -y --purge && \
+    apt-get -qq clean && \
+    apt-get -qq autoremove -y --purge && \
     rm -rf /var/lib/apt/lists/*
 
 FROM build as lint
