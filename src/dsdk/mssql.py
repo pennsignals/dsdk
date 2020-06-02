@@ -73,20 +73,31 @@ class Mixin(BaseMixin):
             type=_inject_mssql_uri,
         )
 
-    @contextmanager
-    def open_mssql(self) -> Generator:
-        """Open mssql."""
-        with self._mssql.connect() as con:
-            yield con
-            logger.info('"action": "connect"')
+    OPEN = "".join(("{", ", ".join(('"key": "mssql.open"')), "}"))
 
-
-class CheckTablePrivileges(Task):  # pylint: disable=too-few-public-methods
-    """Check table privileges."""
+    CLOSE = "".join(("{", ", ".join(('"key": "mssql.close"')), "}"))
 
     CONNECT = """
 select 1 as n
 """
+
+    @contextmanager
+    def open_mssql(self) -> Generator:
+        """Open mssql."""
+        with self._mssql.connect() as con:
+            # force lazy connection open.
+            cur = con.execute(self.CONNECT)
+            for _ in cur.fetchall():
+                pass
+            logger.info(self.OPEN)
+            try:
+                yield con
+            finally:
+                logger.info(self.CLOSE)
+
+
+class CheckTablePrivileges(Task):  # pylint: disable=too-few-public-methods
+    """Check table privileges."""
 
     EXTANT = """
 select 1 as n where exists (select 1 as n from {table})
@@ -122,10 +133,6 @@ select 1 as n where exists (select 1 as n from {table})
         """__call__."""
         logger.info(self.ON)
         with service.open_mssql() as con:
-            # force lazy connection open.
-            cur = con.execute(self.CONNECT)
-            for _ in cur.fetchall():
-                pass
             errors = []
             for table in self.tables:
                 sql = self.EXTANT.format(table=table)

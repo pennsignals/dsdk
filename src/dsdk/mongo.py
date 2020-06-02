@@ -253,13 +253,7 @@ def insert_many(collection: Collection, docs: Sequence[Dict[str, Any]]):
 UPDATE_ONE = "".join(
     (
         "{",
-        ", ".join(
-            (
-                '"key": "mongo.update_one"',
-                '"collection": "%s.%s"',
-                '"id": "%s"',
-            )
-        ),
+        ", ".join(('"key": "mongo.update_one"', '"collection": "%s.%s"',)),
         "}",
     )
 )
@@ -272,9 +266,6 @@ def update_one(
     """Update one with retry."""
     result = collection.update_one(key, doc)
     logger.info(
-        UPDATE_ONE,
-        collection.database.name,
-        collection.name,
-        result.inserted_id,
+        UPDATE_ONE, collection.database.name, collection.name,
     )
     return result
