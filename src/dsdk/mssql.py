@@ -54,10 +54,20 @@ class Mixin(BaseMixin):
         parser.add(
             "--mssql-uri",
             required=True,
-            help=(
-                "MSSQL URI used to connect to a MSSQL database: "
-                "mssql+pymssql://USER:PASS@HOST:PORT/DATABASE?timeout=TIMEOUT "
-                "Url encode all parts: USER (domain slash), PASS in particular"
+            help=" ".join(
+                (
+                    "MSSQL URI used to connect to a MSSQL database:",
+                    (
+                        "mssql+pymssql://USER:PASS@HOST:PORT/DATABASE?"
+                        "timeout=TIMEOUT"
+                    ),
+                    "Use a valid uri."
+                    "Url encode all parts, but do not encode the entire uri.",
+                    "No unencoded colons, ampersands, slashes,",
+                    "question-marks, etc. in parts.",
+                    "Specifically, check url encoding of USER (domain slash),"
+                    "and PASSWORD.",
+                )
             ),
             env_var="MSSQL_URI",
             type=_inject_mssql_uri,
@@ -82,28 +92,26 @@ select 1 as n
 select 1 as n where exists (select 1 as n from {table})
 """
 
-    KEY = "table_privilege_check"
+    KEY = "mssql.table_privilege_check"
 
     ON = "".join(("{", f'"key": "{KEY}.on"', "}"))
 
     END = "".join(("{", f'"key": "{KEY}.end"', "}"))
 
     COLUMN_PRIVILEGE = "".join(
+        ("{", ", ".join((f'"key": "{KEY}.warn"', '"value": "%s"')), "}",)
+    )
+
+    ERROR = "".join(
+        ("{", ", ".join((f'"key": "{KEY}.table.error"', '"table": "%s"')), "}")
+    )
+
+    ERRORS = "".join(
         (
             "{",
-            ", ".join(
-                (f'"key": "{KEY}.column_privilege_warning"', '"value": "%s"')
-            ),
+            ", ".join((f'"key": "{KEY}.tables.error"', '"tables": "%s"')),
             "}",
         )
-    )
-
-    FAILED = "".join(
-        ("{", ", ".join((f'"key": "{KEY}.failed"', '"value": "%s"')), "}")
-    )
-
-    FAILURES = "".join(
-        ("{", ", ".join((f'"key": "{KEY}.failures"', '"value": "%s"')), "}")
     )
 
     def __init__(self, tables):
@@ -118,7 +126,7 @@ select 1 as n where exists (select 1 as n from {table})
             cur = con.execute(self.CONNECT)
             for _ in cur.fetchall():
                 pass
-            failures = []
+            errors = []
             for table in self.tables:
                 sql = self.EXTANT.format(table=table)
                 try:
@@ -131,8 +139,8 @@ select 1 as n where exists (select 1 as n from {table})
                     if number == 230:
                         logger.info(self.COLUMN_PRIVILEGE, table)
                         continue
-                    logger.warning(self.FAILED, table)
-                    failures.append(table)
-            if bool(failures):
-                raise RuntimeError(self.FAILURES, failures)
+                    logger.warning(self.ERROR, table)
+                    errors.append(table)
+            if bool(errors):
+                raise RuntimeError(self.ERRORS, errors)
         logger.info(self.END)

@@ -66,11 +66,19 @@ class Mixin(BaseMixin):
         parser.add(
             "--mongo-uri",
             required=True,
-            help=(
-                "Mongo URI used to connect to a Mongo database: "
-                "mongodb://USER:PASS@HOST1,HOST2,.../DATABASE?"
-                "replicaset=REPLICASET&authsource=admin "
-                "Url encode all parts: PASS in particular"
+            help=" ".join(
+                (
+                    "Mongo URI used to connect to a Mongo database:",
+                    (
+                        "mongodb://USER:PASSWORD@HOST1,HOST2,.../DATABASE?"
+                        "replicaset=REPLICASET&authsource=admin"
+                    ),
+                    "Use a valid uri."
+                    "Url encode all parts, but do not encode the entire uri.",
+                    "No unencoded colons, ampersands, slashes,",
+                    "question-marks, etc. in parts.",
+                    "Specifically, check url encoding of PASSWORD.",
+                )
             ),
             env_var="MONGO_URI",
             type=_inject_mongo_uri,
@@ -85,6 +93,21 @@ class Mixin(BaseMixin):
 
 class EvidenceMixin(Mixin):
     """Evidence Mixin."""
+
+    RESULTSET_ERROR = "".join(
+        (
+            "{",
+            ", ".join(
+                (
+                    '"key": "mongo.resultset.error"',
+                    '"collection": "%s.%s"',
+                    '"actual": %s',
+                    '"expected": %s',
+                )
+            ),
+            "}",
+        )
+    )
 
     def __init__(self, **kwargs):
         """__init__."""
@@ -101,21 +124,11 @@ class EvidenceMixin(Mixin):
             doc = batch.as_insert_doc(model)  # <- model dependency
             with self.open_mongo() as database:
                 key = insert_one(database.batches, doc)
-                logger.info(
-                    f'"action": "insert", '
-                    f'"database": "{database.name}", '
-                    f'"collection": "{database.collection.name}"'
-                )
             yield batch
 
         key, doc = batch.as_update_doc()
         with self.open_mongo() as database:
             update_one(database.batches, key, doc)
-            logger.info(
-                f'"action": "update", '
-                f'"database": "{database.name}", '
-                f'"collection": "{database.collection.name}"'
-            )
 
     def store_evidence(self, batch: Batch, *args, **kwargs) -> None:
         """Store Evidence."""
@@ -129,22 +142,23 @@ class EvidenceMixin(Mixin):
             columns = df[[c for c in df.columns if c not in exclude]]
             docs = columns.to_dict(orient="records")
             with self.open_mongo() as database:
-                result = insert_many(database[key], docs)
-                assert columns.shape[0] == len(result.inserted_ids), (
-                    '"action" "insert_many", "database": "%s", "collection": \
-                        "%s", "message": "columns.shape[0] != \
-                            len(results.inserted_ids)"'
-                    % (database.name, database.collection.name)
+                collection = database[key]
+                result = insert_many(collection, docs)
+                actual = len(result.inserted.ids)
+                expected = columns.shape[0]
+                assert actual == expected, self.RESULTSET_ERROR % (
+                    database.name,
+                    collection.name,
+                    actual,
+                    expected,
                 )
 
                 # TODO: Better exception
             df.drop(columns=["batch_id"], inplace=True)
-            logger.info(
-                f'"action": "insert_many", '
-                f'"database": "{database.name}", '
-                f'"collection": "{database.collection.name}", '
-                f'"count": {len(df.index)}'
-            )
+
+
+OPEN = '{"key": "mongo.open", "database": "%s",  "is_master": "%s" }'
+CLOSE = '{"key": "mongo.close", "database": "%s"}'
 
 
 @contextmanager
@@ -171,31 +185,67 @@ def open_database(
         **kwargs,
     ) as client:
         database = client.get_database()
-        # is_master to force lazy connection open
+        # force lazy connection open
         is_master = client.admin.command("ismaster")
-        logger.debug(
-            '{"opened_mongo_database: {"name": "%s", "is_master": "%s"}}',
-            database.name,
-            is_master,
-        )
+        logger.info(OPEN, database.name, is_master)
         try:
             yield database
         finally:
-            logger.debug(
-                '{"close_mongo_database: {"name": "%s"}}', database.name
-            )
+            logger.info(CLOSE, database.name)
+
+
+INSERT_ONE = "".join(
+    (
+        "{",
+        ", ".join(('"key": "mongo.insert_one"', '"collection": "%s.%s"')),
+        "}",
+    )
+)
 
 
 @retry(AutoReconnect)
 def insert_one(collection: Collection, doc: Dict[str, Any]):
     """Insert one with retry."""
-    return collection.insert_one(doc)
+    result = collection.insert_one(doc)
+    logger.info(INSERT_ONE, collection.database.name, collection.name)
+    return result
+
+
+INSERT_MANY = "".join(
+    (
+        "{",
+        ", ".join(
+            (
+                '"key": "mongo.insert_many"',
+                '"collection": "%s.%s"',
+                '"value": %s',
+            )
+        ),
+        "}",
+    )
+)
 
 
 @retry(AutoReconnect)
 def insert_many(collection: Collection, docs: Sequence[Dict[str, Any]]):
     """Insert many with retry."""
-    return collection.insert_many(docs)
+    result = collection.insert_many(docs)
+    logger.info(
+        INSERT_MANY,
+        collection.database.name,
+        collection.name,
+        len(result.inserted.ids),
+    )
+    return result
+
+
+UPDATE_ONE = "".join(
+    (
+        "{",
+        ", ".join(('"key": "mongo.update_one"', '"collection": "%s.%s"')),
+        "}",
+    )
+)
 
 
 @retry(AutoReconnect)
@@ -203,4 +253,6 @@ def update_one(
     collection: Collection, key: Dict[str, Any], doc: Dict[str, Any]
 ):
     """Update one with retry."""
-    return collection.update_one(key, doc)
+    result = collection.update_one(key, doc)
+    logger.info(UPDATE_ONE, collection.database.name, collection.name)
+    return result

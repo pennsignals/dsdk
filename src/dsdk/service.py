@@ -120,7 +120,6 @@ class Service:
 
     def __call__(self) -> Batch:
         """Run."""
-        self.check()
         with self.open_batch() as batch:
             for task in self.pipeline:
                 task(batch, self)
@@ -131,10 +130,6 @@ class Service:
                 ),
             )
             return batch
-
-    def check(self) -> None:
-        """Check."""
-        # TODO add smoke test for each database mixin.
 
     def inject_arguments(  # pylint: disable=no-self-use,protected-access
         self, parser: ArgumentParser
