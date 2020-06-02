@@ -127,7 +127,7 @@ select 1 as n where exists (select 1 as n from {table})
                         pass
                 except (DatabaseError, InterfaceError) as error:
                     number, *_ = error.orig.args
-                    # column privileges are a non-standard breaking "feature"
+                    # column privileges is a standard-breaking mssql "feature"
                     if number == 230:
                         logger.info(self.COLUMN_PRIVILEDGE, table)
                         continue
