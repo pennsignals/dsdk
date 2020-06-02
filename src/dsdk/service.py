@@ -77,7 +77,7 @@ class Batch:  # pylint: disable=too-few-public-methods
         doc: Optional[Dict[str, Any]] = None
         if model is not None:
             doc = model.as_doc()
-        return {"model": doc, "record": self.record.as_doc()}
+        return {"_id": self.key, "model": doc, "record": self.record.as_doc()}
 
     def as_update_doc(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """As update doc."""
