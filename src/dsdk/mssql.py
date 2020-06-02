@@ -71,8 +71,8 @@ class Mixin(BaseMixin):
             logger.info('"action": "connect"')
 
 
-class CheckTablePriviledges(Task):  # pylint: disable=too-few-public-methods
-    """Check table priviledges."""
+class CheckTablePrivileges(Task):  # pylint: disable=too-few-public-methods
+    """Check table privileges."""
 
     CONNECT = """
 select 1 as n
@@ -82,17 +82,17 @@ select 1 as n
 select 1 as n where exists (select 1 as n from {table})
 """
 
-    KEY = "table_priviledge_check"
+    KEY = "table_privilege_check"
 
     ON = "".join(("{", f'"key": "{KEY}.on"', "}"))
 
     END = "".join(("{", f'"key": "{KEY}.end"', "}"))
 
-    COLUMN_PRIVILEDGE = "".join(
+    COLUMN_PRIVILEGE = "".join(
         (
             "{",
             ", ".join(
-                (f'"key": "{KEY}.column_priviledge_warning"', '"value": "%s"')
+                (f'"key": "{KEY}.column_privilege_warning"', '"value": "%s"')
             ),
             "}",
         )
@@ -129,7 +129,7 @@ select 1 as n where exists (select 1 as n from {table})
                     number, *_ = error.orig.args
                     # column privileges is a standard-breaking mssql "feature"
                     if number == 230:
-                        logger.info(self.COLUMN_PRIVILEDGE, table)
+                        logger.info(self.COLUMN_PRIVILEGE, table)
                         continue
                     logger.warning(self.FAILED, table)
                     failures.append(table)
