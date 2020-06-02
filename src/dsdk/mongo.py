@@ -234,7 +234,7 @@ def insert_many(collection: Collection, docs: Sequence[Dict[str, Any]]):
         INSERT_MANY,
         collection.database.name,
         collection.name,
-        len(result.inserted.ids),
+        len(result.inserted_ids),
     )
     return result
 
