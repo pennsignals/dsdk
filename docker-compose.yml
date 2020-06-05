@@ -1,13 +1,5 @@
 version: "3.8"
 
-configs:
-  freetds:
-    file: freetds.conf
-  localtime:
-    file: localtime
-  timezone:
-    file: timezone
-
 volumes:
   mssql-data:
   mongo-data:
@@ -16,11 +8,6 @@ volumes:
 services:
   mongo:
     command: [--noauth, --smallfiles, --quiet]
-    configs:
-    - source: localtime
-      target: /etc/localtime
-    - source: timezone
-      target: /etc/timezone
     expose:
     - "27017"
     image: mongo:4.0.18-xenial
