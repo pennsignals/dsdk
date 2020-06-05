@@ -2,12 +2,8 @@ version: "3.8"
 services:
 
   test:
-    image: lint
     build:
       context: .
       dockerfile: dockerfile
       target: lint
-    volumes:
-    - ./local:/local:ro
-    - ./model:/model:ro
-    - ./secrets:/secrets:ro
+    image: lint
