@@ -1,0 +1,14 @@
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: checkout
+      uses: actions/checkout@v2.3.0
+
+    - name: lint
+      run: |
+        docker-compose -f docker-compose.lint.yml up
+        docker-compose -f docker-compose.lint.yml down

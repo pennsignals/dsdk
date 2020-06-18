@@ -56,7 +56,7 @@ Installation
 
 ::
 
-    pip install dsdk
+    pip install .
 
 You can also install the in-development version with::
 
@@ -87,13 +87,7 @@ Note, to combine the coverage data from all the tox environments run:
     :widths: 10 90
     :stub-columns: 1
 
-    - - Windows
-      - ::
-
-            set PYTEST_ADDOPTS=--cov-append
-            tox
-
-    - - Other
+    - - Linux
       - ::
 
             PYTEST_ADDOPTS=--cov-append tox

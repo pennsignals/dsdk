@@ -1,15 +1,16 @@
 on:
   release:
-    type: [ created ]
+    types:
+    - published
 
 jobs:
 
-  build:
+  publish:
     runs-on: ubuntu-latest
 
     steps:
     - name: checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v2.3.0
 
     - name: version
       run: |
@@ -27,17 +28,7 @@ jobs:
 
         export DOCKER_BUILDKIT=1
 
-    - name: lint
-      run: |
-        docker-compose -f docker-compose.lint.yml up
-        docker-compose -f docker-compose.lint.yml down
-
-    - name: test
-      run: |
-        docker-compose -f docker-compose.test.yml up
-        docker-compose -f docker-compose.test.yml down
-
-    - name: image
+    - name: publish
       run: |
         VERSION="${{ env.VERSION }}"
         TARGETS="lint test"
