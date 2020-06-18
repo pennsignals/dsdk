@@ -9,7 +9,7 @@ from setuptools import find_packages, setup
 
 CHECK_REQUIRES = ("docutils", "pygments", "readme-renderer")
 
-DOC_REQUIRES = "sphinx"
+DOC_REQUIRES = ("sphinx",)
 
 INSTALL_REQUIRES = (
     "configargparse>=0.15.2",
@@ -70,6 +70,12 @@ setup(
     name="dsdk",
     license="MIT",
     extras_require={
+        "all": CHECK_REQUIRES
+        + DOC_REQUIRES
+        + LINT_REQUIRES
+        + MONGO_REQUIRES
+        + MSSQL_REQUIRES
+        + TEST_REQUIRES,
         "check": CHECK_REQUIRES,
         "doc": DOC_REQUIRES,
         "lint": LINT_REQUIRES,
