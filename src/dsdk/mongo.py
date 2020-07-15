@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from abc import ABC
 from contextlib import contextmanager
-from logging import INFO
+from logging import getLogger
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -19,7 +19,7 @@ from typing import (
 from configargparse import ArgParser as ArgumentParser
 
 from .service import Batch, Model, Service
-from .utils import get_logger, retry
+from .utils import retry
 
 try:
     # Since not everyone will use mongo
@@ -34,7 +34,7 @@ except ImportError:
     Database = None
     AutoReconnect = None
 
-logger = get_logger(__name__, INFO)
+logger = getLogger(__name__)
 
 
 if TYPE_CHECKING:

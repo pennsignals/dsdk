@@ -6,16 +6,14 @@ from __future__ import annotations
 from collections import OrderedDict
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from logging import INFO
+from logging import getLogger
 from sys import argv as sys_argv
 from typing import Any, Dict, Generator, Optional, Sequence, Tuple, cast
 
 from configargparse import ArgParser as ArgumentParser
 from configargparse import Namespace
 
-from .utils import get_logger
-
-logger = get_logger(__name__, INFO)
+logger = getLogger(__name__)
 
 
 class Interval:  # pylint: disable=too-few-public-methods

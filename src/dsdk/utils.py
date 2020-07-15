@@ -16,6 +16,8 @@ from typing import Any, Callable, Dict, List, Optional, Sequence
 from pandas import DataFrame
 from pandas import concat as pd_concat
 
+logger = getLogger(__name__)
+
 
 def get_logger(name, level=INFO):
     """Get logger.
@@ -27,6 +29,8 @@ def get_logger(name, level=INFO):
     Use this function to hide the logger implementation/config for now.
     Show that the conventions demonstrated here work for the applications.
     """
+    result = getLogger(name)
+    result.setLevel(level)
     formatter_string = " - ".join(
         (
             "%(asctime)-15s",
@@ -38,12 +42,8 @@ def get_logger(name, level=INFO):
     handler = StreamHandler(stdout)
     handler.setLevel(level)
     handler.setFormatter(Formatter(formatter_string))
-    result = getLogger(name)
     result.addHandler(handler)
     return result
-
-
-logger = get_logger(__name__)
 
 
 def chunks(sequence: Sequence[Any], n: int):

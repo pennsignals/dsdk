@@ -4,15 +4,15 @@
 from __future__ import annotations
 
 from abc import ABC
-from logging import INFO
+from logging import getLogger
 from typing import TYPE_CHECKING, Optional, cast
 
 from configargparse import ArgParser as ArgumentParser
 
 from .service import Model, Service
-from .utils import get_logger, load_pickle_file
+from .utils import load_pickle_file
 
-logger = get_logger(__name__, INFO)
+logger = getLogger(__name__)
 
 
 if TYPE_CHECKING:

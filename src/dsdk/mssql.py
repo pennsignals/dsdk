@@ -5,15 +5,14 @@ from __future__ import annotations
 
 from abc import ABC
 from contextlib import contextmanager
-from logging import INFO
+from logging import getLogger
 from typing import TYPE_CHECKING, Generator, Optional, cast
 
 from configargparse import ArgParser as ArgumentParser
 
 from .service import Service, Task
-from .utils import get_logger
 
-logger = get_logger(__name__, INFO)
+logger = getLogger(__name__)
 
 try:
     # Since not everyone will use mssql
