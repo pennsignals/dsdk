@@ -19,15 +19,11 @@ from pandas import concat as pd_concat
 logger = getLogger(__name__)
 
 
-def get_logger(name="", level=INFO):
-    """Get logger.
+def configure_logger(name, level=INFO):
+    """Configure logger.
 
-    Actual handlers are typically set by the application.
-    Libraries (like DSDK) typically use a NullHandler, so that the application
-        logger configuration is used.
-
-    Use this function to hide the logger implementation/config for now.
-    Show that the conventions demonstrated here work for the applications.
+    This function should be done by the application.
+    Libraries (like DSDK) should not configure their own loggers.
     """
     result = getLogger(name)
     result.setLevel(level)

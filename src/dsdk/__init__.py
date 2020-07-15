@@ -9,10 +9,10 @@ from .mssql import Mixin as MssqlMixin
 from .service import Batch, Model, Service, Task
 from .utils import (
     chunks,
+    configure_logger,
     df_from_query_by_ids,
     dump_json_file,
     dump_pickle_file,
-    get_logger,
     get_res_with_values,
     load_json_file,
     load_pickle_file,
@@ -30,10 +30,10 @@ __all__ = (
     "Service",
     "Task",
     "chunks",
+    "configure_logger",
     "df_from_query_by_ids",
     "dump_json_file",
     "dump_pickle_file",
-    "get_logger",
     "get_res_with_values",
     "load_json_file",
     "load_pickle_file",
