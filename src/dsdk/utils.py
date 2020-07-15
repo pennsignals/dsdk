@@ -19,7 +19,7 @@ from pandas import concat as pd_concat
 logger = getLogger(__name__)
 
 
-def get_logger(name, level=INFO):
+def get_logger(name="", level=INFO):
     """Get logger.
 
     Actual handlers are typically set by the application.
