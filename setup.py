@@ -1,15 +1,7 @@
 # -*- coding: utf-8 -*-
 """DSDK."""
 
-import io
-import re
-from os.path import dirname, join
-
 from setuptools import find_packages, setup
-
-CHECK_REQUIRES = ("docutils", "pygments", "readme-renderer")
-
-DOC_REQUIRES = ("sphinx",)
 
 INSTALL_REQUIRES = (
     "configargparse>=0.15.2",
@@ -40,53 +32,31 @@ LINT_REQUIRES = (
 
 MONGO_REQUIRES = ("pymongo",)
 
-MSSQL_REQUIRES = ("cython", "pymssql<3.0", "sqlalchemy")
+MSSQL_REQUIRES = ("cython", "pymssql==2.1.4", "sqlalchemy")
+
+POSTGRES_REQUIRES = ("psycopg2",)
 
 SETUP_REQUIRES = ("pytest-runner", "setuptools_scm>=3.3.3")
 
-TEST_REQUIRES = ("coverage", "pytest", "pytest-cov", "tox")
-
-
-def read(*names, **kwargs):
-    """Read."""
-    with io.open(
-        join(dirname(__file__), *names),
-        encoding=kwargs.get("encoding", "utf8"),
-    ) as fin:
-        return fin.read()
-
-
-def long_description():
-    """Long Description."""
-    return "%s\n%s" % (
-        re.compile("^.. start-badges.*^.. end-badges", re.M | re.S).sub(
-            "", read("README.rst")
-        ),
-        re.sub(":[a-z]+:`~?(.*?)`", r"``\1``", read("CHANGELOG.rst")),
-    )
+TEST_REQUIRES = ("coverage", "pytest", "pytest-cov")
 
 
 setup(
-    name="dsdk",
     license="MIT",
     extras_require={
-        "all": CHECK_REQUIRES
-        + DOC_REQUIRES
-        + LINT_REQUIRES
+        "all": LINT_REQUIRES
         + MONGO_REQUIRES
         + MSSQL_REQUIRES
+        + POSTGRES_REQUIRES
         + TEST_REQUIRES,
-        "check": CHECK_REQUIRES,
-        "doc": DOC_REQUIRES,
         "lint": LINT_REQUIRES,
         "mongo": MONGO_REQUIRES,
         "mssql": MSSQL_REQUIRES,
+        "postgres": POSTGRES_REQUIRES,
         "test": TEST_REQUIRES,
     },
     include_package_data=True,
     install_requires=INSTALL_REQUIRES,
-    long_description=long_description(),
-    long_description_content_type="text/x-rst",  # "text/markdown"
     packages=find_packages("src"),
     package_dir={"": "src"},
     python_requires=">=3.7",
