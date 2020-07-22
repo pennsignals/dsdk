@@ -6,7 +6,7 @@ from __future__ import annotations
 from abc import ABC
 from contextlib import contextmanager
 from logging import getLogger
-from typing import TYPE_CHECKING, Generator, Optional, cast
+from typing import TYPE_CHECKING, Generator, Optional
 
 from configargparse import ArgParser as ArgumentParser
 
@@ -18,6 +18,7 @@ try:
     # Since not everyone will use mssql
     from sqlalchemy import create_engine
     from sqlalchemy.exc import DatabaseError, InterfaceError
+    import pymssql  # noqa: F401; pylint: disable=unused-import
 except ImportError:
     create_engine = None
     DatabaseError = InterfaceError = Exception
@@ -34,12 +35,12 @@ class Mixin(BaseMixin):
 
     def __init__(self, *, mssql_uri: Optional[str] = None, **kwargs):
         """__init__."""
-        # inferred type of self._mssql_uri must not be optional...
-        self._mssql_uri = cast(str, mssql_uri)
+        # inferred type is not optional
+        # ... because self._mssql_uri is not Optional
+        assert mssql_uri is not None
+        self._mssql_uri = mssql_uri
         super().__init__(**kwargs)
 
-        # ... because self._mssql_uri is not optional
-        assert self._mssql_uri is not None
         self._mssql = create_engine(self._mssql_uri)
 
     def inject_arguments(self, parser: ArgumentParser) -> None:
