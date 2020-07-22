@@ -4,8 +4,11 @@
 from .model import Mixin as ModelMixin
 from .mongo import EvidenceMixin as MongoEvidenceMixin
 from .mongo import Mixin as MongoMixin
-from .mssql import CheckTablePrivileges
+from .mssql import CheckTablePrivileges as CheckMssqlTablePrivileges
 from .mssql import Mixin as MssqlMixin
+from .postgres import CheckTablePrivileges as CheckPostgresTablePrivileges
+from .postgres import Mixin as PostgresMixin
+from .postgres import PredictionMixin as PostgresPredictionMixin
 from .service import Batch, Model, Service, Task
 from .utils import (
     chunks,
@@ -26,7 +29,10 @@ __all__ = (
     "MongoMixin",
     "MongoEvidenceMixin",
     "MssqlMixin",
-    "CheckTablePrivileges",
+    "CheckMssqlTablePrivileges",
+    "CheckPostgresTablePrivileges",
+    "PostgresPredictionMixin",
+    "PostgresMixin",
     "Service",
     "Task",
     "chunks",
