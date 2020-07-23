@@ -7,9 +7,8 @@ ENV FREETDS /root/freetds.conf
 ENV PATH /root/.local/bin:$PATH
 ENV TINI_VERSION v0.16.1
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /usr/bin/tini
-COPY CHANGELOG.rst .
-COPY README.rst .
 COPY freetds.conf .
+COPY readme.md .
 COPY setup.cfg .
 COPY setup.py .
 COPY pyproject.toml .
