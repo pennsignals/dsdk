@@ -45,4 +45,10 @@ multi_line_output = 3
 known_first_party = ["dsdk"]
 default_section = "THIRDPARTY"
 
+[tool.pytest.ini_options]
+addopts = "-ra --cov=dsdk --cov-report=term-missing --strict --ignore=.eggs --tb=short"
+testpaths = ["test"]
+norecursedirs = ".env .git .tox build dist"
+python_files = "test.py tests.py test_*.py *_test.py"
+
 [tool.setuptools_scm]

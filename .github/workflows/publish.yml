@@ -31,7 +31,7 @@ jobs:
     - name: publish
       run: |
         VERSION="${{ env.VERSION }}"
-        TARGETS="lint test"
+        TARGETS="test"
 
         echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
 

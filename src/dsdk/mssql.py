@@ -6,7 +6,7 @@ from __future__ import annotations
 from abc import ABC
 from contextlib import contextmanager
 from logging import getLogger
-from typing import TYPE_CHECKING, Generator, Optional
+from typing import TYPE_CHECKING, Generator, Optional, cast
 
 from configargparse import ArgParser as ArgumentParser
 
@@ -35,12 +35,11 @@ class Mixin(BaseMixin):
 
     def __init__(self, *, mssql_uri: Optional[str] = None, **kwargs):
         """__init__."""
-        # inferred type is not optional
-        # ... because self._mssql_uri is not Optional
-        assert mssql_uri is not None
-        self._mssql_uri = mssql_uri
+        # inferred type of self._mssql_uri must not be not optional
+        self._mssql_uri = cast(str, mssql_uri)
         super().__init__(**kwargs)
-
+        # ... because post-injected self._mssql_uri is not optional
+        assert self._mssql_uri is not None
         self._mssql = create_engine(self._mssql_uri)
 
     def inject_arguments(self, parser: ArgumentParser) -> None:

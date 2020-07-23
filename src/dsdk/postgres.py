@@ -9,7 +9,7 @@ from contextlib import contextmanager
 from logging import getLogger
 from os import listdir
 from os.path import isdir, join, splitext
-from typing import TYPE_CHECKING, Generator, Optional, Type
+from typing import TYPE_CHECKING, Generator, Optional, Type, cast
 
 from configargparse import ArgParser as ArgumentParser
 
@@ -107,20 +107,29 @@ class Mixin(BaseMixin):
         **kwargs,
     ):
         """__init__."""
-        assert postgres_code is not None
-        assert postgres_uri is not None
-        self.postgres = postgres_persistor(postgres_code, postgres_uri)
+        # infered type of attributes must not be optional
+        self._postgres_code = cast(Namespace, postgres_code)
+        self._postgres_uri = cast(str, postgres_uri)
         super().__init__(**kwargs)
+
+        # ... because post-injected attributes are not optional
+        assert self._postgres_uri is not None
+        assert self._postgres_code is not None
+        self.postgres = postgres_persistor(
+            self._postgres_code, self._postgres_uri
+        )
 
     def inject_arguments(self, parser: ArgumentParser) -> None:
         """Inject arguments."""
         super().inject_arguments(parser)
 
         def _inject_uri(uri: str) -> str:
+            self._postgres_uri = uri
             return uri
 
         def _inject_code(directory: str) -> Namespace:
-            return namespace_directory(directory)
+            self._postgres_code = namespace = namespace_directory(directory)
+            return namespace
 
         parser.add(
             "--postgres-uri",

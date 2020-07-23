@@ -54,5 +54,13 @@ repos:
   hooks:
   - id: mypy
     language: system
+- repo: local
+  hooks:
+  - id: pytest
+    entry: python setup.py test
+    language: system
+    pass_filenames: false
+    name: pytest
+    types: [python]
 default_language_version:
   python: python3

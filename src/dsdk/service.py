@@ -13,6 +13,8 @@ from typing import Any, Dict, Generator, Optional, Sequence, Tuple, cast
 from configargparse import ArgParser as ArgumentParser
 from configargparse import Namespace
 
+from .utils import configure_logger
+
 logger = getLogger(__name__)
 
 
@@ -94,6 +96,19 @@ class Evidence(OrderedDict):
 
 class Service:
     """Service."""
+
+    ON = "".join(("{", ", ".join(('"key": "main.on"',)), "}"))
+
+    END = "".join(("{", ", ".join(('"key": "main.end"',)), "}"))
+
+    @classmethod
+    def main(cls):
+        """Main."""
+        configure_logger("dsdk")
+        logger.info(cls.ON)
+        service = cls(parser=ArgumentParser())
+        _ = service()
+        logger.info(cls.END)
 
     def __init__(
         self,
