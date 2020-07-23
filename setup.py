@@ -4,16 +4,26 @@
 from setuptools import find_packages, setup
 
 INSTALL_REQUIRES = (
-    "configargparse>=0.15.2",
+    "configargparse>=1.2.3",
     "numpy>=1.17.0",
     "pip>=19.3.1",
     "pandas>=0.23.4",
-    "setuptools>=42.0.2",
-    "wheel>=0.33.6",
+    "setuptools>=49.2.0",
+    "wheel>=0.34.2",
 )
 
-LINT_REQUIRES = (
+
+MONGO_REQUIRES = ("pymongo",)
+
+MSSQL_REQUIRES = ("cython", "pymssql==2.1.4", "sqlalchemy")
+
+POSTGRES_REQUIRES = ("psycopg2",)
+
+SETUP_REQUIRES = ("pytest-runner", "setuptools_scm>=4.1.2")
+
+TEST_REQUIRES = (
     "black",
+    "coverage",
     "flake8",
     "flake8-bugbear",
     "flake8-commas",
@@ -27,29 +37,17 @@ LINT_REQUIRES = (
     "pep8-naming",
     "pre-commit",
     "pylint",
-    "pytest",  # lint of tests fails without import
+    "pytest",
+    "pytest-cov",
 )
-
-MONGO_REQUIRES = ("pymongo",)
-
-MSSQL_REQUIRES = ("cython", "pymssql==2.1.4", "sqlalchemy")
-
-POSTGRES_REQUIRES = ("psycopg2",)
-
-SETUP_REQUIRES = ("pytest-runner", "setuptools_scm>=3.3.3")
-
-TEST_REQUIRES = ("coverage", "pytest", "pytest-cov")
-
 
 setup(
     license="MIT",
     extras_require={
-        "all": LINT_REQUIRES
-        + MONGO_REQUIRES
+        "all": MONGO_REQUIRES
         + MSSQL_REQUIRES
         + POSTGRES_REQUIRES
         + TEST_REQUIRES,
-        "lint": LINT_REQUIRES,
         "mongo": MONGO_REQUIRES,
         "mssql": MSSQL_REQUIRES,
         "postgres": POSTGRES_REQUIRES,
@@ -61,7 +59,7 @@ setup(
     package_dir={"": "src"},
     python_requires=">=3.7",
     setup_requires=SETUP_REQUIRES,
-    tests_require=LINT_REQUIRES + TEST_REQUIRES,
+    tests_require=TEST_REQUIRES,
     use_scm_version={"local_scheme": "dirty-tag"},
     zip_safe=False,
 )
