@@ -17,7 +17,7 @@ MONGO_REQUIRES = ("pymongo",)
 
 MSSQL_REQUIRES = ("cython", "pymssql==2.1.4", "sqlalchemy")
 
-POSTGRES_REQUIRES = ("psycopg2",)
+POSTGRES_REQUIRES = ("psycopg2-binary",)
 
 SETUP_REQUIRES = ("pytest-runner", "setuptools_scm>=4.1.2")
 
@@ -32,7 +32,7 @@ TEST_REQUIRES = (
     "flake8-logging-format",
     "flake8-mutable",
     "flake8-sorted-keys",
-    "isort",
+    "isort<=4.2.5",
     "mypy",
     "pep8-naming",
     "pre-commit",
