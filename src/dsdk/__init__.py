@@ -4,6 +4,7 @@
 from .model import Mixin as ModelMixin
 from .mongo import EvidenceMixin as MongoEvidenceMixin
 from .mongo import Mixin as MongoMixin
+from .mssql import AlchemyMixin as MssqlAlchemyMixin
 from .mssql import CheckTablePrivileges as CheckMssqlTablePrivileges
 from .mssql import Mixin as MssqlMixin
 from .postgres import CheckTablePrivileges as CheckPostgresTablePrivileges
@@ -28,6 +29,7 @@ __all__ = (
     "ModelMixin",
     "MongoMixin",
     "MongoEvidenceMixin",
+    "MssqlAlchemyMixin",
     "MssqlMixin",
     "CheckMssqlTablePrivileges",
     "CheckPostgresTablePrivileges",
