@@ -13,7 +13,7 @@ from dsdk import (
     Model,
     ModelMixin,
     MongoEvidenceMixin,
-    MssqlMixin,
+    MssqlAlchemyMixin,
     Service,
     Task,
     dump_json_file,
@@ -98,16 +98,21 @@ def test_mongo_mixin(kwargs: Dict[str, Any]) -> None:
     _ = _App(**kwargs)
 
 
-def pymssql_mixin_parser_kwargs():
-    """Return pymssql mixin parser kwargs."""
+def mssql_mixin_parser_kwargs():
+    """Return mssql mixin parser kwargs."""
     config_path = "./config.json"
-    config: Dict[str, Any] = {}
+    config: Dict[str, Any] = {
+        "mssql-sql": "./sql/mssql",
+        "mssql-tables": "foo,bar,baz",
+    }
     dump_json_file(config, config_path)
 
     model = Model(name="test", version="0.0.1")
     model_path = "./model.pkl"
     dump_pickle_file(model, model_path)
 
+    mssql_sql = "./sql/mssql"
+    mssql_tables = "foo,bar,baz"
     mssql_uri = "mssql+pymssql://mssql?test"
 
     argv = [
@@ -115,6 +120,10 @@ def pymssql_mixin_parser_kwargs():
         config_path,
         "--model",
         model_path,
+        "--mssql-sql",
+        mssql_sql,
+        "--mssql-tables",
+        mssql_tables,
         "--mssql-uri",
         mssql_uri,
     ]
@@ -122,24 +131,31 @@ def pymssql_mixin_parser_kwargs():
     return {"argv": argv, "parser": parser}
 
 
-def pymssql_mixin_kwargs():
-    """Return pymssql mixin kwargs."""
+def mssql_mixin_kwargs():
+    """Return mssql mixin kwargs."""
     model = Model(name="test", version="0.0.1")
+    mssql_sql = "./sql/mssql"
+    mssql_tables = "foo,bar,baz"
     mssql_uri = "mssql+pymssql://mssql?test"
 
-    return {"model": model, "mssql_uri": mssql_uri}
+    return {
+        "model": model,
+        "mssql_sql": mssql_sql,
+        "mssql_tables": mssql_tables,
+        "mssql_uri": mssql_uri,
+    }
 
 
 @mark.skipif(
     version_info >= (3, 8), reason="pymssql not supported >= python 3.8"
 )
 @mark.parametrize(
-    "kwargs", [pymssql_mixin_parser_kwargs(), pymssql_mixin_kwargs()]
+    "kwargs", [mssql_mixin_parser_kwargs(), mssql_mixin_kwargs()]
 )
-def test_pymssql_mixin(kwargs: Dict[str, Any]) -> None:
+def test_mssql_mixin(kwargs: Dict[str, Any]) -> None:
     """Test mssql mixin."""
 
-    class _App(MssqlMixin, ModelMixin, Service):
+    class _App(MssqlAlchemyMixin, ModelMixin, Service):
         def __init__(self, **kwargs):
             pipeline = (_Extract, _Transform, _Predict)
             super().__init__(pipeline=pipeline, **kwargs)

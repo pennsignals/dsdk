@@ -6,8 +6,9 @@ from setuptools import find_packages, setup
 INSTALL_REQUIRES = (
     "configargparse>=1.2.3",
     "numpy>=1.17.0",
-    "pip>=19.3.1",
     "pandas>=0.23.4",
+    "pip>=19.3.1",
+    "pyyaml>=5.3.1",
     "setuptools>=49.2.0",
     "wheel>=0.34.2",
 )

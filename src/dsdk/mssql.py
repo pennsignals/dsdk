@@ -1,27 +1,46 @@
 # -*- coding: utf-8 -*-
-"""Mssql support."""
+"""Mssql."""
 
 from __future__ import annotations
 
 from abc import ABC
+from argparse import Namespace
 from contextlib import contextmanager
 from logging import getLogger
-from typing import TYPE_CHECKING, Generator, Optional, cast
+from typing import TYPE_CHECKING, Any, Dict, Generator, Tuple, Type, cast
 
 from configargparse import ArgParser as ArgumentParser
 
+from .persistor import AbstractPersistor as BaseAbstractPersistor
+from .persistor import Persistor as BasePersistor
+from .persistor import StubException, namespace_directory
 from .service import Service, Task
 
 logger = getLogger(__name__)
 
+
 try:
-    # Since not everyone will use mssql
+    from pymssql import connect, DatabaseError, InterfaceError
+except ImportError as import_error:
+    logger.warning(import_error)
+
+    DatabaseError = InterfaceError = StubException
+
+    def connect(*args, **kwargs):
+        """Connect stub."""
+        raise NotImplementedError()
+
+
+try:
     from sqlalchemy import create_engine
-    from sqlalchemy.exc import DatabaseError, InterfaceError
-    import pymssql  # noqa: F401; pylint: disable=unused-import
-except ImportError:
-    create_engine = None
-    DatabaseError = InterfaceError = Exception
+    from sqlalchemy.exc import (
+        DatabaseError as AlchemyDatabaseError,
+        InterfaceError as AlchemyInterfaceError,
+    )
+except ImportError as import_error:
+    logger.warning(import_error)
+
+    AchemyDatabaseError = AlchemyInterfaceError = StubException
 
 
 if TYPE_CHECKING:
@@ -30,29 +49,116 @@ else:
     BaseMixin = ABC
 
 
-class Mixin(BaseMixin):
-    """Mixin."""
+class Messages:  # pylint: disable=too-few-public-methods
+    """Messages."""
 
-    def __init__(self, *, mssql_uri: Optional[str] = None, **kwargs):
-        """__init__."""
-        # inferred type of self._mssql_uri must not be not optional
-        self._mssql_uri = cast(str, mssql_uri)
-        super().__init__(**kwargs)
-        # ... because post-injected self._mssql_uri is not optional
-        assert self._mssql_uri is not None
-        self._mssql = create_engine(self._mssql_uri)
+    KEY = "mssql"
 
-    def inject_arguments(self, parser: ArgumentParser) -> None:
+    CLOSE = "".join(("{", ", ".join((f'"key": "{KEY}.close"',)), "}"))
+    COLUMN_PRIVILEGE = "".join(
+        ("{", ", ".join((f'"key": "{KEY}.warn"', '"value": "%s"')), "}",)
+    )
+    COMMIT = "".join(("{", ", ".join((f'"key": "{KEY}.commit"')), "}"))
+    END = "".join(("{", f'"key": "{KEY}.end"', "}"))
+
+    ERROR = "".join(
+        ("{", ", ".join((f'"key": "{KEY}.table.error"', '"table": "%s"')), "}")
+    )
+    ERRORS = "".join(
+        (
+            "{",
+            ", ".join((f'"key": "{KEY}.tables.error"', '"tables": "%s"')),
+            "}",
+        )
+    )
+    ON = "".join(("{", ", ".join((f'"key": "{KEY}.on"',)), "}"))
+    OPEN = "".join(("{", ", ".join(('"key": "{KEY}.open"',)), "}"))
+    ROLLBACK = "".join(("{", ", ".join(('"key": "{KEY}.rollback"')), "}"))
+
+    def check(self, cur, exceptions):
+        """check."""
+        logger.info(self.ON)
+        errors = []
+        for table in self.tables:  # pylint: disable=no-member; type: ignore
+            try:
+                cur.execute(
+                    # pylint: disable=no-member; type: ignore
+                    self.sql.extant.format(table=table)
+                )
+                (n,) = cur.fetchone()
+                assert n == 1
+            except exceptions as error:
+                number, *_ = error.orig.args
+                # column privileges are a standards-breaking mssql mis-feature
+                if number == 230:
+                    logger.info(self.COLUMN_PRIVILEGE, table)
+                    continue
+                logger.warning(self.ERROR, table)
+                errors.append(table)
+        if bool(errors):
+            raise RuntimeError(self.ERRORS, errors)
+        logger.info(self.END)
+
+
+class Persistor(Messages, BasePersistor):
+    """Persistor."""
+
+    @contextmanager
+    def connect(self) -> Generator[Any, None, None]:
+        """Connect."""
+        con = connect(
+            server=self.host,
+            username=self.username,
+            password=self.password,
+            database=self.database,
+            port=self.port,
+        )
+        logger.info(self.OPEN)
+        # TODO check semantics on pymssql connection and `with ... as`
+        try:
+            yield con
+        finally:
+            con.close()
+            logger.info(self.CLOSE)
+
+    def check(self, cur, exceptions=(DatabaseError, InterfaceError)):
+        """Check."""
+        super().check(cur, exceptions)
+
+
+class AlchemyPersistor(Messages, BaseAbstractPersistor):
+    """AlchemyPersistor."""
+
+    @classmethod
+    def inject_arguments(cls, mixin, parser):
         """Inject arguments."""
-        super().inject_arguments(parser)
+        kwargs: Dict[str, Any] = {}
 
-        def _inject_mssql_uri(mssql_uri: str) -> str:
-            self._mssql_uri = mssql_uri
-            return mssql_uri
+        def _inject_sql(sql: str) -> Namespace:
+            nonlocal kwargs
+            kwargs["sql"] = value = namespace_directory(sql)
+            return value
+
+        def _inject_tables(strings: str) -> Tuple[str, ...]:
+            nonlocal kwargs
+            value = tuple(",".split(strings))
+            for string in value:
+                assert string.__class__ is str
+            kwargs["tables"] = value
+            return value
+
+        def _inject_uri(uri: str) -> str:
+            nonlocal kwargs
+            kwargs["uri"] = uri
+            return uri
+
+        def _inject_persistor(cls: Type) -> AlchemyPersistor:
+            mixin.mssql = persistor = cast(AlchemyPersistor, cls(**kwargs))
+            return persistor
 
         parser.add(
             "--mssql-uri",
-            required=True,
+            env_var="MSSQL_URI",
             help=" ".join(
                 (
                     "MSSQL URI used to connect to a MSSQL database:",
@@ -68,85 +174,93 @@ class Mixin(BaseMixin):
                     "and PASSWORD.",
                 )
             ),
-            env_var="MSSQL_URI",
-            type=_inject_mssql_uri,
+            required=True,
+            type=_inject_uri,
+        )
+        parser.add(
+            "--mssql-tables",
+            env_var="MSSQL_TABLES",
+            help="Comma delimited tables to check.",
+            required=True,
+            type=_inject_tables,
+        )
+        parser.add(
+            "--mssql-sql",
+            help="Nested directory of sql fragments.",
+            required=True,
+            type=_inject_sql,
+        )
+        parser.add(
+            "--mssql", default=cls, required=False, type=_inject_persistor,
         )
 
-    OPEN = "".join(("{", ", ".join(('"key": "mssql.open"',)), "}"))
+    def __init__(self, sql: Namespace, tables: Tuple[str, ...], uri: str):
+        """__init__."""
+        self.engine = create_engine(uri)
+        self.uri = uri
+        super().__init__(sql, tables)
 
-    CLOSE = "".join(("{", ", ".join(('"key": "mssql.close"',)), "}"))
-
-    CONNECT = """
-select 1 as n
-"""
+    def check(
+        self, cur, exceptions=(AlchemyDatabaseError, AlchemyInterfaceError),
+    ):
+        """Check."""
+        super().check(cur, exceptions)
 
     @contextmanager
-    def open_mssql(self) -> Generator:
-        """Open mssql."""
-        with self._mssql.connect() as con:
-            # force lazy connection open.
-            cur = con.execute(self.CONNECT)
-            for _ in cur.fetchall():
-                pass
-            logger.info(self.OPEN)
-            try:
-                yield con
-            finally:
-                logger.info(self.CLOSE)
+    def connect(self) -> Generator[Any, None, None]:
+        """Connect."""
+        con = self.engine.connect()
+        logger.info(self.OPEN)
+        try:
+            yield con
+        finally:
+            con.close()
+            logger.info(self.CLOSE)
+
+
+class Mixin(BaseMixin):
+    """Mixin."""
+
+    def __init__(self, *, mssql_cls: Type = Persistor, **kwargs):
+        """__init__."""
+        self.mssql = cast(Persistor, None)
+        self.mssql_cls = mssql_cls
+        super().__init__(**kwargs)
+
+    def inject_arguments(self, parser: ArgumentParser) -> None:
+        """Inject arguments."""
+        self.mssql_cls.inject_arguments(self, parser)
+        super().inject_arguments(parser)
+
+
+class AlchemyMixin(BaseMixin):
+    """AlchemyMixin."""
+
+    def __init__(
+        self,
+        *,
+        mssql_tables=None,  # pylint: disable=unused-argument
+        mssql_sql=None,  # pylint: disable=unused-argument
+        mssql_uri=None,  # pylint: disable=unused-argument
+        mssql_cls: Type = AlchemyPersistor,
+        **kwargs,
+    ):
+        """__init__."""
+        self.mssql = cast(AlchemyPersistor, None)
+        self.mssql_cls = mssql_cls
+        super().__init__(**kwargs)
+
+    def inject_arguments(self, parser: ArgumentParser) -> None:
+        """Inject arguments."""
+        self.mssql_cls.inject_arguments(self, parser)
+        super().inject_arguments(parser)
 
 
 class CheckTablePrivileges(Task):  # pylint: disable=too-few-public-methods
-    """Check table privileges."""
-
-    EXTANT = """
-select 1 as n where exists (select 1 as n from {table})
-"""
-
-    KEY = "mssql.table_privilege_check"
-
-    ON = "".join(("{", f'"key": "{KEY}.on"', "}"))
-
-    END = "".join(("{", f'"key": "{KEY}.end"', "}"))
-
-    COLUMN_PRIVILEGE = "".join(
-        ("{", ", ".join((f'"key": "{KEY}.warn"', '"value": "%s"')), "}",)
-    )
-
-    ERROR = "".join(
-        ("{", ", ".join((f'"key": "{KEY}.table.error"', '"table": "%s"')), "}")
-    )
-
-    ERRORS = "".join(
-        (
-            "{",
-            ", ".join((f'"key": "{KEY}.tables.error"', '"tables": "%s"')),
-            "}",
-        )
-    )
-
-    def __init__(self, tables):
-        """__init__."""
-        self.tables = tables
+    """CheckTablePrivileges."""
 
     def __call__(self, batch, service):
         """__call__."""
-        logger.info(self.ON)
-        with service.open_mssql() as con:
-            errors = []
-            for table in self.tables:
-                sql = self.EXTANT.format(table=table)
-                try:
-                    cur = con.execute(sql)
-                    for _ in cur.fetchall():
-                        pass
-                except (DatabaseError, InterfaceError) as error:
-                    number, *_ = error.orig.args
-                    # column privileges is a standard-breaking mssql "feature"
-                    if number == 230:
-                        logger.info(self.COLUMN_PRIVILEGE, table)
-                        continue
-                    logger.warning(self.ERROR, table)
-                    errors.append(table)
-            if bool(errors):
-                raise RuntimeError(self.ERRORS, errors)
-        logger.info(self.END)
+        mssql = service.mssql
+        with mssql.rollback() as cur:
+            mssql.check(cur)
