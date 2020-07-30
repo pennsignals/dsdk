@@ -6,10 +6,11 @@ from __future__ import annotations
 from abc import ABC
 from contextlib import contextmanager
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Dict, Generator, cast
+from typing import TYPE_CHECKING, Any, Dict, Generator, Type, cast
 
 from configargparse import ArgParser as ArgumentParser
 
+from .dependency import inject_str
 from .service import Service
 from .utils import load_pickle_file
 
@@ -25,10 +26,34 @@ else:
 class Model:  # pylint: disable=too-few-public-methods
     """Model."""
 
+    KEY = "model"
+
     def __init__(self, name: str, version: str) -> None:
         """__init__."""
         self.name = name
         self.version = version
+
+    @classmethod
+    @contextmanager
+    def dependencies(
+        cls, service: Service, parser
+    ) -> Generator[None, None, None]:
+        """Dependencies."""
+        kwargs: Dict[str, Any] = {}
+
+        for src, dst, help_, inject in (
+            ("model", "path", "Path to pickled model.", inject_str,),
+        ):
+            parser.add(
+                f"--{cls.KEY}-{src}",
+                env_var=f"{cls.KEY.upper()}_{src.upper()}",
+                help=help_,
+                required=True,
+                type=inject(dst, kwargs),
+            )
+        yield
+
+        service.dependency(cls.KEY, load_pickle_file, kwargs)
 
     def as_doc(self) -> Dict[str, Any]:
         """As doc."""
@@ -38,9 +63,10 @@ class Model:  # pylint: disable=too-few-public-methods
 class Mixin(BaseMixin):
     """Mixin."""
 
-    def __init__(self, *, model=None, **kwargs):
+    def __init__(self, *, model=None, model_cls: Type = Model, **kwargs):
         """__init__."""
         self.model = cast(Model, model)
+        self.model_cls = model_cls
         super().__init__(**kwargs)
 
     @contextmanager
@@ -48,24 +74,6 @@ class Mixin(BaseMixin):
         self, parser: ArgumentParser
     ) -> Generator[None, None, None]:
         """Inject arguments."""
-
-        model = cast(Model, None)
-
-        def _inject_model(path: str) -> Model:
-            nonlocal model
-            model = cast(Model, load_pickle_file(path))
-            return model
-
-        parser.add(
-            "--model",
-            required=True,
-            help="Path to pickled model",
-            env_var="MODEL_PATH",
-            type=_inject_model,
-        )
-
-        with super().inject_arguments(parser):
-            yield
-
-        if self.model is None:
-            self.model = model
+        with self.model_cls.dependencies(self, parser):
+            with super().inject_arguments(parser):
+                yield

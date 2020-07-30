@@ -11,14 +11,14 @@ from typing import TYPE_CHECKING, Any, Dict, Generator, Tuple, Type, cast
 
 from configargparse import ArgParser as ArgumentParser
 
+from .dependency import (
+    StubException,
+    inject_namespace,
+    inject_str,
+    inject_str_tuple,
+)
 from .persistor import AbstractPersistor as BaseAbstractPersistor
 from .persistor import Persistor as BasePersistor
-from .persistor import (
-    StubException,
-    _inject_namespace,
-    _inject_str,
-    _inject_str_tuple,
-)
 from .service import Service, Task
 
 logger = getLogger(__name__)
@@ -146,9 +146,9 @@ class AlchemyPersistor(Messages, BaseAbstractPersistor):
             (
                 "tables",
                 "A comma delimited list of tables to check.",
-                _inject_str_tuple,
+                inject_str_tuple,
             ),
-            ("sql", "A nested directory of sql fragments.", _inject_namespace),
+            ("sql", "A nested directory of sql fragments.", inject_namespace),
             (
                 "uri",
                 " ".join(
@@ -167,7 +167,7 @@ class AlchemyPersistor(Messages, BaseAbstractPersistor):
                         "and PASSWORD.",
                     )
                 ),
-                _inject_str,
+                inject_str,
             ),
         ):
             parser.add(

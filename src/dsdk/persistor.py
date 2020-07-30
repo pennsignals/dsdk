@@ -6,35 +6,17 @@ from __future__ import annotations
 from argparse import Namespace
 from contextlib import contextmanager
 from logging import getLogger
-from os import listdir
-from os.path import isdir, join, splitext
-from typing import Any, Callable, Dict, Generator, Tuple
+from typing import Any, Dict, Generator, Tuple
 
+from .dependency import (
+    inject_int,
+    inject_namespace,
+    inject_str,
+    inject_str_tuple,
+)
 from .service import Service
 
 logger = getLogger(__name__)
-
-
-class StubException(Exception):
-    """StubException."""
-
-
-def namespace_directory(root: str = "./", ext: str = ".sql") -> Namespace:
-    """Return namespace from code directory."""
-    result = Namespace()
-    for name in listdir(root):
-        if name[0] == ".":
-            continue
-        path = join(root, name)
-        if isdir(path):
-            setattr(result, name, namespace_directory(path, ext))
-            continue
-        s_name, s_ext = splitext(name)
-        if s_ext != ext:
-            continue
-        with open(path) as fin:
-            setattr(result, s_name, fin.read())
-    return result
 
 
 class AbstractPersistor:
@@ -118,40 +100,6 @@ class AbstractPersistor:
                 logger.info(self.ROLLBACK)
 
 
-def _inject_int(key, kwargs: Dict[str, Any]) -> Callable:
-    def _inject(value) -> int:
-        kwargs[key] = result = int(value)
-        return result
-
-    return _inject
-
-
-def _inject_str(key, kwargs: Dict[str, Any]) -> Callable:
-    def _inject(value: str):
-        assert value.__class__ is str
-        kwargs[key] = result = value
-        return result
-
-    return _inject
-
-
-def _inject_str_tuple(key, kwargs: Dict[str, Any]) -> Callable:
-    def _inject(value: str):
-        assert value.__class__ is str
-        kwargs[key] = result = tuple(",".split(value))
-        return result
-
-    return _inject
-
-
-def _inject_namespace(key, kwargs: Dict[str, Any]) -> Callable:
-    def _inject(value: str):
-        result = namespace_directory(value)
-        kwargs[key] = result
-
-    return _inject
-
-
 class Persistor(AbstractPersistor):
     """Persistor."""
 
@@ -164,17 +112,17 @@ class Persistor(AbstractPersistor):
         kwargs: Dict[str, Any] = {}
 
         for key, help_, inject in (
-            ("database", "The database name", _inject_str),
-            ("host", "The database host name or ip address", _inject_str),
-            ("password", "The database password", _inject_str),
-            ("port", "The database port", _inject_int),
-            ("sql", "A nested directory of sql fragments.", _inject_namespace),
+            ("database", "The database name", inject_str),
+            ("host", "The database host name or ip address", inject_str),
+            ("password", "The database password", inject_str),
+            ("port", "The database port", inject_int),
+            ("sql", "A nested directory of sql fragments.", inject_namespace),
             (
                 "tables",
                 "A comma delimited list of tables to check",
-                _inject_str_tuple,
+                inject_str_tuple,
             ),
-            ("username", "The database username", _inject_str),
+            ("username", "The database username", inject_str),
         ):
             parser.add(
                 f"--{cls.KEY}-{key}",

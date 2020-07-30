@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Data Science Deployment Kit."""
 
+from .dependency import namespace_directory
 from .model import Mixin as ModelMixin
 from .model import Model
 from .mongo import EvidenceMixin as MongoEvidenceMixin
@@ -12,7 +13,6 @@ from .mssql import AlchemyPersistor as MssqlAlchemyPersistor
 from .mssql import CheckTablePrivileges as CheckMssqlTablePrivileges
 from .mssql import Mixin as MssqlMixin
 from .mssql import Persistor as MssqlPersistor
-from .persistor import namespace_directory
 from .postgres import CheckTablePrivileges as CheckPostgresTablePrivileges
 from .postgres import Mixin as PostgresMixin
 from .postgres import Persistor as PostgresPersistor

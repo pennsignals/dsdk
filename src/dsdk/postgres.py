@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING, Any, Generator, Type, cast
 
 from configargparse import ArgParser as ArgumentParser
 
+from .dependency import StubException
 from .persistor import Persistor as BasePersistor
-from .persistor import StubException
 from .service import Service, Task
 
 logger = getLogger(__name__)
