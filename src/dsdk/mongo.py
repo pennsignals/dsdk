@@ -18,8 +18,8 @@ from typing import (
 
 from configargparse import ArgParser as ArgumentParser
 
+from .dependency import inject_str
 from .model import Model
-from .persistor import _inject_str
 from .service import Batch, Service
 from .utils import retry
 
@@ -140,7 +140,7 @@ class Persistor(Messages):
                         "Specifically, check url encoding of PASSWORD.",
                     )
                 ),
-                _inject_str,
+                inject_str,
             ),
         ):
             parser.add(

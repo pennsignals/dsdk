@@ -173,7 +173,7 @@ class Service:
         dependency = getattr(self, key)
         if dependency is not None:
             return
-        logger.info(
+        logger.debug(
             "Injecting dependency: %s, %s, %s",
             key,
             cls.__name__,
