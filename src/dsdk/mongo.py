@@ -18,7 +18,9 @@ from typing import (
 
 from configargparse import ArgParser as ArgumentParser
 
-from .service import Batch, Model, Service
+from .model import Model
+from .persistor import _inject_str
+from .service import Batch, Service
 from .utils import retry
 
 try:
@@ -43,63 +45,25 @@ else:
     BaseMixin = ABC
 
 
-class Mixin(BaseMixin):
-    """Mixin."""
+class Messages:  # pylint: disable=too-few-public-methods
+    """Messages."""
 
-    def __init__(self, *, mongo_uri: Optional[str] = None, **kwargs):
-        """__init__."""
-        # inferred type of self._mongo_uri must not be optional...
-        self._mongo_uri = cast(str, mongo_uri)
-        super().__init__(**kwargs)
+    KEY = "mongo"
 
-        # ... because self._mongo_uri is not optional
-        assert self._mongo_uri is not None
+    CLOSE = "".join(
+        ("{", ", ".join((f'"key": "{KEY}.close"', '"database": "%s"',)), "}",)
+    )
 
-    def inject_arguments(self, parser: ArgumentParser) -> None:
-        """Inject arguments."""
-        super().inject_arguments(parser)
-
-        def _inject_mongo_uri(mongo_uri: str) -> str:
-            self._mongo_uri = mongo_uri
-            return mongo_uri
-
-        parser.add(
-            "--mongo-uri",
-            required=True,
-            help=" ".join(
-                (
-                    "Mongo URI used to connect to a Mongo database:",
-                    (
-                        "mongodb://USER:PASSWORD@HOST1,HOST2,.../DATABASE?"
-                        "replicaset=REPLICASET&authsource=admin"
-                    ),
-                    "Use a valid uri."
-                    "Url encode all parts, but do not encode the entire uri.",
-                    "No unencoded colons, ampersands, slashes,",
-                    "question-marks, etc. in parts.",
-                    "Specifically, check url encoding of PASSWORD.",
-                )
-            ),
-            env_var="MONGO_URI",
-            type=_inject_mongo_uri,
-        )
-
-    @contextmanager
-    def open_mongo(self) -> Generator:
-        """Open mongo."""
-        with open_database(self._mongo_uri) as database:
-            yield database
-
-
-class EvidenceMixin(Mixin):
-    """Evidence Mixin."""
+    OPEN = "".join(
+        ("{", ", ".join((f'"key": "{KEY}.open"', '"database": "%s"',)), "}",)
+    )
 
     RESULTSET_ERROR = "".join(
         (
             "{",
             ", ".join(
                 (
-                    '"key": "mongo.resultset.error"',
+                    f'"key": "{KEY}.resultset.error"',
                     '"collection": "%s.%s"',
                     '"actual": %s',
                     '"expected": %s',
@@ -109,9 +73,190 @@ class EvidenceMixin(Mixin):
         )
     )
 
-    def __init__(self, **kwargs):
+    INSERT_ONE = "".join(
+        (
+            "{",
+            ", ".join(
+                (
+                    f'"key": "{KEY}.insert_one"',
+                    '"collection": "%s.%s"',
+                    '"id": "%s"',
+                )
+            ),
+            "}",
+        )
+    )
+
+    INSERT_MANY = "".join(
+        (
+            "{",
+            ", ".join(
+                (
+                    f'"key": "{KEY}.insert_many"',
+                    '"collection": "%s.%s"',
+                    '"value": %s',
+                )
+            ),
+            "}",
+        )
+    )
+
+    UPDATE_ONE = "".join(
+        (
+            "{",
+            ", ".join(
+                (f'"key": "{KEY}.update_one"', '"collection": "%s.%s"',)
+            ),
+            "}",
+        )
+    )
+
+
+class Persistor(Messages):
+    """Persistor."""
+
+    @classmethod
+    @contextmanager
+    def dependencies(
+        cls, service: Service, parser
+    ) -> Generator[None, None, None]:
+        """Dependencies."""
+        kwargs: Dict[str, Any] = {}
+
+        for key, help_, inject in (
+            (
+                "uri",
+                " ".join(
+                    (
+                        "Mongo URI used to connect to a Mongo database:",
+                        (
+                            "mongodb://USER:PASSWORD@HOST1,HOST2,.../DATABASE?"
+                            "replicaset=REPLICASET&authsource=admin"
+                        ),
+                        "Use a valid uri."
+                        "Url encode parts, do not encode the entire uri.",
+                        "No unencoded colons, ampersands, slashes,",
+                        "question-marks, etc. in parts.",
+                        "Specifically, check url encoding of PASSWORD.",
+                    )
+                ),
+                _inject_str,
+            ),
+        ):
+            parser.add(
+                f"--{cls.KEY}-{key}",
+                env_var=f"{cls.KEY.upper()}_{key.upper()}",
+                help=help_,
+                required=True,
+                type=inject(key, kwargs),
+            )
+        yield
+
+        service.dependency(cls.KEY, cls, kwargs)
+
+    def __init__(self, uri: str):
         """__init__."""
+        self.uri = uri
+        self.document_class = dict
+        self.tz_aware = True
+        self.connect_ = True
+
+    @contextmanager
+    def connect(self, **kwargs) -> Generator[Database, None, None]:
+        """Contextmanager for database.
+
+        Ensures that the mongo connection is opened and closed.
+        """
+        with MongoClient(
+            self.uri,
+            document_class=self.document_class,
+            tz_aware=self.tz_aware,
+            connect=self.connect_,
+            **kwargs,
+        ) as client:
+            database = client.get_database()
+            # force lazy connection open
+            client.admin.command("ismaster")
+            logger.info(self.OPEN, database.name)
+            try:
+                yield database
+            finally:
+                logger.info(self.CLOSE, database.name)
+
+    @retry(AutoReconnect)
+    def insert_one(self, collection: Collection, doc: Dict[str, Any]):
+        """Insert one with retry."""
+        result = collection.insert_one(doc)
+        logger.info(
+            self.INSERT_ONE,
+            collection.database.name,
+            collection.name,
+            result.inserted_id,
+        )
+        return result
+
+    @retry(AutoReconnect)
+    def insert_many(
+        self, collection: Collection, docs: Sequence[Dict[str, Any]]
+    ):
+        """Insert many with retry."""
+        result = collection.insert_many(docs)
+        logger.info(
+            self.INSERT_MANY,
+            collection.database.name,
+            collection.name,
+            len(result.inserted_ids),
+        )
+        return result
+
+    @retry(AutoReconnect)
+    def update_one(
+        self, collection: Collection, key: Dict[str, Any], doc: Dict[str, Any]
+    ):
+        """Update one with retry."""
+        result = collection.update_one(key, doc)
+        logger.info(
+            self.UPDATE_ONE, collection.database.name, collection.name,
+        )
+        return result
+
+
+class EvidencePersistor(Persistor):
+    """Evidence Persistor."""
+
+
+class Mixin(BaseMixin):
+    """Mixin."""
+
+    def __init__(
+        self,
+        *,
+        mongo=None,
+        mongo_uri=None,  # pylint: disable=unused-argument
+        mongo_cls=Persistor,
+        **kwargs,
+    ):
+        """__init__."""
+        self.mongo = cast(Persistor, mongo)
+        self.mongo_cls = mongo_cls
         super().__init__(**kwargs)
+
+    @contextmanager
+    def inject_arguments(
+        self, parser: ArgumentParser,
+    ) -> Generator[None, None, None]:
+        """Inject arguments."""
+        with self.mongo_cls.dependencies(self, parser):
+            with super().inject_arguments(parser):
+                yield
+
+
+class EvidenceMixin(Mixin):
+    """Evidence Mixin."""
+
+    def __init__(self, *, mongo_cls=EvidencePersistor, **kwargs):
+        """__init__."""
+        super().__init__(mongo_cls=mongo_cls, **kwargs)
 
     @contextmanager
     def open_batch(
@@ -120,15 +265,16 @@ class EvidenceMixin(Mixin):
         """Open batch."""
         if key is None:
             key = ObjectId()
+        mongo = self.mongo
         with super().open_batch(key) as batch:
             doc = batch.as_insert_doc(model)  # <- model dependency
-            with self.open_mongo() as database:
-                key = insert_one(database.batches, doc)
+            with mongo.connect() as database:
+                key = mongo.insert_one(database.batches, doc)
             yield batch
 
         key, doc = batch.as_update_doc()
-        with self.open_mongo() as database:
-            update_one(database.batches, key, doc)
+        with mongo.connect() as database:
+            mongo.update_one(database.batches, key, doc)
 
     def store_evidence(self, batch: Batch, *args, **kwargs) -> None:
         """Store Evidence."""
@@ -141,12 +287,13 @@ class EvidenceMixin(Mixin):
             df["batch_id"] = batch.key
             columns = df[[c for c in df.columns if c not in exclude]]
             docs = columns.to_dict(orient="records")
-            with self.open_mongo() as database:
+            mongo = self.mongo
+            with mongo.connect() as database:
                 collection = database[key]
-                result = insert_many(collection, docs)
+                result = mongo.insert_many(collection, docs)
                 actual = len(result.inserted_ids)
                 expected = columns.shape[0]
-                assert actual == expected, self.RESULTSET_ERROR % (
+                assert actual == expected, mongo.RESULTSET_ERROR % (
                     database.name,
                     collection.name,
                     actual,
@@ -155,122 +302,3 @@ class EvidenceMixin(Mixin):
 
                 # TODO: Better exception
             df.drop(columns=["batch_id"], inplace=True)
-
-
-OPEN = "".join(
-    ("{", ", ".join(('"key": "mongo.open"', '"database": "%s"',)), "}",)
-)
-
-CLOSE = "".join(
-    ("{", ", ".join(('"key": "mongo.close"', '"database": "%s"',)), "}",)
-)
-
-
-@contextmanager
-def open_database(
-    uri: str, document_class=dict, tz_aware=True, connect=True, **kwargs
-) -> Database:
-    """Contextmanager for database.
-
-    Ensures that the mongo connection is opened and closed.
-
-    uri:
-        mongodb://user:pass@host1,host2,host3/database?replicaSet=replica&authSource=admin
-
-    Like any uri, components (like user and pass) must be urlencoded to
-        prevent special characters (like the slash following user's
-        domain or an '@' in a password') from creating an invalid uri.
-    Do not urlencode the entire uri.
-    """
-    with MongoClient(
-        uri,
-        document_class=document_class,
-        tz_aware=tz_aware,
-        connect=connect,
-        **kwargs,
-    ) as client:
-        database = client.get_database()
-        # force lazy connection open
-        client.admin.command("ismaster")
-        logger.info(OPEN, database.name)
-        try:
-            yield database
-        finally:
-            logger.info(CLOSE, database.name)
-
-
-INSERT_ONE = "".join(
-    (
-        "{",
-        ", ".join(
-            (
-                '"key": "mongo.insert_one"',
-                '"collection": "%s.%s"',
-                '"id": "%s"',
-            )
-        ),
-        "}",
-    )
-)
-
-
-@retry(AutoReconnect)
-def insert_one(collection: Collection, doc: Dict[str, Any]):
-    """Insert one with retry."""
-    result = collection.insert_one(doc)
-    logger.info(
-        INSERT_ONE,
-        collection.database.name,
-        collection.name,
-        result.inserted_id,
-    )
-    return result
-
-
-INSERT_MANY = "".join(
-    (
-        "{",
-        ", ".join(
-            (
-                '"key": "mongo.insert_many"',
-                '"collection": "%s.%s"',
-                '"value": %s',
-            )
-        ),
-        "}",
-    )
-)
-
-
-@retry(AutoReconnect)
-def insert_many(collection: Collection, docs: Sequence[Dict[str, Any]]):
-    """Insert many with retry."""
-    result = collection.insert_many(docs)
-    logger.info(
-        INSERT_MANY,
-        collection.database.name,
-        collection.name,
-        len(result.inserted_ids),
-    )
-    return result
-
-
-UPDATE_ONE = "".join(
-    (
-        "{",
-        ", ".join(('"key": "mongo.update_one"', '"collection": "%s.%s"',)),
-        "}",
-    )
-)
-
-
-@retry(AutoReconnect)
-def update_one(
-    collection: Collection, key: Dict[str, Any], doc: Dict[str, Any]
-):
-    """Update one with retry."""
-    result = collection.update_one(key, doc)
-    logger.info(
-        UPDATE_ONE, collection.database.name, collection.name,
-    )
-    return result

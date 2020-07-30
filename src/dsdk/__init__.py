@@ -2,15 +2,22 @@
 """Data Science Deployment Kit."""
 
 from .model import Mixin as ModelMixin
+from .model import Model
 from .mongo import EvidenceMixin as MongoEvidenceMixin
+from .mongo import EvidencePersistor as MongoEvidencePersistor
 from .mongo import Mixin as MongoMixin
+from .mongo import Persistor as MongoPersistor
 from .mssql import AlchemyMixin as MssqlAlchemyMixin
+from .mssql import AlchemyPersistor as MssqlAlchemyPersistor
 from .mssql import CheckTablePrivileges as CheckMssqlTablePrivileges
 from .mssql import Mixin as MssqlMixin
+from .mssql import Persistor as MssqlPersistor
+from .persistor import namespace_directory
 from .postgres import CheckTablePrivileges as CheckPostgresTablePrivileges
 from .postgres import Mixin as PostgresMixin
+from .postgres import Persistor as PostgresPersistor
 from .postgres import PredictionMixin as PostgresPredictionMixin
-from .service import Batch, Model, Service, Task
+from .service import Batch, Service, Task
 from .utils import (
     chunks,
     configure_logger,
@@ -28,13 +35,18 @@ __all__ = (
     "Model",
     "ModelMixin",
     "MongoMixin",
+    "MongoPersistor",
     "MongoEvidenceMixin",
+    "MongoEvidencePersistor",
     "MssqlAlchemyMixin",
+    "MssqlAlchemyPersistor",
     "MssqlMixin",
+    "MssqlPersistor",
     "CheckMssqlTablePrivileges",
     "CheckPostgresTablePrivileges",
     "PostgresPredictionMixin",
     "PostgresMixin",
+    "PostgresPersistor",
     "Service",
     "Task",
     "chunks",
@@ -45,5 +57,6 @@ __all__ = (
     "get_res_with_values",
     "load_json_file",
     "load_pickle_file",
+    "namespace_directory",
     "retry",
 )

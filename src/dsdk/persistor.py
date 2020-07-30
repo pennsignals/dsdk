@@ -8,9 +8,9 @@ from contextlib import contextmanager
 from logging import getLogger
 from os import listdir
 from os.path import isdir, join, splitext
-from typing import Any, Dict, Generator, Tuple, Type, cast
+from typing import Any, Callable, Dict, Generator, Tuple
 
-from yaml import safe_load as yaml_loads
+from .service import Service
 
 logger = getLogger(__name__)
 
@@ -61,8 +61,9 @@ class AbstractPersistor:
     ROLLBACK = "".join(("{", ", ".join(('"key": "{KEY}.rollback"')), "}"))
 
     @classmethod
-    def inject_arguments(cls, mixin, parser):
-        """Inject arguments."""
+    @contextmanager
+    def dependencies(cls, service: Service, parser):
+        """Dependencies."""
         raise NotImplementedError()
 
     def __init__(self, sql: Namespace, tables: Tuple[str, ...]):
@@ -117,59 +118,75 @@ class AbstractPersistor:
                 logger.info(self.ROLLBACK)
 
 
+def _inject_int(key, kwargs: Dict[str, Any]) -> Callable:
+    def _inject(value) -> int:
+        kwargs[key] = result = int(value)
+        return result
+
+    return _inject
+
+
+def _inject_str(key, kwargs: Dict[str, Any]) -> Callable:
+    def _inject(value: str):
+        assert value.__class__ is str
+        kwargs[key] = result = value
+        return result
+
+    return _inject
+
+
+def _inject_str_tuple(key, kwargs: Dict[str, Any]) -> Callable:
+    def _inject(value: str):
+        assert value.__class__ is str
+        kwargs[key] = result = tuple(",".split(value))
+        return result
+
+    return _inject
+
+
+def _inject_namespace(key, kwargs: Dict[str, Any]) -> Callable:
+    def _inject(value: str):
+        result = namespace_directory(value)
+        kwargs[key] = result
+
+    return _inject
+
+
 class Persistor(AbstractPersistor):
     """Persistor."""
 
     @classmethod
-    def inject_arguments(cls, mixin, parser):
-        """Inject arguments."""
+    @contextmanager
+    def dependencies(
+        cls, service: Service, parser
+    ) -> Generator[None, None, None]:
+        """Dependencies."""
         kwargs: Dict[str, Any] = {}
 
-        def _inject_cfg(name: str) -> Dict:
-            nonlocal kwargs
-            with open(name) as fin:
-                cfg = yaml_loads(fin.read())
-            for key in ("username", "password", "host", "database"):
-                kwargs[key] = value = cfg[key]
-                assert value.__class__ is str
-                del cfg[key]
-            for key in ("port",):
-                kwargs[key] = value = cfg[key]
-                assert value.__class__ is int
-                del cfg[key]
-            for key in ("tables",):
-                value = cfg[key]
-                assert value.__class__ is list
-                strings = tuple(value)
-                for string in strings:
-                    assert string.__class__ is str
-                kwargs[key] = strings
-                del cfg[key]
-            for key in ("sql",):
-                value = cfg[key]
-                assert value.__class__ is str
-                namespace = namespace_directory(value)
-                kwargs[key] = namespace
-                del cfg[key]
-            for key in cfg:
-                logger.error("Unexpected key in configuration: %s", key)
-            return kwargs
+        for key, help_, inject in (
+            ("database", "The database name", _inject_str),
+            ("host", "The database host name or ip address", _inject_str),
+            ("password", "The database password", _inject_str),
+            ("port", "The database port", _inject_int),
+            ("sql", "A nested directory of sql fragments.", _inject_namespace),
+            (
+                "tables",
+                "A comma delimited list of tables to check",
+                _inject_str_tuple,
+            ),
+            ("username", "The database username", _inject_str),
+        ):
+            parser.add(
+                f"--{cls.KEY}-{key}",
+                env_var=f"{cls.KEY.upper()}_{key.upper()}",
+                help=help_,
+                required=True,
+                type=inject(key, kwargs),
+            )
 
-        def _inject_persistor(cls: Type) -> Persistor:
-            persistor = cast(Persistor, cls(**kwargs))
-            setattr(mixin, cls.KEY, persistor)
-            return persistor
+        yield
 
-        parser.add(
-            f"--{cls.KEY}-cfg",
-            required=True,
-            help=f"{cls.KEY} cfg file",
-            env_var=f"{cls.KEY.upper()}_CFG",
-            type=_inject_cfg,
-        )
-        parser.add(
-            f"--{cls.KEY}", default=cls, required=True, type=_inject_persistor
-        )
+        service.dependency(cls.KEY, cls, kwargs)
 
     def __init__(  # pylint: disable=too-many-arguments
         self,

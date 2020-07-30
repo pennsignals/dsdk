@@ -13,7 +13,12 @@ from configargparse import ArgParser as ArgumentParser
 
 from .persistor import AbstractPersistor as BaseAbstractPersistor
 from .persistor import Persistor as BasePersistor
-from .persistor import StubException, namespace_directory
+from .persistor import (
+    StubException,
+    _inject_namespace,
+    _inject_str,
+    _inject_str_tuple,
+)
 from .service import Service, Task
 
 logger = getLogger(__name__)
@@ -130,69 +135,51 @@ class AlchemyPersistor(Messages, BaseAbstractPersistor):
     """AlchemyPersistor."""
 
     @classmethod
-    def inject_arguments(cls, mixin, parser):
-        """Inject arguments."""
+    @contextmanager
+    def dependencies(
+        cls, service: Service, parser
+    ) -> Generator[None, None, None]:
+        """Dependencies."""
         kwargs: Dict[str, Any] = {}
 
-        def _inject_sql(sql: str) -> Namespace:
-            nonlocal kwargs
-            kwargs["sql"] = value = namespace_directory(sql)
-            return value
-
-        def _inject_tables(strings: str) -> Tuple[str, ...]:
-            nonlocal kwargs
-            value = tuple(",".split(strings))
-            for string in value:
-                assert string.__class__ is str
-            kwargs["tables"] = value
-            return value
-
-        def _inject_uri(uri: str) -> str:
-            nonlocal kwargs
-            kwargs["uri"] = uri
-            return uri
-
-        def _inject_persistor(cls: Type) -> AlchemyPersistor:
-            mixin.mssql = persistor = cast(AlchemyPersistor, cls(**kwargs))
-            return persistor
-
-        parser.add(
-            "--mssql-uri",
-            env_var="MSSQL_URI",
-            help=" ".join(
-                (
-                    "MSSQL URI used to connect to a MSSQL database:",
-                    (
-                        "mssql+pymssql://USER:PASS@HOST:PORT/DATABASE?"
-                        "timeout=TIMEOUT"
-                    ),
-                    "Use a valid uri."
-                    "Url encode all parts, but do not encode the entire uri.",
-                    "No unencoded colons, ampersands, slashes,",
-                    "question-marks, etc. in parts.",
-                    "Specifically, check url encoding of USER (domain slash),"
-                    "and PASSWORD.",
-                )
+        for key, help_, inject in (
+            (
+                "tables",
+                "A comma delimited list of tables to check.",
+                _inject_str_tuple,
             ),
-            required=True,
-            type=_inject_uri,
-        )
-        parser.add(
-            "--mssql-tables",
-            env_var="MSSQL_TABLES",
-            help="Comma delimited tables to check.",
-            required=True,
-            type=_inject_tables,
-        )
-        parser.add(
-            "--mssql-sql",
-            help="Nested directory of sql fragments.",
-            required=True,
-            type=_inject_sql,
-        )
-        parser.add(
-            "--mssql", default=cls, required=False, type=_inject_persistor,
-        )
+            ("sql", "A nested directory of sql fragments.", _inject_namespace),
+            (
+                "uri",
+                " ".join(
+                    (
+                        "MSSQL URI used to connect to a MSSQL database:",
+                        (
+                            "mssql+pymssql://USER:PASS@HOST:PORT/DATABASE?"
+                            "timeout=TIMEOUT"
+                        ),
+                        "Use a valid uri.",
+                        "Url encode parts, do not encode the entire uri.",
+                        "No unencoded colons, ampersands, slashes,",
+                        "question-marks, etc. in parts.",
+                        "Specifically, check url encoding of USER",
+                        "(domain slash)",
+                        "and PASSWORD.",
+                    )
+                ),
+                _inject_str,
+            ),
+        ):
+            parser.add(
+                f"--{cls.KEY}-{key}",
+                env_var=f"{cls.KEY.upper()}_{key.upper()}",
+                help=help_,
+                required=True,
+                type=inject(key, kwargs),
+            )
+        yield
+
+        service.dependency(cls.KEY, cls, kwargs)
 
     def __init__(self, sql: Namespace, tables: Tuple[str, ...], uri: str):
         """__init__."""
@@ -221,39 +208,41 @@ class AlchemyPersistor(Messages, BaseAbstractPersistor):
 class Mixin(BaseMixin):
     """Mixin."""
 
-    def __init__(self, *, mssql_cls: Type = Persistor, **kwargs):
+    def __init__(self, *, mssql=None, mssql_cls: Type = Persistor, **kwargs):
         """__init__."""
-        self.mssql = cast(Persistor, None)
+        self.mssql = cast(Persistor, mssql)
         self.mssql_cls = mssql_cls
         super().__init__(**kwargs)
 
-    def inject_arguments(self, parser: ArgumentParser) -> None:
+    @contextmanager
+    def inject_arguments(
+        self, parser: ArgumentParser
+    ) -> Generator[None, None, None]:
         """Inject arguments."""
-        self.mssql_cls.inject_arguments(self, parser)
-        super().inject_arguments(parser)
+        with self.mssql_cls.dependencies(self, parser):
+            with super().inject_arguments(parser):
+                yield
 
 
 class AlchemyMixin(BaseMixin):
     """AlchemyMixin."""
 
     def __init__(
-        self,
-        *,
-        mssql_tables=None,  # pylint: disable=unused-argument
-        mssql_sql=None,  # pylint: disable=unused-argument
-        mssql_uri=None,  # pylint: disable=unused-argument
-        mssql_cls: Type = AlchemyPersistor,
-        **kwargs,
+        self, *, mssql=None, mssql_cls: Type = AlchemyPersistor, **kwargs,
     ):
         """__init__."""
-        self.mssql = cast(AlchemyPersistor, None)
+        self.mssql = cast(AlchemyPersistor, mssql)
         self.mssql_cls = mssql_cls
         super().__init__(**kwargs)
 
-    def inject_arguments(self, parser: ArgumentParser) -> None:
+    @contextmanager
+    def inject_arguments(
+        self, parser: ArgumentParser
+    ) -> Generator[None, None, None]:
         """Inject arguments."""
-        self.mssql_cls.inject_arguments(self, parser)
-        super().inject_arguments(parser)
+        with self.mssql_cls.dependencies(self, parser):
+            with super().inject_arguments(parser):
+                yield
 
 
 class CheckTablePrivileges(Task):  # pylint: disable=too-few-public-methods

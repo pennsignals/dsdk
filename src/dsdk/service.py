@@ -31,19 +31,6 @@ class Interval:  # pylint: disable=too-few-public-methods
         return {"end": self.end, "on": self.on}
 
 
-class Model:  # pylint: disable=too-few-public-methods
-    """Model."""
-
-    def __init__(self, name: str, version: str) -> None:
-        """__init__."""
-        self.name = name
-        self.version = version
-
-    def as_doc(self) -> Dict[str, Any]:
-        """As doc."""
-        return {"name": self.name, "on": self.version}
-
-
 class Batch:  # pylint: disable=too-few-public-methods
     """Batch."""
 
@@ -72,7 +59,7 @@ class Batch:  # pylint: disable=too-few-public-methods
             return end
         return datetime(end.year, end.month, end.day, tzinfo=timezone.utc)
 
-    def as_insert_doc(self, model: Optional[Model]) -> Dict[str, Any]:
+    def as_insert_doc(self, model) -> Dict[str, Any]:
         """As insert doc."""
         doc: Optional[Dict[str, Any]] = None
         if model is not None:
@@ -123,10 +110,10 @@ class Service:
         # inferred type of self.pipeline must not be optional...
         self.pipeline = cast(Sequence[Task], pipeline)
         if parser:
-            self.inject_arguments(parser)
-            if not argv:
-                argv = sys_argv[1:]
-            self.args = parser.parse_args(argv)
+            with self.inject_arguments(parser):
+                if not argv:
+                    argv = sys_argv[1:]
+                self.args = parser.parse_args(argv)
 
         # ... because self.pipeline is not optional
         assert self.pipeline is not None
@@ -158,9 +145,10 @@ class Service:
             logger.info(self.PIPELINE_END, self.__class__.__name__)
             return batch
 
+    @contextmanager
     def inject_arguments(  # pylint: disable=no-self-use,protected-access
         self, parser: ArgumentParser
-    ) -> None:
+    ) -> Generator[None, None, None]:
         """Inject arguments."""
         parser._default_config_files = [
             "/local/config.yaml",
@@ -178,6 +166,21 @@ class Service:
             help="config file path",
             env_var="CONFIG",  # make ENV match default metavar
         )
+        yield
+
+    def dependency(self, key, cls, kwargs):
+        """Dependency."""
+        dependency = getattr(self, key)
+        if dependency is not None:
+            return
+        logger.info(
+            "Injecting dependency: %s, %s, %s",
+            key,
+            cls.__name__,
+            kwargs.keys(),
+        )
+        dependency = cls(**kwargs)
+        setattr(self, key, dependency)
 
     BATCH_OPEN = "".join(
         ("{", ", ".join(('"key": "batch.open"', '"on": "%s"')), "}")
@@ -189,7 +192,7 @@ class Service:
 
     @contextmanager
     def open_batch(  # pylint: disable=no-self-use,unused-argument
-        self, key: Any = None, model: Optional[Model] = None
+        self, key: Any = None, model=None
     ) -> Generator[Batch, None, None]:
         """Open batch."""
         record = Interval(on=datetime.now(timezone.utc), end=None)
