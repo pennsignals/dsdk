@@ -88,16 +88,22 @@ class Persistor(Messages, BasePersistor):
 class Mixin(BaseMixin):
     """Mixin."""
 
-    def __init__(self, *, postgres_cls: Type = Persistor, **kwargs):
+    def __init__(
+        self, *, postgres=None, postgres_cls: Type = Persistor, **kwargs,
+    ):
         """__init__."""
-        self.postgres = cast(None, Persistor)
+        self.postgres = cast(Persistor, postgres)
         self.postgres_cls = postgres_cls
         super().__init__(**kwargs)
 
-    def inject_arguments(self, parser: ArgumentParser) -> None:
+    @contextmanager
+    def inject_arguments(
+        self, parser: ArgumentParser
+    ) -> Generator[None, None, None]:
         """Inject arguments."""
-        self.postgres_cls.inject_arguments(self, parser)
-        super().inject_arguments(parser)
+        with self.postgres_cls.dependencies(self, parser):
+            with super().inject_arguments(parser):
+                yield
 
 
 class Run:  # pylint: disable=too-few-public-methods

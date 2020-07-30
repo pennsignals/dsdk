@@ -4,12 +4,13 @@
 from __future__ import annotations
 
 from abc import ABC
+from contextlib import contextmanager
 from logging import getLogger
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, Any, Dict, Generator, cast
 
 from configargparse import ArgParser as ArgumentParser
 
-from .service import Model, Service
+from .service import Service
 from .utils import load_pickle_file
 
 logger = getLogger(__name__)
@@ -21,25 +22,38 @@ else:
     BaseMixin = ABC
 
 
+class Model:  # pylint: disable=too-few-public-methods
+    """Model."""
+
+    def __init__(self, name: str, version: str) -> None:
+        """__init__."""
+        self.name = name
+        self.version = version
+
+    def as_doc(self) -> Dict[str, Any]:
+        """As doc."""
+        return {"name": self.name, "on": self.version}
+
+
 class Mixin(BaseMixin):
     """Mixin."""
 
-    def __init__(self, *, model: Optional[Model] = None, **kwargs):
+    def __init__(self, *, model=None, **kwargs):
         """__init__."""
-        # inferred type of self.model must not be optional...
         self.model = cast(Model, model)
         super().__init__(**kwargs)
 
-        # ... because self.model is not optional
-        assert self.model is not None
-
-    def inject_arguments(self, parser: ArgumentParser) -> None:
+    @contextmanager
+    def inject_arguments(
+        self, parser: ArgumentParser
+    ) -> Generator[None, None, None]:
         """Inject arguments."""
-        super().inject_arguments(parser)
+
+        model = cast(Model, None)
 
         def _inject_model(path: str) -> Model:
+            nonlocal model
             model = cast(Model, load_pickle_file(path))
-            self.model = model
             return model
 
         parser.add(
@@ -49,3 +63,9 @@ class Mixin(BaseMixin):
             env_var="MODEL_PATH",
             type=_inject_model,
         )
+
+        with super().inject_arguments(parser):
+            yield
+
+        if self.model is None:
+            self.model = model
