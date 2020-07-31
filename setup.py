@@ -14,13 +14,15 @@ INSTALL_REQUIRES = (
 )
 
 
-MONGO_REQUIRES = ("pymongo",)
+PYMONGO_REQUIRES = ("pymongo>=3.11.0",)
 
-MSSQL_REQUIRES = ("cython", "pymssql==2.1.4", "sqlalchemy")
+PYMSSQL_REQUIRES = ("cython>=0.29.21", "pymssql==2.1.4")
 
-POSTGRES_REQUIRES = ("psycopg2-binary",)
+PSYCOPG2_REQUIRES = ("psycopg2-binary>=2.8.5",)
 
-SETUP_REQUIRES = ("pytest-runner", "setuptools_scm>=4.1.2")
+SETUP_REQUIRES = ("pytest-runner>=5.2", "setuptools_scm>=4.1.2")
+
+SQLALCHEMY_REQUIRES = ("sqlalchemy>=1.3.18",)
 
 TEST_REQUIRES = (
     "black",
@@ -45,13 +47,15 @@ TEST_REQUIRES = (
 setup(
     license="MIT",
     extras_require={
-        "all": MONGO_REQUIRES
-        + MSSQL_REQUIRES
-        + POSTGRES_REQUIRES
+        "all": PSYCOPG2_REQUIRES
+        + PYMONGO_REQUIRES
+        + PYMSSQL_REQUIRES
+        + SQLALCHEMY_REQUIRES
         + TEST_REQUIRES,
-        "mongo": MONGO_REQUIRES,
-        "mssql": MSSQL_REQUIRES,
-        "postgres": POSTGRES_REQUIRES,
+        "psycopg2": PSYCOPG2_REQUIRES,
+        "pymongo": PYMONGO_REQUIRES,
+        "pymssql": PYMSSQL_REQUIRES,
+        "sqlalchemy": SQLALCHEMY_REQUIRES,
         "test": TEST_REQUIRES,
     },
     include_package_data=True,
