@@ -13,7 +13,6 @@ INSTALL_REQUIRES = (
     "wheel>=0.34.2",
 )
 
-
 PYMONGO_REQUIRES = ("pymongo>=3.11.0",)
 
 PYMSSQL_REQUIRES = ("cython>=0.29.21", "pymssql==2.1.4")
