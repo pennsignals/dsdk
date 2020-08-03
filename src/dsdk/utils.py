@@ -11,10 +11,9 @@ from pickle import dump as pickle_dump
 from pickle import load as pickle_load
 from sys import stdout
 from time import sleep as default_sleep
-from typing import Any, Callable, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, Optional, Sequence
 
-from pandas import DataFrame
-from pandas import concat as pd_concat
+from pandas import DataFrame, concat
 
 logger = getLogger(__name__)
 
@@ -82,44 +81,21 @@ def df_from_query_by_ids(
     """Return DataFrame from query by ids."""
     if parameters is None:
         parameters = {}
-    return pd_concat(
-        [
-            DataFrame(
-                [
-                    dict(each.items())
-                    for each in con.execute(
-                        query, {"ids": chunk, **parameters}
-                    ).fetchall()
-                ]
-            )
-            for chunk in chunks(ids, size)
-        ],
-        ignore_index=True,
-    )
-
-
-def get_res_with_values(query, values, con) -> List[Dict[str, Any]]:
-    """Get result from query with values."""
-    result = con.execute(query, values)
-    return [dict(each.items()) for each in result.fetchall()]
-
-
-def chunk_res_with_values(
-    query: str,
-    ids: Sequence[Any],
-    con,
-    size: int = 10000,
-    params: Optional[Dict[str, Any]] = None,
-) -> DataFrame:
-    """Chunk query result values."""
-    if params is None:
-        params = {}
-    result = []
+    dfs = []
     for chunk in chunks(ids, size):
-        params.update({"ids": chunk})
-        result.append(DataFrame(get_res_with_values(query, params, con)))
-    del params["ids"]
-    return pd_concat(result, ignore_index=True)
+        result = con.execute(query, {"ids": chunk, **parameters}).fetchall()
+        dfs.append(DataFrame(result, result.keys()))
+    return concat(dfs, ignore_index=True)
+
+
+def df_from_query(
+    con, query: str, parameters: Optional[Dict[str, Any]],
+) -> DataFrame:
+    """Return DataFrame from query."""
+    if parameters is None:
+        parameters = {}
+    result = con.execute(query, parameters).fetchall()
+    return DataFrame(result, result.keys())
 
 
 def retry(
