@@ -11,7 +11,6 @@ with c as (
 )
 select
     run_id,
-    csn,
     patient_id,
     score
 from

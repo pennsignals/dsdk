@@ -41,16 +41,13 @@ class Model:  # pylint: disable=too-few-public-methods
         """Dependencies."""
         kwargs: Dict[str, Any] = {}
 
-        for src, dst, help_, inject in (
-            ("model", "path", "Path to pickled model.", inject_str,),
-        ):
-            parser.add(
-                f"--{cls.KEY}-{src}",
-                env_var=f"{cls.KEY.upper()}_{src.upper()}",
-                help=help_,
-                required=True,
-                type=inject(dst, kwargs),
-            )
+        parser.add(
+            f"--{cls.KEY}",
+            env_var=f"{cls.KEY.upper()}",
+            help="Path to pickled model.",
+            required=True,
+            type=inject_str("path", kwargs),
+        )
         yield
 
         service.dependency(cls.KEY, load_pickle_file, kwargs)
