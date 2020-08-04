@@ -29,7 +29,7 @@ def namespace_directory(root: str = "./", ext: str = ".sql") -> Namespace:
     return result
 
 
-def inject_int(key, kwargs: Dict[str, Any]) -> Callable:
+def inject_int(key: str, kwargs: Dict[str, Any]) -> Callable:
     """Inject int."""
 
     def _inject(value) -> int:
@@ -39,7 +39,7 @@ def inject_int(key, kwargs: Dict[str, Any]) -> Callable:
     return _inject
 
 
-def inject_str(key, kwargs: Dict[str, Any]) -> Callable:
+def inject_str(key: str, kwargs: Dict[str, Any]) -> Callable:
     """Inject str."""
 
     def _inject(value: str) -> str:
@@ -50,7 +50,7 @@ def inject_str(key, kwargs: Dict[str, Any]) -> Callable:
     return _inject
 
 
-def inject_str_tuple(key, kwargs: Dict[str, Any]) -> Callable:
+def inject_str_tuple(key: str, kwargs: Dict[str, Any]) -> Callable:
     """Inject str tuple."""
 
     def _inject(value: str) -> Tuple[str, ...]:
@@ -61,7 +61,7 @@ def inject_str_tuple(key, kwargs: Dict[str, Any]) -> Callable:
     return _inject
 
 
-def inject_namespace(key, kwargs: Dict[str, Any]) -> Callable:
+def inject_namespace(key: str, kwargs: Dict[str, Any]) -> Callable:
     """Inject namespace."""
 
     def _inject(value: str) -> Namespace:

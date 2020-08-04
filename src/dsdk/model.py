@@ -28,10 +28,15 @@ class Model:  # pylint: disable=too-few-public-methods
 
     KEY = "model"
 
-    def __init__(self, name: str, version: str) -> None:
-        """__init__."""
-        self.name = name
-        self.version = version
+    @classmethod
+    def load(cls, path: str) -> Model:
+        """Load."""
+        pkl = load_pickle_file(path)
+        if pkl.__class__ is dict:
+            assert pkl.__class__ is dict
+            return cls(**pkl)  # type: ignore
+        assert isinstance(pkl, Model)
+        return pkl
 
     @classmethod
     @contextmanager
@@ -50,7 +55,12 @@ class Model:  # pylint: disable=too-few-public-methods
         )
         yield
 
-        service.dependency(cls.KEY, load_pickle_file, kwargs)
+        service.dependency(cls.KEY, cls.load, kwargs)
+
+    def __init__(self, name: str, version: str) -> None:
+        """__init__."""
+        self.name = name
+        self.version = version
 
     def as_doc(self) -> Dict[str, Any]:
         """As doc."""
