@@ -67,20 +67,23 @@ class Messages:  # pylint: disable=too-few-public-methods
 class Persistor(Messages, BasePersistor):
     """Persistor."""
 
+    @retry((OperationalError,))
+    def retry_connect(self):
+        """Retry connect."""
+        return connect(
+            user=self.username,
+            password=self.password,
+            host=self.host,
+            port=self.port,
+            dbname=self.database,
+        )
+
     @contextmanager
     def connect(self) -> Generator[Any, None, None]:
         """Connect."""
         # The `with ... as con:` formulation does not close the connection:
         # https://www.psycopg.org/docs/usage.html#with-statement
-        with retry((OperationalError,)):  # pylint: disable=not-context-manager
-            # retry to allow db to spin up
-            con = connect(
-                user=self.username,
-                password=self.password,
-                host=self.host,
-                port=self.port,
-                dbname=self.database,
-            )
+        con = self.retry_connect()
         logger.info(self.OPEN)
         try:
             yield con
