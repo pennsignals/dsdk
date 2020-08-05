@@ -60,8 +60,8 @@ class Messages:  # pylint: disable=too-few-public-methods
         )
     )
     ON = "".join(("{", ", ".join((f'"key": "{KEY}.on"',)), "}"))
-    OPEN = "".join(("{", ", ".join(('"key": "{KEY}.open"',)), "}"))
-    ROLLBACK = "".join(("{", ", ".join(('"key": "{KEY}.rollback"')), "}"))
+    OPEN = "".join(("{", ", ".join((f'"key": "{KEY}.open"',)), "}"))
+    ROLLBACK = "".join(("{", ", ".join((f'"key": "{KEY}.rollback"',)), "}"))
 
 
 class Persistor(Messages, BasePersistor):
