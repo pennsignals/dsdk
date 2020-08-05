@@ -25,7 +25,7 @@ class AbstractPersistor:
     KEY = "abstract_persistor"
 
     CLOSE = "".join(("{", ", ".join((f'"key": "{KEY}.close"',)), "}"))
-    COMMIT = "".join(("{", ", ".join((f'"key": "{KEY}.commit"')), "}"))
+    COMMIT = "".join(("{", ", ".join((f'"key": "{KEY}.commit"',)), "}"))
     END = "".join(("{", f'"key": "{KEY}.end"', "}"))
 
     ERROR = "".join(
