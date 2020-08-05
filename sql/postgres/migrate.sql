@@ -1,3 +1,5 @@
+set search_path = test,public;
+
 create or replace function up()
 returns void as $$
     -- dependency/alphabetic order
