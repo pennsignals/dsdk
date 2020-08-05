@@ -1,4 +1,3 @@
 create schema if not exists test;
-grant usage on test to public;
-grant create on test to public;
-set search_path = test,public;
+grant usage on schema test to public;
+grant create on schema test to public;
