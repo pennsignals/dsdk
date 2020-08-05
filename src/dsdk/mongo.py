@@ -166,6 +166,10 @@ class Persistor(Messages):
         """Contextmanager for database.
 
         Ensures that the mongo connection is opened and closed.
+        MongoClient also has defaults for its own:
+        - reconnectTries (30)
+        - reconnectInterval (1000ms)
+        - no backoff
         """
         with MongoClient(
             self.uri,
@@ -175,8 +179,12 @@ class Persistor(Messages):
             **kwargs,
         ) as client:
             database = client.get_database()
-            # force lazy connection open
-            client.admin.command("ismaster")
+            with retry(  # pylint: disable=not-context-manager
+                (AutoReconnect,)
+            ):
+                # retry to allowdb to spin up
+                # force lazy connection open with actual command
+                client.admin.command("ismaster")
             logger.info(self.OPEN, database.name)
             try:
                 yield database

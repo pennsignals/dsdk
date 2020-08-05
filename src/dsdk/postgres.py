@@ -13,16 +13,22 @@ from configargparse import ArgParser as ArgumentParser
 from .dependency import StubException
 from .persistor import Persistor as BasePersistor
 from .service import Service, Task
+from .utils import retry
 
 logger = getLogger(__name__)
 
 try:
     # Not everyone will be using postgres
-    from psycopg2 import DatabaseError, InterfaceError, connect
+    from psycopg2 import (
+        DatabaseError,
+        InterfaceError,
+        OperationalError,
+        connect,
+    )
 except ImportError as import_error:
     logger.warning(import_error)
 
-    DatabaseError = InterfaceError = StubException
+    DatabaseError = InterfaceError = OperationalError = StubException
 
     def connect(*args, **kwargs):
         """Connect stub."""
@@ -66,13 +72,15 @@ class Persistor(Messages, BasePersistor):
         """Connect."""
         # The `with ... as con:` formulation does not close the connection:
         # https://www.psycopg.org/docs/usage.html#with-statement
-        con = connect(
-            user=self.username,
-            password=self.password,
-            host=self.host,
-            port=self.port,
-            dbname=self.database,
-        )
+        with retry((OperationalError,)):  # pylint: disable=not-context-manager
+            # retry to allow db to spin up
+            con = connect(
+                user=self.username,
+                password=self.password,
+                host=self.host,
+                port=self.port,
+                dbname=self.database,
+            )
         logger.info(self.OPEN)
         try:
             yield con
