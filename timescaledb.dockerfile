@@ -1,5 +1,7 @@
 FROM timescale/timescaledb-postgis:latest-pg12 as timescaledb
 ARG MONGO_FDW=0
+ARG SEMVER=1
+ARG SEMVER_VERSION=0.30.0
 ARG TDS_FDW=1
 ARG TDS_FDW_VERSION=2.0.1
 ARG MONGO_C_DRIVER_VERSION=1.9.5
@@ -57,5 +59,13 @@ RUN apk add \
         && rm -rf tds_fdw-${TDS_FDW_VERSION} \
         && rm v${TDS_FDW_VERSION}.tar.gz \
         && apk del --no-cache .build-mssql \
+    ; fi \
+        && if [ "${SEMVER}" = "1" ]; then \
+        git clone --branch v"${SEMVER_VERSION}" https://github.com/theory/pg-semver.git \
+        && cd pg-semver \
+        && make \
+        && make install \
+        && echo "# semver extension\ncomment = 'Semantic version data type'\ndefault_version = '${SEMVER_VERSION}'\nmodule_pathname = '$libdir/semver'\nrelocatable = true\n" > /usr/local/share/postgresql/extension/semver.control \
+        && cd .. \
     ; fi \
     && apk del --no-cache .build
