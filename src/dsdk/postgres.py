@@ -112,7 +112,7 @@ class Mixin(BaseMixin):
         self, parser: ArgumentParser
     ) -> Generator[None, None, None]:
         """Inject arguments."""
-        with self.postgres_cls.dependencies(self, parser):
+        with self.postgres_cls.configure(self, parser):
             with super().inject_arguments(parser):
                 yield
 
@@ -137,24 +137,23 @@ class PredictionPersistor(Persistor):
         self, microservice_version: str, model_version: str
     ) -> Generator[Run, None, None]:
         """Open run."""
+        sql = self.sql
         with self.commit() as cur:
-            cur.execute(self.sql.create)
-            cur.execute(self.sql.migrate)
+            cur.execute(sql.create)
+            cur.execute(sql.migrate)
         with self.commit() as cur:
-            cur.execute(
-                self.sql.runs.open, microservice_version, model_version
-            )
+            cur.execute(sql.runs.open, (microservice_version, model_version,))
             run_id, microservice_id, model_id, duration = cur.fetchone()
             run = Run(run_id, microservice_id, model_id, duration)
             yield run
             cur.execute_many(
-                self.sql.predictions.insert,
+                sql.predictions.insert,
                 (
                     (run_id, patient_id, score)
                     for patient_id, score in run.predictions
                 ),
             )
-            cur.execute(self.sql.runs.close, run.id)
+            cur.execute(sql.runs.close, (run.id,))
             _, _, _, _, duration = cur.fetchone()
             run.duration = duration
 
