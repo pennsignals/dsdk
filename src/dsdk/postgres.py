@@ -25,6 +25,7 @@ try:
         OperationalError,
         connect,
     )
+    from psycopg2.sql import Identifier
 except ImportError as import_error:
     logger.warning(import_error)
 
@@ -91,9 +92,13 @@ class Persistor(Messages, BasePersistor):
             con.close()
             logger.info(self.CLOSE)
 
+    def identifier(self, name: str):
+        """Safe quoting for a sql identifier."""
+        return Identifier(name)
+
     def check(self, cur, exceptions=(DatabaseError, InterfaceError)):
         """Check."""
-        super.check(cur, exceptions)
+        super().check(cur, exceptions)
 
 
 class Mixin(BaseMixin):
