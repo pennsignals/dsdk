@@ -14,21 +14,21 @@ returns void as $$
         return null;
     end;
     $function$ language plpgsql;
-    create sequence models_sequence;
+    create sequence if not exists models_sequence;
     create table if not exists models (
         id int default nextval('models_sequence') primary key,
         version semver not null,
         constraint model_version_must_be_unique
             unique (version)
     );
-    create sequence microservices_sequence;
+    create sequence if not exists microservices_sequence;
     create table if not exists microservices (
         id int default nextval('microservices_sequence') primary key,
         version semver not null,
         constraint microservice_version_must_be_unique
             unique (version)
     );
-    create sequence runs_sequence;
+    create sequence if not exists runs_sequence;
     create table if not exists runs (
         id int default nextval('runs_sequence') primary key,
         microservice_id int not null,
@@ -49,7 +49,7 @@ returns void as $$
         constraint only_one_run_per_duration_microservice_and_model -- simultaneous, blue-green deploys allowed
             exclude using gist (microservice_id with =, model_id with =, duration with &&)
     );
-    create sequence predictions_sequence;
+    create sequence if not exists predictions_sequence;
     create table if not exists predictions (
         id int default nextval('predictions_sequence') primary key,
         run_id int not null,
