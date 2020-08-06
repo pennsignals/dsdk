@@ -40,7 +40,7 @@ class AbstractPersistor:
     )
     ON = "".join(("{", ", ".join((f'"key": "{KEY}.on"',)), "}"))
     OPEN = "".join(("{", ", ".join(('"key": "{KEY}.open"',)), "}"))
-    ROLLBACK = "".join(("{", ", ".join(('"key": "{KEY}.rollback"')), "}"))
+    ROLLBACK = "".join(("{", ", ".join(('"key": "{KEY}.rollback"',)), "}"))
 
     @classmethod
     @contextmanager

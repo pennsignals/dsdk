@@ -47,7 +47,7 @@ class Messages:  # pylint: disable=too-few-public-methods
     KEY = "postgres"
 
     CLOSE = "".join(("{", ", ".join((f'"key": "{KEY}.close"',)), "}"))
-    COMMIT = "".join(("{", ", ".join((f'"key": "{KEY}.commit"')), "}"))
+    COMMIT = "".join(("{", ", ".join((f'"key": "{KEY}.commit"',)), "}"))
     END = "".join(("{", f'"key": "{KEY}.end"', "}"))
     ERROR = "".join(
         ("{", ", ".join((f'"key": "{KEY}.table.error"', '"table": "%s"')), "}")
