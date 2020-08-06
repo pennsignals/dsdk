@@ -2,8 +2,7 @@ with c as (
     select
         cast(%s as semver) as microservice_version,
         cast(%s as semver) as model_version
-)
-with i_microservices as (
+) i_microservices as (
     insert into microservices (version)
     select microservice_version from c
     on conflict do nothing
