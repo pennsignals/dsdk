@@ -54,12 +54,12 @@ class AbstractPersistor:
         self.tables = tables
 
     def check(self, cur, exceptions):
-        """check."""
+        """Check."""
         logger.info(self.ON)
         errors = []
         for table in self.tables:
             try:
-                cur.execute(self.sql.extant, table)
+                cur.execute(self.sql.extant.format(self.identifier(table)))
                 (n,) = cur.fetchone()
                 assert n == 1
             except exceptions:
@@ -87,6 +87,10 @@ class AbstractPersistor:
                 con.rollback()
                 logger.info(self.ROLLBACK)
                 raise
+
+    def identifier(self, name: str):
+        """Safe quoting for sql identifier."""
+        raise NotImplementedError()
 
     @contextmanager
     def rollback(self) -> Generator[Any, None, None]:
