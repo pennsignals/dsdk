@@ -136,7 +136,7 @@ class AlchemyPersistor(Messages, BaseAbstractPersistor):
 
     @classmethod
     @contextmanager
-    def dependencies(
+    def configure(
         cls, service: Service, parser
     ) -> Generator[None, None, None]:
         """Dependencies."""
@@ -219,7 +219,7 @@ class Mixin(BaseMixin):
         self, parser: ArgumentParser
     ) -> Generator[None, None, None]:
         """Inject arguments."""
-        with self.mssql_cls.dependencies(self, parser):
+        with self.mssql_cls.configure(self, parser):
             with super().inject_arguments(parser):
                 yield
 
@@ -240,7 +240,7 @@ class AlchemyMixin(BaseMixin):
         self, parser: ArgumentParser
     ) -> Generator[None, None, None]:
         """Inject arguments."""
-        with self.mssql_cls.dependencies(self, parser):
+        with self.mssql_cls.configure(self, parser):
             with super().inject_arguments(parser):
                 yield
 

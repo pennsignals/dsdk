@@ -44,8 +44,8 @@ class AbstractPersistor:
 
     @classmethod
     @contextmanager
-    def dependencies(cls, service: Service, parser):
-        """Dependencies."""
+    def configure(cls, service: Service, parser):
+        """Configure."""
         raise NotImplementedError()
 
     def __init__(self, sql: Namespace, tables: Tuple[str, ...]):
@@ -105,10 +105,10 @@ class Persistor(AbstractPersistor):
 
     @classmethod
     @contextmanager
-    def dependencies(
+    def configure(
         cls, service: Service, parser
     ) -> Generator[None, None, None]:
-        """Dependencies."""
+        """Configure."""
         kwargs: Dict[str, Any] = {}
 
         for key, help_, inject in (

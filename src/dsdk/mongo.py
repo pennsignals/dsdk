@@ -117,7 +117,7 @@ class Persistor(Messages):
 
     @classmethod
     @contextmanager
-    def dependencies(
+    def configure(
         cls, service: Service, parser
     ) -> Generator[None, None, None]:
         """Dependencies."""
@@ -251,7 +251,7 @@ class Mixin(BaseMixin):
         self, parser: ArgumentParser,
     ) -> Generator[None, None, None]:
         """Inject arguments."""
-        with self.mongo_cls.dependencies(self, parser):
+        with self.mongo_cls.configure(self, parser):
             with super().inject_arguments(parser):
                 yield
 
