@@ -59,7 +59,10 @@ class AbstractPersistor:
         errors = []
         for table in self.tables:
             try:
-                cur.execute(self.sql.extant.format(self.identifier(table)))
+                logger.debug(table)
+                statement = self.sql.extant.format(self.identifier(table))
+                logger.debug(statement)
+                cur.execute(statement)
                 (n,) = cur.fetchone()
                 assert n == 1
             except exceptions:
