@@ -57,11 +57,10 @@ class AbstractPersistor:
         """Check."""
         logger.info(self.ON)
         errors = []
+        logger.debug(self.tables)
         for table in self.tables:
             try:
-                logger.debug(table)
                 statement = self.sql.extant.format(self.identifier(table))
-                logger.debug(statement)
                 cur.execute(statement)
                 (n,) = cur.fetchone()
                 assert n == 1
