@@ -57,7 +57,7 @@ class AbstractPersistor:
         """Check."""
         logger.info(self.ON)
         errors = []
-        logger.debug(self.tables)
+        logger.debug("Tables: %s", self.tables)
         for table in self.tables:
             try:
                 statement = self.sql.extant.format(self.identifier(table))
