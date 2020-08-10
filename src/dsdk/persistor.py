@@ -59,8 +59,7 @@ class AbstractPersistor:
         errors = []
         for table in self.tables:
             try:
-                statement = self.sql.extant.format(self.identifier(table))
-                cur.execute(statement)
+                cur.execute(self.extant(table))
                 (n,) = cur.fetchone()
                 assert n == 1
             except exceptions:
@@ -89,8 +88,8 @@ class AbstractPersistor:
                 logger.info(self.ROLLBACK)
                 raise
 
-    def identifier(self, name: str):
-        """Safe quoting for sql identifier."""
+    def extant(self, table):
+        """Return extant table sql."""
         raise NotImplementedError()
 
     @contextmanager
