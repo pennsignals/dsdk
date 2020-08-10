@@ -55,7 +55,7 @@ def inject_str_tuple(key: str, kwargs: Dict[str, Any]) -> Callable:
 
     def _inject(value: str) -> Tuple[str, ...]:
         assert value.__class__ is str
-        kwargs[key] = result = tuple(",".split(value))
+        kwargs[key] = result = tuple(value.split(","))
         return result
 
     return _inject
