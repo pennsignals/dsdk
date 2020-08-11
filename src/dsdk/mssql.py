@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import re
 from abc import ABC
 from argparse import Namespace
 from contextlib import contextmanager
@@ -53,9 +52,6 @@ if TYPE_CHECKING:
     BaseMixin = Service
 else:
     BaseMixin = ABC
-
-
-ALPHA_NUMERIC_DOT = re.compile("^[a-zA-Z_][A-Za-z0-9_.]*$")
 
 
 class Messages:  # pylint: disable=too-few-public-methods
@@ -134,12 +130,6 @@ class Persistor(Messages, BasePersistor):
         """Check."""
         super().check(cur, exceptions)
 
-    def extant(self, table: str) -> str:
-        """Return extant atble sql."""
-        if not ALPHA_NUMERIC_DOT.match(table):
-            raise ValueError(f"Not a sql identifier: {table}.")
-        return self.sql.extant.format(table)
-
 
 class AlchemyPersistor(Messages, BaseAbstractPersistor):
     """AlchemyPersistor."""
@@ -202,12 +192,6 @@ class AlchemyPersistor(Messages, BaseAbstractPersistor):
     ):
         """Check."""
         super().check(cur, exceptions)
-
-    def extant(self, table: str) -> str:
-        """Returns extant table sql."""
-        if not ALPHA_NUMERIC_DOT.match(table):
-            raise ValueError(f"Not a sql identifier: {table}")
-        return self.sql.extant.format(table)
 
     @contextmanager
     def connect(self) -> Generator[Any, None, None]:

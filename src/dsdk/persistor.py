@@ -6,6 +6,7 @@ from __future__ import annotations
 from argparse import Namespace
 from contextlib import contextmanager
 from logging import getLogger
+from re import compile as re_compile
 from typing import Any, Dict, Generator, Tuple
 
 from .dependency import (
@@ -17,6 +18,9 @@ from .dependency import (
 from .service import Service
 
 logger = getLogger(__name__)
+
+
+ALPHA_NUMERIC_DOT = re_compile("^[a-zA-Z_][A-Za-z0-9_.]*$")
 
 
 class AbstractPersistor:
@@ -88,9 +92,11 @@ class AbstractPersistor:
                 logger.info(self.ROLLBACK)
                 raise
 
-    def extant(self, table):
+    def extant(self, table: str) -> str:
         """Return extant table sql."""
-        raise NotImplementedError()
+        if not ALPHA_NUMERIC_DOT.match(table):
+            raise ValueError(f"Not a sql identifier: {table}.")
+        return self.sql.extant.format(table)
 
     @contextmanager
     def rollback(self) -> Generator[Any, None, None]:

@@ -25,7 +25,6 @@ try:
         OperationalError,
         connect,
     )
-    from psycopg2.sql import Identifier, SQL
 except ImportError as import_error:
     logger.warning(import_error)
 
@@ -91,10 +90,6 @@ class Persistor(Messages, BasePersistor):
         finally:
             con.close()
             logger.info(self.CLOSE)
-
-    def extant(self, table: str) -> str:
-        """Returns extant table sql."""
-        return SQL(self.sql.extant).format(Identifier(table))
 
     def check(self, cur, exceptions=(DatabaseError, InterfaceError)):
         """Check."""
