@@ -116,7 +116,7 @@ class Persistor(Messages, BasePersistor):
         """Connect."""
         con = connect(
             server=self.host,
-            username=self.username,
+            user=self.username,
             password=self.password,
             database=self.database,
             port=self.port,
