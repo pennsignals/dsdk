@@ -89,12 +89,14 @@ class Messages:  # pylint: disable=too-few-public-methods
         errors = []
         for table in self.tables:  # pylint: disable=no-member; type: ignore
             try:
-                cur.execute(
-                    # pylint: disable=no-member; type: ignore
-                    self.sql.extant.format(table=table)
-                )
-                (n,) = cur.fetchone()
-                assert n == 1
+                # pylint: disable=no-member; type: ignore
+                statement = self.extant(table)
+                logger.info(self.EXTANT, statement)
+                cur.execute(statement)
+                for row in cur:
+                    (n,) = row
+                    assert n == 1
+                    continue
             except exceptions as error:
                 number, *_ = error.orig.args
                 # column privileges are a standards-breaking mssql mis-feature
