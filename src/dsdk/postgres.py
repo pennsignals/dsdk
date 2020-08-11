@@ -59,6 +59,9 @@ class Messages:  # pylint: disable=too-few-public-methods
             "}",
         )
     )
+    EXTANT = "".join(
+        ("{", ", ".join((f'"key": "{KEY}.sql.extant"', '"value": "%s"')), "}",)
+    )
     ON = "".join(("{", ", ".join((f'"key": "{KEY}.on"',)), "}"))
     OPEN = "".join(("{", ", ".join((f'"key": "{KEY}.open"',)), "}"))
     ROLLBACK = "".join(("{", ", ".join((f'"key": "{KEY}.rollback"',)), "}"))

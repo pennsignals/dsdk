@@ -32,6 +32,10 @@ class AbstractPersistor:
     COMMIT = "".join(("{", ", ".join((f'"key": "{KEY}.commit"',)), "}"))
     END = "".join(("{", f'"key": "{KEY}.end"', "}"))
 
+    EXTANT = "".join(
+        ("{", ", ".join((f'"key": "{KEY}.extant.sql"', '"value": "%s"')), "}",)
+    )
+
     ERROR = "".join(
         ("{", ", ".join((f'"key": "{KEY}.table.error"', '"table": "%s"')), "}")
     )
@@ -41,6 +45,9 @@ class AbstractPersistor:
             ", ".join((f'"key": "{KEY}.tables.error"', '"tables": "%s"')),
             "}",
         )
+    )
+    EXTANT = "".join(
+        ("{", ", ".join((f'"key": "{KEY}.sql.extant"', '"value": "%s"')), "}",)
     )
     ON = "".join(("{", ", ".join((f'"key": "{KEY}.on"',)), "}"))
     OPEN = "".join(("{", ", ".join(('"key": "{KEY}.open"',)), "}"))
@@ -63,9 +70,13 @@ class AbstractPersistor:
         errors = []
         for table in self.tables:
             try:
-                cur.execute(self.extant(table))
-                (n,) = cur.fetchone()
-                assert n == 1
+                statement = self.extant(table)
+                logger.info(self.EXTANT, statement)
+                cur.execute(statement)
+                for row in cur:
+                    (n,) = row
+                    assert n == 1
+                    continue
             except exceptions:
                 logger.warning(self.ERROR, table)
                 errors.append(table)
