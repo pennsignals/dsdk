@@ -144,13 +144,13 @@ class PredictionPersistor(Persistor):
         """Open run."""
         sql = self.sql
         with self.commit() as cur:
-            cur.execute(sql.create)
-            cur.execute(sql.migrate)
-        with self.commit() as cur:
+            cur.execute(sql.schema)
             cur.execute(sql.runs.open, (microservice_version, model_version,))
             run_id, microservice_id, model_id, duration = cur.fetchone()
             run = Run(run_id, microservice_id, model_id, duration)
-            yield run
+        yield run
+        with self.commit() as cur:
+            cur.execute(sql.schema)
             cur.execute_many(
                 sql.predictions.insert,
                 (
