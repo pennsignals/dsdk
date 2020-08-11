@@ -37,15 +37,15 @@ services:
     - mssql-data:/var/opt/mssql/data
     - ./secrets:/secrets:ro
 
-  timescaledb:
+  postgres:
     build:
       context: .
       dockerfile: timescaledb.dockerfile
-      target: timescaledb
+      target: test
     environment:
     - POSTGRES_USER=postgres
     - POSTGRES_PASSWORD=password
-    - POSTGRES_DB=postgres
+    - POSTGRES_DB=test
     image: timescaledb
     links:
     - mongo

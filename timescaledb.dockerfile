@@ -1,4 +1,4 @@
-FROM timescale/timescaledb-postgis:latest-pg12 as timescaledb
+FROM timescale/timescaledb-postgis:latest-pg12 as build
 ARG MONGO_FDW=0
 ARG SEMVER=1
 ARG SEMVER_VERSION=0.30.0
@@ -69,3 +69,8 @@ RUN apk add \
         && cd .. \
     ; fi \
     && apk del --no-cache .build
+
+
+FROM build as test
+COPY ./sql/postgres/create.sql /docker-entrypoint-initdb.d/003.create.sql
+COPY ./sql/postgres/migrate.sql /docker-entrypoint-initdb.d/004.migrate.sql
