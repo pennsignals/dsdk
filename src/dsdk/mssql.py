@@ -80,16 +80,19 @@ class Messages:  # pylint: disable=too-few-public-methods
         ("{", ", ".join((f'"key": "{KEY}.sql.extant"', '"value": "%s"')), "}",)
     )
     ON = "".join(("{", ", ".join((f'"key": "{KEY}.on"',)), "}"))
-    OPEN = "".join(("{", ", ".join(('"key": "{KEY}.open"',)), "}"))
-    ROLLBACK = "".join(("{", ", ".join(('"key": "{KEY}.rollback"')), "}"))
+    OPEN = "".join(("{", ", ".join((f'"key": "{KEY}.open"',)), "}"))
+    ROLLBACK = "".join(("{", ", ".join((f'"key": "{KEY}.rollback"',)), "}"))
 
-    def check(self, cur, exceptions):
+
+class Persistor(Messages, BasePersistor):
+    """Persistor."""
+
+    def check(self, cur, exceptions=(DatabaseError, InterfaceError)):
         """check."""
         logger.info(self.ON)
         errors = []
-        for table in self.tables:  # pylint: disable=no-member; type: ignore
+        for table in self.tables:
             try:
-                # pylint: disable=no-member; type: ignore
                 statement = self.extant(table)
                 logger.info(self.EXTANT, statement)
                 cur.execute(statement)
@@ -97,8 +100,9 @@ class Messages:  # pylint: disable=too-few-public-methods
                     (n,) = row
                     assert n == 1
                     continue
+            # pylint: disable=catching-non-exception
             except exceptions as error:
-                number, *_ = error.orig.args
+                number, *_ = error.args  # args are not wrapped
                 # column privileges are a standards-breaking mssql mis-feature
                 if number == 230:
                     logger.info(self.COLUMN_PRIVILEGE, table)
@@ -108,10 +112,6 @@ class Messages:  # pylint: disable=too-few-public-methods
         if bool(errors):
             raise RuntimeError(self.ERRORS, errors)
         logger.info(self.END)
-
-
-class Persistor(Messages, BasePersistor):
-    """Persistor."""
 
     @contextmanager
     def connect(self) -> Generator[Any, None, None]:
@@ -130,10 +130,6 @@ class Persistor(Messages, BasePersistor):
         finally:
             con.close()
             logger.info(self.CLOSE)
-
-    def check(self, cur, exceptions=(DatabaseError, InterfaceError)):
-        """Check."""
-        super().check(cur, exceptions)
 
 
 class AlchemyPersistor(Messages, BaseAbstractPersistor):
@@ -195,8 +191,29 @@ class AlchemyPersistor(Messages, BaseAbstractPersistor):
     def check(
         self, cur, exceptions=(AlchemyDatabaseError, AlchemyInterfaceError),
     ):
-        """Check."""
-        super().check(cur, exceptions)
+        """check."""
+        logger.info(self.ON)
+        errors = []
+        for table in self.tables:
+            try:
+                statement = self.extant(table)
+                logger.info(self.EXTANT, statement)
+                cur.execute(statement)
+                for row in cur:
+                    (n,) = row
+                    assert n == 1
+                    continue
+            except exceptions as error:
+                number, *_ = error.orig.args  # args are wrapped
+                # column privileges are a standards-breaking mssql mis-feature
+                if number == 230:
+                    logger.info(self.COLUMN_PRIVILEGE, table)
+                    continue
+                logger.warning(self.ERROR, table)
+                errors.append(table)
+        if bool(errors):
+            raise RuntimeError(self.ERRORS, errors)
+        logger.info(self.END)
 
     @contextmanager
     def connect(self) -> Generator[Any, None, None]:
