@@ -152,12 +152,12 @@ class PredictionPersistor(Persistor):
             cur.executemany(
                 sql.predictions.insert,
                 (
-                    (run_id, patient_id, score)
-                    for patient_id, score in run.predictions
+                    (run_id, patient_id, score, *args)
+                    for patient_id, score, args in run.predictions
                 ),
             )
             cur.execute(sql.runs.close, (run.id,))
-            _, _, _, _, duration = cur.fetchone()
+            _, _, _, duration = cur.fetchone()
             run.duration = duration
 
 

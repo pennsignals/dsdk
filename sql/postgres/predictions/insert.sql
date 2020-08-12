@@ -1,8 +1,8 @@
 with c as (
     select
-        cast(%s as int) as run_id,
-        cast(%s as int) as patient_id,
-        cast(%s as double precision) as score,
+        cast(%(run_id)s as int) as run_id,
+        cast(%(patient_id)s as int) as patient_id,
+        cast(%(score)s as double precision) as score,
 ), i as (
     insert into predictions (
         run_id,
