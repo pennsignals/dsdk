@@ -149,7 +149,7 @@ class PredictionPersistor(Persistor):
         yield run
         with self.commit() as cur:
             cur.execute(sql.schema)
-            cur.execute_many(
+            cur.executemany(
                 sql.predictions.insert,
                 (
                     (run_id, patient_id, score)
