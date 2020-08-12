@@ -6,9 +6,10 @@ from __future__ import annotations
 from abc import ABC
 from contextlib import contextmanager
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Generator, Type, cast
+from typing import TYPE_CHECKING, Any, Generator, Optional, Type, cast
 
 from configargparse import ArgParser as ArgumentParser
+from pandas import DataFrame
 
 from .dependency import StubException
 from .persistor import Persistor as BasePersistor
@@ -129,7 +130,7 @@ class Run:  # pylint: disable=too-few-public-methods
         self.microservice_id = microservice_id
         self.model_id = model_id
         self.duration = duration
-        self.predictions = []
+        self.predictions: Optional[DataFrame] = None
 
 
 class PredictionPersistor(Persistor):
@@ -149,13 +150,12 @@ class PredictionPersistor(Persistor):
         yield run
         with self.commit() as cur:
             cur.execute(sql.schema)
-            cur.executemany(
-                sql.predictions.insert,
-                (
-                    (run_id, patient_id, score, *args)
-                    for patient_id, score, args in run.predictions
-                ),
-            )
+            if run.predictions is not None:
+                # pylint: disable=unsupported-assignment-operation
+                run.predictions["run_id"] = run.id
+                cur.executemany(
+                    sql.predictions.insert, run.predictions.to_dict("records")
+                )
             cur.execute(sql.runs.close, (run.id,))
             _, _, _, duration = cur.fetchone()
             run.duration = duration
