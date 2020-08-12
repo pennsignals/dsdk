@@ -8,3 +8,4 @@ from
     c
 where
     runs.id = c.id
+returning *
