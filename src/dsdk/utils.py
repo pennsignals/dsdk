@@ -72,7 +72,7 @@ def load_pickle_file(path: str) -> object:
 
 
 def df_from_query_by_ids(
-    con,  # TODO type annotation for con
+    cur,
     query: str,
     ids: Sequence[Any],
     parameters: Optional[Dict[str, Any]] = None,
@@ -83,19 +83,21 @@ def df_from_query_by_ids(
         parameters = {}
     dfs = []
     for chunk in chunks(ids, size):
-        result = con.execute(query, {"ids": chunk, **parameters}).fetchall()
-        dfs.append(DataFrame(result, result.keys()))
+        cur.execute(query, {"ids": chunk, **parameters})
+        columns = tuple(i[0] for i in cur.description)
+        dfs.append(DataFrame(cur, columns))
     return concat(dfs, ignore_index=True)
 
 
 def df_from_query(
-    con, query: str, parameters: Optional[Dict[str, Any]],
+    cur, query: str, parameters: Optional[Dict[str, Any]],
 ) -> DataFrame:
     """Return DataFrame from query."""
     if parameters is None:
         parameters = {}
-    result = con.execute(query, parameters).fetchall()
-    return DataFrame(result, result.keys())
+    cur.execute(query, parameters)
+    columns = tuple(i[0] for i in cur.description)
+    return DataFrame(cur, columns)
 
 
 def retry(
