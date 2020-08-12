@@ -98,7 +98,9 @@ def df_from_query(
         parameters = {}
     cur.execute(query, parameters)
     columns = [i[0] for i in cur.description]
+    logger.info(columns)
     rows = cur.fetchall()
+    logger.info(rows[0])
     return DataFrame.from_records(rows, columns)
 
 
