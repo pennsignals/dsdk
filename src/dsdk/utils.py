@@ -85,7 +85,7 @@ def df_from_query_by_ids(
     for chunk in chunks(ids, size):
         cur.execute(query, {"ids": chunk, **parameters})
         columns = tuple(i[0] for i in cur.description)
-        dfs.append(DataFrame(cur, columns))
+        dfs.append(DataFrame.from_records(cur, columns))
     return concat(dfs, ignore_index=True)
 
 
@@ -97,7 +97,7 @@ def df_from_query(
         parameters = {}
     cur.execute(query, parameters)
     columns = tuple(i[0] for i in cur.description)
-    return DataFrame(cur, columns)
+    return DataFrame.from_records(cur, columns)
 
 
 def retry(
