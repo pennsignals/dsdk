@@ -4,5 +4,7 @@ with c as (
 update runs
 set
     duration = tstzrange(lower(runs.duration), current_timestamp, '[)')
-
-join c using (id)
+from
+    c
+where
+    runs.id = c.id
