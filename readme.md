@@ -2,8 +2,6 @@
 
 ![Docker Images](https://github.com/pennsignals/dsdk/workflows/.github/workflows/publish.yml/badge.svg)
 
-![Lint](https://github.com/pennsignals/dsdk/workflows/.github/workflows/lint.yml/badge.svg)
-
 ![Test](https://github.com/pennsignals/dsdk/workflows/.github/workflows/test.yml/badge.svg)
 
 An opinionated library to help deploy data science projects
