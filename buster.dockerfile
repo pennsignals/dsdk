@@ -16,6 +16,7 @@ COPY .pre-commit-config.yaml .
 COPY .pylintrc .
 COPY .git ./.git
 COPY src ./src
+COPY sql ./sql
 COPY test ./test
 RUN \
     chmod +x /usr/bin/tini && \
@@ -26,7 +27,7 @@ RUN \
     apt-get -qq autoremove -y --purge && \
     rm -rf /var/lib/apt/lists/*
 
-FROM build as lint
+FROM build as test
 ARG IFLAGS
 WORKDIR /root
 ENV IMAGE dsdk.lint
@@ -34,9 +35,3 @@ RUN \
     pip install ${IFLAGS} ".[all]"
 ENTRYPOINT [ "/usr/bin/tini", "--" ]
 CMD [ "pre-commit", "run", "--all-files" ]
-
-FROM lint as test
-WORKDIR /root
-ENV IMAGE dsdk.test
-ENTRYPOINT [ "/usr/bin/tini", "--" ]
-CMD [ "python", "setup.py", "test" ]
