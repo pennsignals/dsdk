@@ -6,6 +6,7 @@ from __future__ import annotations
 from abc import ABC
 from argparse import Namespace
 from contextlib import contextmanager
+from json import dumps
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, Dict, Generator, Tuple, Type, cast
 
@@ -59,29 +60,16 @@ class Messages:  # pylint: disable=too-few-public-methods
 
     KEY = "mssql"
 
-    CLOSE = "".join(("{", ", ".join((f'"key": "{KEY}.close"',)), "}"))
-    COLUMN_PRIVILEGE = "".join(
-        ("{", ", ".join((f'"key": "{KEY}.warn"', '"value": "%s"')), "}",)
-    )
-    COMMIT = "".join(("{", ", ".join((f'"key": "{KEY}.commit"')), "}"))
-    END = "".join(("{", f'"key": "{KEY}.end"', "}"))
-
-    ERROR = "".join(
-        ("{", ", ".join((f'"key": "{KEY}.table.error"', '"table": "%s"')), "}")
-    )
-    ERRORS = "".join(
-        (
-            "{",
-            ", ".join((f'"key": "{KEY}.tables.error"', '"tables": "%s"')),
-            "}",
-        )
-    )
-    EXTANT = "".join(
-        ("{", ", ".join((f'"key": "{KEY}.sql.extant"', '"value": "%s"')), "}",)
-    )
-    ON = "".join(("{", ", ".join((f'"key": "{KEY}.on"',)), "}"))
-    OPEN = "".join(("{", ", ".join((f'"key": "{KEY}.open"',)), "}"))
-    ROLLBACK = "".join(("{", ", ".join((f'"key": "{KEY}.rollback"',)), "}"))
+    CLOSE = dumps({"key": f"{KEY}.close"})
+    COLUMN_PRIVILEGE = dumps({"key": f"{KEY}.warn", "value": "%s"})
+    COMMIT = dumps({"key": f"{KEY}.commit"})
+    END = dumps({"key": f"{KEY}.end"})
+    ERROR = dumps({"key": f"{KEY}.table.error", "table": "%s"})
+    ERRORS = dumps({"key": f"{KEY}.tables.error", "tables": "%s"})
+    EXTANT = dumps({"key": f"{KEY}.sql.extant", "value": "%s"})
+    ON = dumps({"key": f"{KEY}.on"})
+    OPEN = dumps({"key": f"{KEY}.open"})
+    ROLLBACK = dumps({"key": f"{KEY}.rollback"})
 
 
 class Persistor(Messages, BasePersistor):
