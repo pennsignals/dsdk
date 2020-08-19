@@ -7,11 +7,11 @@ with args as (
         %(run_id)s,
         %(patient_id)s,
         %(score)s
-), i as (
-    insert into predictions (
-        run_id,
-        patient_id,
-        score
+)
+insert into predictions (
+    run_id,
+    patient_id,
+    score
 )
 select
     run_id,
@@ -21,4 +21,4 @@ from
     args
 where
     run_id is not null
-returning id
+returning *
