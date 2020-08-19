@@ -104,9 +104,9 @@ def df_from_query(
 
 def retry(
     exceptions: Sequence[Exception],
-    retries: int = 30,
+    retries: int = 60,
     delay: float = 1.0,
-    backoff: float = 1.01,
+    backoff: float = 1.05,
     sleep: Callable = default_sleep,
 ):
     """
