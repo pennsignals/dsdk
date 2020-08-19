@@ -10,5 +10,5 @@ jobs:
 
     - name: test
       run: |
-        docker-compose -f docker-compose.test.yml up
+        docker-compose -f docker-compose.test.yml up --exit-code-from test
         docker-compose -f docker-compose.test.yml down
