@@ -1,8 +1,12 @@
-with c as (
+with args as (
     select
-        cast(%(run_id)s as int) as run_id,
-        cast(%(patient_id)s as int) as patient_id,
-        cast(%(score)s as double precision) as score,
+        cast(null as int) as run_id,
+        cast(null as int) as patient_id,
+        cast(null as double precision) as score
+    union all select
+        %(run_id)s,
+        %(patient_id)s,
+        %(score)s
 ), i as (
     insert into predictions (
         run_id,
@@ -14,5 +18,7 @@ select
     patient_id,
     score
 from
-    c
+    args
+where
+    run_id is not null
 returning id

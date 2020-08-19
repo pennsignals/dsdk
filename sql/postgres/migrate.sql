@@ -43,12 +43,13 @@ returns void as $$
             foreign key (model_id) references models (id)
             on delete cascade
             on update cascade,
-        -- pick one of the following two constaints
+        -- pick one of the following two constaints or the index
         constraint only_one_run_per_duration -- no overlaps or outstanding (crashed) runs
             exclude using gist (duration with &&),
         constraint only_one_run_per_duration_microservice_and_model -- simultaneous, blue-green deploys allowed
             exclude using gist (microservice_id with =, model_id with =, duration with &&)
     );
+    create index if not exists runs_duration_index on runs using gist (duration);
     create sequence if not exists predictions_sequence;
     create table if not exists predictions (
         id int default nextval('predictions_sequence') primary key,
@@ -76,6 +77,8 @@ $$ language sql;
 
 create or replace function down()
 returns void as $$
+    drop table if exists models cascade;
+    drop table if exists microservices cascade;
     drop sequence if exists predictions_sequence cascade;
     drop sequence if exists models_sequence cascade;
     drop sequence if exists microservices_sequence cascade;
