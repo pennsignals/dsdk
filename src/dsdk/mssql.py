@@ -46,7 +46,7 @@ try:
 except ImportError as import_error:
     logger.warning(import_error)
 
-    AchemyDatabaseError = AlchemyInterfaceError = StubException
+    AlchemyDatabaseError = AlchemyInterfaceError = StubException
 
 
 if TYPE_CHECKING:
