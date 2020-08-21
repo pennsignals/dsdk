@@ -136,7 +136,13 @@ class PredictionPersistor(Persistor):
         sql = self.sql
         with self.commit() as cur:
             cur.execute(sql.schema)
-            cur.execute(sql.runs.open, (microservice_version, model_version,))
+            cur.execute(
+                sql.runs.open,
+                {
+                    "microservice_version": microservice_version,
+                    "model_version": model_version,
+                },
+            )
             row = cur.fetchone()
             run = Run(
                 row["id"],
