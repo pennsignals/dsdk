@@ -27,6 +27,7 @@ try:
         OperationalError,
         connect,
     )
+    from psycopg2.extras import execute_batch
 except ImportError as import_error:
     logger.warning(import_error)
 
@@ -136,20 +137,27 @@ class PredictionPersistor(Persistor):
         with self.commit() as cur:
             cur.execute(sql.schema)
             cur.execute(sql.runs.open, (microservice_version, model_version,))
-            run_id, microservice_id, model_id, duration = cur.fetchone()
-            run = Run(run_id, microservice_id, model_id, duration)
+            row = cur.fetchone()
+            run = Run(
+                row["id"],
+                row["microservice_id"],
+                row["model_id"],
+                row["duration"],
+            )
         yield run
         with self.commit() as cur:
             cur.execute(sql.schema)
             if run.predictions is not None:
                 # pylint: disable=unsupported-assignment-operation
                 run.predictions["run_id"] = run.id
-                cur.executemany(
-                    sql.predictions.insert, run.predictions.to_dict("records")
+                execute_batch(
+                    cur,
+                    sql.predictions.insert,
+                    run.predictions.to_dict("records"),
                 )
-            cur.execute(sql.runs.close, (run.id,))
-            _, _, _, duration = cur.fetchone()
-            run.duration = duration
+            cur.execute(sql.runs.close, {"id": run.id})
+            row = cur.fetchone()
+            run.duration = row["duration"]
 
 
 class PredictionMixin(Mixin):  # pylint: disable=too-few-public-methods.
