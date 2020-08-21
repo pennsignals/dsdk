@@ -54,14 +54,14 @@ returns void as $$
     create table if not exists predictions (
         id int default nextval('predictions_sequence') primary key,
         run_id int not null,
-        patient_id int not null,
+        subject_id int not null,
         score double precision not null,
         constraint predictions_require_a_run
             foreign key (run_id) references runs (id)
             on delete cascade
             on update cascade,
-        constraint only_one_prediction_per_patient_id_and_run
-            unique (run_id, patent_id),
+        constraint only_one_prediction_per_subject_id_and_run
+            unique (run_id, subject_id),
         -- pick one of the following two constaints
         constraint prediction_score_must_be_a_normal
             check (0.0 <= score and score <= 1.0),

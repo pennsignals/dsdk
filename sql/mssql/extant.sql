@@ -1,3 +1,3 @@
 select 1 as n where exists (
-    select 1 as n from {}
+    select 1 as n from {table}
 )
