@@ -1,7 +1,7 @@
 with args as (
     select
-        cast(%s as semver) as microservice_version,
-        cast(%s as semver) as model_version
+        cast(%(microservice_version)s as semver) as microservice_version,
+        cast(%(model_version)s as semver) as model_version
 ), i_microservices as (
     insert into microservices (
         version
