@@ -143,13 +143,14 @@ class PredictionPersistor(Persistor):
                     "model_version": model_version,
                 },
             )
-            row = cur.fetchone()
-            run = Run(
-                row["id"],
-                row["microservice_id"],
-                row["model_id"],
-                row["duration"],
-            )
+            for row in cur:
+                run = Run(
+                    row["id"],
+                    row["microservice_id"],
+                    row["model_id"],
+                    row["duration"],
+                )
+                break
         yield run
         with self.commit() as cur:
             cur.execute(sql.schema)
@@ -162,8 +163,9 @@ class PredictionPersistor(Persistor):
                     run.predictions.to_dict("records"),
                 )
             cur.execute(sql.runs.close, {"id": run.id})
-            row = cur.fetchone()
-            run.duration = row["duration"]
+            for row in cur:
+                run.duration = row["duration"]
+                break
 
 
 class PredictionMixin(Mixin):  # pylint: disable=too-few-public-methods.
