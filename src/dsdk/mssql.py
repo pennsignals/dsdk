@@ -85,7 +85,7 @@ class Persistor(Messages, BasePersistor):
                 logger.info(self.EXTANT, statement)
                 cur.execute(statement)
                 for row in cur:
-                    (n,) = row
+                    n = row["n"]
                     assert n == 1
                     continue
             # pylint: disable=catching-non-exception
@@ -100,6 +100,20 @@ class Persistor(Messages, BasePersistor):
         if bool(errors):
             raise RuntimeError(self.ERRORS, errors)
         logger.info(self.END)
+
+    @contextmanager
+    def commit(self) -> Generator[Any, None, None]:
+        """Commit."""
+        with self.connect() as con:
+            try:
+                with con.cursor(as_dict=True) as cur:
+                    yield cur
+                con.commit()
+                logger.info(self.COMMIT)
+            except BaseException:
+                con.rollback()
+                logger.info(self.ROLLBACK)
+                raise
 
     @contextmanager
     def connect(self) -> Generator[Any, None, None]:
@@ -118,6 +132,17 @@ class Persistor(Messages, BasePersistor):
         finally:
             con.close()
             logger.info(self.CLOSE)
+
+    @contextmanager
+    def rollback(self) -> Generator[Any, None, None]:
+        """Rollback."""
+        with self.connect() as con:
+            try:
+                with con.cursor(as_dict=True) as cur:
+                    yield cur
+            finally:
+                con.rollback()
+                logger.info(self.ROLLBACK)
 
 
 class AlchemyPersistor(Messages, BaseAbstractPersistor):
@@ -188,7 +213,7 @@ class AlchemyPersistor(Messages, BaseAbstractPersistor):
                 logger.info(self.EXTANT, statement)
                 cur.execute(statement)
                 for row in cur:
-                    (n,) = row
+                    n = row["n"]
                     assert n == 1
                     continue
             except exceptions as error:

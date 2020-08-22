@@ -8,7 +8,9 @@ from contextlib import contextmanager
 from json import dumps
 from logging import getLogger
 from re import compile as re_compile
-from typing import Any, Dict, Generator, Tuple
+from typing import Any, Dict, Generator, Optional, Sequence, Tuple
+
+from pandas import DataFrame, concat
 
 from .dependency import (
     inject_int,
@@ -17,6 +19,7 @@ from .dependency import (
     inject_str_tuple,
 )
 from .service import Service
+from .utils import chunks
 
 logger = getLogger(__name__)
 
@@ -45,6 +48,36 @@ class AbstractPersistor:
         """Configure."""
         raise NotImplementedError()
 
+    @classmethod
+    def df_from_query(
+        cls, cur, query: str, parameters: Optional[Dict[str, Any]],
+    ) -> DataFrame:
+        """Return DataFrame from query."""
+        if parameters is None:
+            parameters = {}
+        cur.execute(query, parameters)
+        rows = cur.fetchall()
+        return DataFrame(rows)
+
+    @classmethod
+    def df_from_query_by_ids(  # pylint: disable=too-many-arguments
+        cls,
+        cur,
+        query: str,
+        ids: Sequence[Any],
+        parameters: Optional[Dict[str, Any]] = None,
+        size: int = 10000,
+    ) -> DataFrame:
+        """Return DataFrame from query by ids."""
+        if parameters is None:
+            parameters = {}
+        dfs = []
+        for chunk in chunks(ids, size):
+            cur.execute(query, {"ids": chunk, **parameters})
+            rows = cur.fetchall()
+            dfs.append(DataFrame(rows))
+        return concat(dfs, ignore_index=True)
+
     def __init__(self, sql: Namespace, tables: Tuple[str, ...]):
         """__init__."""
         self.sql = sql
@@ -60,7 +93,7 @@ class AbstractPersistor:
                 logger.info(self.EXTANT, statement)
                 cur.execute(statement)
                 for row in cur:
-                    (n,) = row
+                    n = row["n"]
                     assert n == 1
                     continue
             except exceptions:
@@ -69,11 +102,6 @@ class AbstractPersistor:
         if bool(errors):
             raise RuntimeError(self.ERRORS, errors)
         logger.info(self.END)
-
-    @contextmanager
-    def connect(self) -> Generator[Any, None, None]:
-        """Connect."""
-        raise NotImplementedError()
 
     @contextmanager
     def commit(self) -> Generator[Any, None, None]:
@@ -88,6 +116,11 @@ class AbstractPersistor:
                 con.rollback()
                 logger.info(self.ROLLBACK)
                 raise
+
+    @contextmanager
+    def connect(self) -> Generator[Any, None, None]:
+        """Connect."""
+        raise NotImplementedError()
 
     def extant(self, table: str) -> str:
         """Return extant table sql."""
