@@ -11,9 +11,7 @@ from pickle import dump as pickle_dump
 from pickle import load as pickle_load
 from sys import stdout
 from time import sleep as default_sleep
-from typing import Any, Callable, Dict, Optional, Sequence
-
-from pandas import DataFrame, concat
+from typing import Any, Callable, Sequence
 
 logger = getLogger(__name__)
 
@@ -69,37 +67,6 @@ def load_pickle_file(path: str) -> object:
     """Load pickle from file."""
     with open(path, "rb") as fin:
         return pickle_load(fin)
-
-
-def df_from_query_by_ids(
-    cur,
-    query: str,
-    ids: Sequence[Any],
-    parameters: Optional[Dict[str, Any]] = None,
-    size: int = 10000,
-) -> DataFrame:
-    """Return DataFrame from query by ids."""
-    if parameters is None:
-        parameters = {}
-    dfs = []
-    for chunk in chunks(ids, size):
-        cur.execute(query, {"ids": chunk, **parameters})
-        columns = [i[0] for i in cur.description]
-        rows = cur.fetchall()
-        dfs.append(DataFrame.from_records(rows, columns=columns))
-    return concat(dfs, ignore_index=True)
-
-
-def df_from_query(
-    cur, query: str, parameters: Optional[Dict[str, Any]],
-) -> DataFrame:
-    """Return DataFrame from query."""
-    if parameters is None:
-        parameters = {}
-    cur.execute(query, parameters)
-    columns = [i[0] for i in cur.description]
-    rows = cur.fetchall()
-    return DataFrame.from_records(rows, columns=columns)
 
 
 def retry(

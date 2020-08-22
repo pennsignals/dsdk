@@ -19,6 +19,7 @@ from .utils import retry
 
 logger = getLogger(__name__)
 
+
 try:
     # Not everyone will be using postgres
     from psycopg2 import (
@@ -27,7 +28,10 @@ try:
         OperationalError,
         connect,
     )
-    from psycopg2.extras import execute_batch
+    from psycopg2.extras import (
+        DictCursor,
+        execute_batch,
+    )
 except ImportError as import_error:
     logger.warning(import_error)
 
@@ -63,16 +67,23 @@ class Messages:  # pylint: disable=too-few-public-methods
 class Persistor(Messages, BasePersistor):
     """Persistor."""
 
-    @retry((OperationalError,))
-    def retry_connect(self):
-        """Retry connect."""
-        return connect(
-            user=self.username,
-            password=self.password,
-            host=self.host,
-            port=self.port,
-            dbname=self.database,
-        )
+    def check(self, cur, exceptions=(DatabaseError, InterfaceError)):
+        """Check."""
+        super().check(cur, exceptions)
+
+    @contextmanager
+    def commit(self) -> Generator[Any, None, None]:
+        """Commit."""
+        with self.connect() as con:
+            try:
+                with con.cursor(cursor_factory=DictCursor) as cur:
+                    yield cur
+                con.commit()
+                logger.info(self.COMMIT)
+            except BaseException:
+                con.rollback()
+                logger.info(self.ROLLBACK)
+                raise
 
     @contextmanager
     def connect(self) -> Generator[Any, None, None]:
@@ -87,9 +98,27 @@ class Persistor(Messages, BasePersistor):
             con.close()
             logger.info(self.CLOSE)
 
-    def check(self, cur, exceptions=(DatabaseError, InterfaceError)):
-        """Check."""
-        super().check(cur, exceptions)
+    @retry((OperationalError,))
+    def retry_connect(self):
+        """Retry connect."""
+        return connect(
+            user=self.username,
+            password=self.password,
+            host=self.host,
+            port=self.port,
+            dbname=self.database,
+        )
+
+    @contextmanager
+    def rollback(self) -> Generator[Any, None, None]:
+        """Rollback."""
+        with self.connect() as con:
+            try:
+                with con.cursor(cursor_factory=DictCursor) as cur:
+                    yield cur
+            finally:
+                con.rollback()
+                logger.info(self.ROLLBACK)
 
 
 class Mixin(BaseMixin):

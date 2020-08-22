@@ -21,8 +21,6 @@ from .service import Batch, Service, Task
 from .utils import (
     chunks,
     configure_logger,
-    df_from_query,
-    df_from_query_by_ids,
     dump_json_file,
     dump_pickle_file,
     load_json_file,
@@ -51,8 +49,6 @@ __all__ = (
     "Task",
     "chunks",
     "configure_logger",
-    "df_from_query_by_ids",
-    "df_from_query",
     "dump_json_file",
     "dump_pickle_file",
     "load_json_file",
