@@ -126,7 +126,7 @@ class AbstractPersistor:
         """Return extant table sql."""
         if not ALPHA_NUMERIC_DOT.match(table):
             raise ValueError(f"Not a sql identifier: {table}.")
-        return self.sql.extant.format({"table": table})
+        return self.sql.extant.format(table=table)
 
     @contextmanager
     def rollback(self) -> Generator[Any, None, None]:
