@@ -106,9 +106,10 @@ class AbstractPersistor:
     @contextmanager
     def commit(self) -> Generator[Any, None, None]:
         """Commit."""
+        # Replace return type with ContextManager[Any] when mypy is fixed.
         with self.connect() as con:
             try:
-                with con.cursor() as cur:
+                with self.cursor(con) as cur:
                     yield cur
                 con.commit()
                 logger.info(self.COMMIT)
@@ -120,6 +121,13 @@ class AbstractPersistor:
     @contextmanager
     def connect(self) -> Generator[Any, None, None]:
         """Connect."""
+        # Replace return type with ContextManager[Any] when mypy is fixed.
+        raise NotImplementedError()
+
+    @contextmanager
+    def cursor(self, con):
+        """Yield a cursor that provides dicts."""
+        # Replace return type with ContextManager[Any] when mypy is fixed.
         raise NotImplementedError()
 
     def extant(self, table: str) -> str:
@@ -131,9 +139,10 @@ class AbstractPersistor:
     @contextmanager
     def rollback(self) -> Generator[Any, None, None]:
         """Rollback."""
+        # Replace return type with ContextManager[Any] when mypy is fixed.
         with self.connect() as con:
             try:
-                with con.cursor() as cur:
+                with self.cursor(con) as cur:
                     yield cur
             finally:
                 con.rollback()
@@ -149,6 +158,7 @@ class Persistor(AbstractPersistor):
         cls, service: Service, parser
     ) -> Generator[None, None, None]:
         """Configure."""
+        # Replace return type with ContextManager[None] when mypy is fixed.
         kwargs: Dict[str, Any] = {}
 
         for key, help_, inject in (
@@ -197,4 +207,5 @@ class Persistor(AbstractPersistor):
     @contextmanager
     def connect(self) -> Generator[Any, None, None]:
         """Connect."""
+        # Replace return type with ContextManager[Any] when mypy is fixed.
         raise NotImplementedError()

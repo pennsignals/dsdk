@@ -102,22 +102,9 @@ class Persistor(Messages, BasePersistor):
         logger.info(self.END)
 
     @contextmanager
-    def commit(self) -> Generator[Any, None, None]:
-        """Commit."""
-        with self.connect() as con:
-            try:
-                with con.cursor(as_dict=True) as cur:
-                    yield cur
-                con.commit()
-                logger.info(self.COMMIT)
-            except BaseException:
-                con.rollback()
-                logger.info(self.ROLLBACK)
-                raise
-
-    @contextmanager
     def connect(self) -> Generator[Any, None, None]:
         """Connect."""
+        # Replace return type with ContextManager[Any] when mypy is fixed.
         con = connect(
             server=self.host,
             user=self.username,
@@ -134,15 +121,11 @@ class Persistor(Messages, BasePersistor):
             logger.info(self.CLOSE)
 
     @contextmanager
-    def rollback(self) -> Generator[Any, None, None]:
-        """Rollback."""
-        with self.connect() as con:
-            try:
-                with con.cursor(as_dict=True) as cur:
-                    yield cur
-            finally:
-                con.rollback()
-                logger.info(self.ROLLBACK)
+    def cursor(self, con) -> Generator[Any, None, None]:
+        """Yield cursor that provides dicts."""
+        # Replace return type with ContextManager[Any] when mypy is fixed.
+        with con.cursor(as_dict=True) as cur:
+            yield cur
 
 
 class AlchemyPersistor(Messages, BaseAbstractPersistor):
@@ -154,6 +137,7 @@ class AlchemyPersistor(Messages, BaseAbstractPersistor):
         cls, service: Service, parser
     ) -> Generator[None, None, None]:
         """Dependencies."""
+        # Replace return type with ContextManager[None] when mypy is fixed.
         kwargs: Dict[str, Any] = {}
 
         for key, help_, inject in (
@@ -230,6 +214,7 @@ class AlchemyPersistor(Messages, BaseAbstractPersistor):
 
     @contextmanager
     def connect(self) -> Generator[Any, None, None]:
+        # Replace return type with ContextManager[Any] when mypy is fixed.
         """Connect."""
         con = self.engine.connect()
         logger.info(self.OPEN)
@@ -238,6 +223,13 @@ class AlchemyPersistor(Messages, BaseAbstractPersistor):
         finally:
             con.close()
             logger.info(self.CLOSE)
+
+    @contextmanager
+    def cursor(self, con) -> Generator[Any, None, None]:
+        # Replace return type with ContextManager[Any] when mypy is fixed.
+        """Yield a cursor that provides dicts."""
+        with con.cursor() as cur:
+            yield cur
 
 
 class Mixin(BaseMixin):
@@ -254,6 +246,7 @@ class Mixin(BaseMixin):
         self, parser: ArgumentParser
     ) -> Generator[None, None, None]:
         """Inject arguments."""
+        # Replace return type with ContextManager[Any] when mypy is fixed.
         with self.mssql_cls.configure(self, parser):
             with super().inject_arguments(parser):
                 yield
@@ -274,6 +267,7 @@ class AlchemyMixin(BaseMixin):
     def inject_arguments(
         self, parser: ArgumentParser
     ) -> Generator[None, None, None]:
+        # Replace return type with ContextManager[None] when mypy is fixed.
         """Inject arguments."""
         with self.mssql_cls.configure(self, parser):
             with super().inject_arguments(parser):

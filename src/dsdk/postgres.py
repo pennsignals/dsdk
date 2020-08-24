@@ -72,22 +72,9 @@ class Persistor(Messages, BasePersistor):
         super().check(cur, exceptions)
 
     @contextmanager
-    def commit(self) -> Generator[Any, None, None]:
-        """Commit."""
-        with self.connect() as con:
-            try:
-                with con.cursor(cursor_factory=DictCursor) as cur:
-                    yield cur
-                con.commit()
-                logger.info(self.COMMIT)
-            except BaseException:
-                con.rollback()
-                logger.info(self.ROLLBACK)
-                raise
-
-    @contextmanager
     def connect(self) -> Generator[Any, None, None]:
         """Connect."""
+        # Replace return type with ContextManager[Any] when mypy is fixed.
         # The `with ... as con:` formulation does not close the connection:
         # https://www.psycopg.org/docs/usage.html#with-statement
         con = self.retry_connect()
@@ -97,6 +84,13 @@ class Persistor(Messages, BasePersistor):
         finally:
             con.close()
             logger.info(self.CLOSE)
+
+    @contextmanager
+    def cursor(self, con) -> Generator[Any, None, None]:
+        """Yield a cursor that provides dicts."""
+        # Replace return type with ContextManager[Any] when mypy is fixed.
+        with con.cursor(cursor_factory=DictCursor) as cur:
+            yield cur
 
     @retry((OperationalError,))
     def retry_connect(self):
@@ -108,17 +102,6 @@ class Persistor(Messages, BasePersistor):
             port=self.port,
             dbname=self.database,
         )
-
-    @contextmanager
-    def rollback(self) -> Generator[Any, None, None]:
-        """Rollback."""
-        with self.connect() as con:
-            try:
-                with con.cursor(cursor_factory=DictCursor) as cur:
-                    yield cur
-            finally:
-                con.rollback()
-                logger.info(self.ROLLBACK)
 
 
 class Mixin(BaseMixin):
@@ -137,6 +120,7 @@ class Mixin(BaseMixin):
         self, parser: ArgumentParser
     ) -> Generator[None, None, None]:
         """Inject arguments."""
+        # Replace return type with ContextManager[None] when mypy is fixed.
         with self.postgres_cls.configure(self, parser):
             with super().inject_arguments(parser):
                 yield
@@ -162,6 +146,7 @@ class PredictionPersistor(Persistor):
         self, microservice_version: str, model_version: str
     ) -> Generator[Run, None, None]:
         """Open run."""
+        # Replace return type with ContextManager[Run] when mypy is fixed.
         sql = self.sql
         with self.commit() as cur:
             cur.execute(sql.schema)
@@ -180,7 +165,9 @@ class PredictionPersistor(Persistor):
                     row["duration"],
                 )
                 break
+
         yield run
+
         with self.commit() as cur:
             cur.execute(sql.schema)
             if run.predictions is not None:
