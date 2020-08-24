@@ -30,7 +30,7 @@ RUN \
 FROM build as test
 ARG IFLAGS
 WORKDIR /root
-ENV IMAGE dsdk.lint
+ENV IMAGE dsdk.test
 RUN \
     pip install ${IFLAGS} ".[all]"
 ENTRYPOINT [ "/usr/bin/tini", "--" ]
