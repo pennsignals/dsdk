@@ -186,7 +186,9 @@ class AlchemyPersistor(Messages, BaseAbstractPersistor):
         super().__init__(sql, tables)
 
     def check(
-        self, cur, exceptions=(AlchemyDatabaseError, AlchemyInterfaceError),
+        self,
+        cur,
+        exceptions=(AlchemyDatabaseError, AlchemyInterfaceError),
     ):
         """check."""
         logger.info(self.ON)
@@ -256,7 +258,11 @@ class AlchemyMixin(BaseMixin):
     """AlchemyMixin."""
 
     def __init__(
-        self, *, mssql=None, mssql_cls: Type = AlchemyPersistor, **kwargs,
+        self,
+        *,
+        mssql=None,
+        mssql_cls: Type = AlchemyPersistor,
+        **kwargs,
     ):
         """__init__."""
         self.mssql = cast(AlchemyPersistor, mssql)

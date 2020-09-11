@@ -108,7 +108,11 @@ class Mixin(BaseMixin):
     """Mixin."""
 
     def __init__(
-        self, *, postgres=None, postgres_cls: Type = Persistor, **kwargs,
+        self,
+        *,
+        postgres=None,
+        postgres_cls: Type = Persistor,
+        **kwargs,
     ):
         """__init__."""
         self.postgres = cast(Persistor, postgres)
