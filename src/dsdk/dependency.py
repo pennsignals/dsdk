@@ -29,6 +29,16 @@ def namespace_directory(root: str = "./", ext: str = ".sql") -> Namespace:
     return result
 
 
+def inject_float(key: str, kwargs: Dict[str, Any]) -> Callable:
+    """Inject float."""
+
+    def _inject(value) -> float:
+        kwargs[key] = result = float(value)
+        return result
+
+    return _inject
+
+
 def inject_int(key: str, kwargs: Dict[str, Any]) -> Callable:
     """Inject int."""
 

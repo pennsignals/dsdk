@@ -13,9 +13,24 @@ from typing import Any, Dict, Generator, Optional, Sequence, Tuple, cast
 from configargparse import ArgParser as ArgumentParser
 from configargparse import Namespace
 
+from .dependency import inject_float
 from .utils import configure_logger
 
 logger = getLogger(__name__)
+
+
+def get_utc_now_times(
+    kwargs: Dict[str, Any], key: str,
+) -> Tuple[datetime, float, datetime, float]:
+    """Get utc now times."""
+    assert_utc_now = utc_now = datetime.utcnow().replace(tzinfo=timezone.utc)
+    assert_epoch_ms = epoch_ms = utc_now.timestamp() * 1000
+
+    epoch_ms = kwargs.get(key, epoch_ms)
+    utc_now = datetime.utcfromtimestamp(epoch_ms / 1000).replace(
+        tzinfo=timezone.utc
+    )
+    return assert_utc_now, assert_epoch_ms, utc_now, epoch_ms
 
 
 class Interval:  # pylint: disable=too-few-public-methods
@@ -150,6 +165,7 @@ class Service:
         self, parser: ArgumentParser
     ) -> Generator[None, None, None]:
         """Inject arguments."""
+        kwargs: Dict[str, Any] = {}
         parser._default_config_files = [
             "/local/config.yaml",
             "/local/config.yml",
@@ -166,7 +182,24 @@ class Service:
             help="config file path",
             env_var="CONFIG",  # make ENV match default metavar
         )
+        parser.add(
+            "-e",
+            "--epoch-ms",
+            help="epoch ms",
+            env_var="EPOCH_MS",
+            type=inject_float("epoch_ms", kwargs),
+        )
+
         yield
+
+        assert_utc_now, assert_epoch_ms, epoch_ms, utc_now = get_utc_now_times(
+            kwargs, "epoch_ms"
+        )
+
+        self.assert_utc_now = assert_utc_now
+        self.assert_epoch_ms = assert_epoch_ms
+        self.utc_now = utc_now
+        self.epoch_ms = epoch_ms
 
     def dependency(self, key, cls, kwargs):
         """Dependency."""

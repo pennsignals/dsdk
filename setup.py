@@ -25,7 +25,7 @@ SQLALCHEMY_REQUIRES = ("sqlalchemy>=1.3.18",)
 
 TEST_REQUIRES = (
     "black",
-    "coverage",
+    "coverage[toml]",
     "flake8",
     "flake8-bugbear",
     "flake8-commas",
