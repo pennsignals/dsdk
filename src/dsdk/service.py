@@ -6,6 +6,7 @@ from __future__ import annotations
 from collections import OrderedDict
 from contextlib import contextmanager
 from datetime import datetime, timezone
+from json import dumps
 from logging import getLogger
 from sys import argv as sys_argv
 from typing import Any, Dict, Generator, Optional, Sequence, Tuple, cast
@@ -19,18 +20,21 @@ from .utils import configure_logger
 logger = getLogger(__name__)
 
 
-def get_utc_now_times(
-    kwargs: Dict[str, Any], key: str,
-) -> Tuple[datetime, float, datetime, float]:
-    """Get utc now times."""
-    assert_utc_now = utc_now = datetime.utcnow().replace(tzinfo=timezone.utc)
-    assert_epoch_ms = epoch_ms = utc_now.timestamp() * 1000
+def epoch_ms_from_utc_datetime(utc: datetime) -> float:
+    """Epoch ms from non-naive UTC datetime."""
+    return utc.timestamp() * 1000
 
-    epoch_ms = kwargs.get(key, epoch_ms)
-    utc_now = datetime.utcfromtimestamp(epoch_ms / 1000).replace(
+
+def utc_datetime_from_epoch_ms(epoch_ms: float) -> datetime:
+    """Non-naive UTC datetime from UTC epoch ms."""
+    return datetime.utcfromtimestamp(epoch_ms / 1000).replace(
         tzinfo=timezone.utc
     )
-    return assert_utc_now, assert_epoch_ms, utc_now, epoch_ms
+
+
+def now_utc_datetime() -> datetime:
+    """Non-naive now UTC datetime."""
+    return datetime.utcnow().replace(tzinfo=timezone.utc)
 
 
 class Interval:  # pylint: disable=too-few-public-methods
@@ -49,27 +53,28 @@ class Interval:  # pylint: disable=too-few-public-methods
 class Batch:  # pylint: disable=too-few-public-methods
     """Batch."""
 
-    def __init__(self, key: Any, record: Interval) -> None:
+    def __init__(self, key: Any, execute: Interval, as_of: Interval) -> None:
         """__init__."""
         self.key = key
-        self.record = record
+        self.execute = execute
+        self.as_of = as_of
         self.evidence = Evidence()
 
     @property
     def start_time(self):
         """Return start time."""
-        return self.record.on
+        return self.as_of.on
 
     @property
     def start_date(self):
         """Return start date."""
-        on = self.record.on
+        on = self.as_of.on
         return datetime(on.year, on.month, on.day, tzinfo=timezone.utc)
 
     @property
     def end_date(self):
         """Return end date."""
-        end = self.record.end
+        end = self.as_of.end
         if not end:
             return end
         return datetime(end.year, end.month, end.day, tzinfo=timezone.utc)
@@ -79,11 +84,24 @@ class Batch:  # pylint: disable=too-few-public-methods
         doc: Optional[Dict[str, Any]] = None
         if model is not None:
             doc = model.as_doc()
-        return {"_id": self.key, "model": doc, "record": self.record.as_doc()}
+        return {
+            "_id": self.key,
+            "as_of": self.as_of.as_doc(),
+            "execute": self.execute.as_doc(),
+            "model": doc,
+        }
 
     def as_update_doc(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """As update doc."""
-        return ({"_id": self.key}, {"$set": {"record": self.record.as_doc()}})
+        return (
+            {"_id": self.key},
+            {
+                "$set": {
+                    "as_of": self.as_of.as_doc(),
+                    "execute": self.execute.as_doc(),
+                }
+            },
+        )
 
 
 class Evidence(OrderedDict):
@@ -99,9 +117,8 @@ class Evidence(OrderedDict):
 class Service:
     """Service."""
 
-    ON = "".join(("{", ", ".join(('"key": "main.on"',)), "}"))
-
-    END = "".join(("{", ", ".join(('"key": "main.end"',)), "}"))
+    ON = dumps({"key": "main.on"})
+    END = dumps({"key": "main.end"})
 
     @classmethod
     def main(cls):
@@ -117,6 +134,7 @@ class Service:
         argv: Optional[Sequence[str]] = None,
         parser: Optional[ArgumentParser] = None,
         pipeline: Optional[Sequence[Task]] = None,
+        epoch_ms: Optional[float] = None,
     ) -> None:
         """__init__."""
         self.args: Optional[Namespace] = None
@@ -124,30 +142,25 @@ class Service:
 
         # inferred type of self.pipeline must not be optional...
         self.pipeline = cast(Sequence[Task], pipeline)
+        self.now_utc_datetime = now_utc_datetime()
+        self.epoch_ms = cast(float, epoch_ms)
         if parser:
             with self.inject_arguments(parser):
                 if not argv:
                     argv = sys_argv[1:]
                 self.args = parser.parse_args(argv)
 
+        if self.epoch_ms is None:
+            self.epoch_ms = epoch_ms_from_utc_datetime(self.now_utc_datetime)
+
         # ... because self.pipeline is not optional
         assert self.pipeline is not None
+        assert self.epoch_ms is not None
 
-    TASK_ON = "".join(
-        ("{", ", ".join(('"key": "task.on"', '"task": "%s"')), "}")
-    )
-
-    TASK_END = "".join(
-        ("{", ", ".join(('"key": "task.end"', '"task": "%s"')), "}")
-    )
-
-    PIPELINE_ON = "".join(
-        ("{", ", ".join(('"key": "pipeline.on"', '"pipeline": "%s"')), "}")
-    )
-
-    PIPELINE_END = "".join(
-        ("{", ", ".join(('"key": "pipeline.end"', '"pipeline": "%s"')), "}")
-    )
+    TASK_ON = dumps({"key": "task.on", "task": "%s"})
+    TASK_END = dumps({"key": "task.end", "task": "%s"})
+    PIPELINE_ON = dumps({"key": "pipeline.on", "pipeline": "%s"})
+    PIPELINE_END = dumps({"key": "pipeline.end", "pipeline": "%s"})
 
     def __call__(self) -> Batch:
         """Run."""
@@ -192,14 +205,7 @@ class Service:
 
         yield
 
-        assert_utc_now, assert_epoch_ms, epoch_ms, utc_now = get_utc_now_times(
-            kwargs, "epoch_ms"
-        )
-
-        self.assert_utc_now = assert_utc_now
-        self.assert_epoch_ms = assert_epoch_ms
-        self.utc_now = utc_now
-        self.epoch_ms = epoch_ms
+        self.epoch_ms = cast(float, kwargs.get("epoch_ms"))
 
     def dependency(self, key, cls, kwargs):
         """Dependency."""
@@ -215,24 +221,21 @@ class Service:
         dependency = cls(**kwargs)
         setattr(self, key, dependency)
 
-    BATCH_OPEN = "".join(
-        ("{", ", ".join(('"key": "batch.open"', '"on": "%s"')), "}")
-    )
-
-    BATCH_CLOSE = "".join(
-        ("{", ", ".join(('"key": "batch.close"', '"end": "%s"')), "}")
-    )
+    BATCH_OPEN = dumps({"key": "batch.open", "on": "%s", "as_of": "%s"})
+    BATCH_CLOSE = dumps({"key": "batch.close", "end": "%s"})
 
     @contextmanager
     def open_batch(  # pylint: disable=no-self-use,unused-argument
         self, key: Any = None, model=None
     ) -> Generator[Batch, None, None]:
         """Open batch."""
-        record = Interval(on=datetime.now(timezone.utc), end=None)
-        logger.info(self.BATCH_OPEN, record.on)
-        yield Batch(key, record)
-        record.end = datetime.now(timezone.utc)
-        logger.info(self.BATCH_CLOSE, record.end)
+        execute = Interval(on=self.now_utc_datetime, end=None)
+        as_of_utc_datetime = utc_datetime_from_epoch_ms(self.epoch_ms)
+        as_of = Interval(on=as_of_utc_datetime, end=None)
+        logger.info(self.BATCH_OPEN, execute.on, as_of.on)
+        yield Batch(key, execute, as_of)
+        execute.end = now_utc_datetime()
+        logger.info(self.BATCH_CLOSE, execute.end)
 
     def store_evidence(  # pylint: disable=no-self-use,unused-argument
         self, batch: Batch, *args, **kwargs
