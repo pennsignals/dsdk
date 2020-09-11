@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, tzinfo
 from json import dumps
 from logging import getLogger
 from sys import argv as sys_argv
@@ -13,28 +13,18 @@ from typing import Any, Dict, Generator, Optional, Sequence, Tuple, cast
 
 from configargparse import ArgParser as ArgumentParser
 from configargparse import Namespace
+from dateutil import tz
 
-from .dependency import inject_float
+from .dependency import (
+    epoch_ms_from_utc_datetime,
+    inject_float,
+    inject_timezone,
+    now_utc_datetime,
+    utc_datetime_from_epoch_ms,
+)
 from .utils import configure_logger
 
 logger = getLogger(__name__)
-
-
-def epoch_ms_from_utc_datetime(utc: datetime) -> float:
-    """Epoch ms from non-naive UTC datetime."""
-    return utc.timestamp() * 1000
-
-
-def utc_datetime_from_epoch_ms(epoch_ms: float) -> datetime:
-    """Non-naive UTC datetime from UTC epoch ms."""
-    return datetime.utcfromtimestamp(epoch_ms / 1000).replace(
-        tzinfo=timezone.utc
-    )
-
-
-def now_utc_datetime() -> datetime:
-    """Non-naive now UTC datetime."""
-    return datetime.utcnow().replace(tzinfo=timezone.utc)
 
 
 class Interval:  # pylint: disable=too-few-public-methods
@@ -69,7 +59,7 @@ class Batch:  # pylint: disable=too-few-public-methods
     def start_date(self):
         """Return start date."""
         on = self.as_of.on
-        return datetime(on.year, on.month, on.day, tzinfo=timezone.utc)
+        return datetime(on.year, on.month, on.day, tzinfo=tz.tzutc())
 
     @property
     def end_date(self):
@@ -77,7 +67,7 @@ class Batch:  # pylint: disable=too-few-public-methods
         end = self.as_of.end
         if not end:
             return end
-        return datetime(end.year, end.month, end.day, tzinfo=timezone.utc)
+        return datetime(end.year, end.month, end.day, tzinfo=tz.tzutc())
 
     def as_insert_doc(self, model) -> Dict[str, Any]:
         """As insert doc."""
@@ -129,12 +119,13 @@ class Service:
         _ = service()
         logger.info(cls.END)
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         argv: Optional[Sequence[str]] = None,
         parser: Optional[ArgumentParser] = None,
         pipeline: Optional[Sequence[Task]] = None,
         epoch_ms: Optional[float] = None,
+        timezone: Optional[tzinfo] = None,
     ) -> None:
         """__init__."""
         self.args: Optional[Namespace] = None
@@ -144,6 +135,7 @@ class Service:
         self.pipeline = cast(Sequence[Task], pipeline)
         self.now_utc_datetime = now_utc_datetime()
         self.epoch_ms = cast(float, epoch_ms)
+        self.timezone = cast(tzinfo, timezone)
         if parser:
             with self.inject_arguments(parser):
                 if not argv:
@@ -152,10 +144,11 @@ class Service:
 
         if self.epoch_ms is None:
             self.epoch_ms = epoch_ms_from_utc_datetime(self.now_utc_datetime)
+        if self.timezone is None:
+            self.timezone = tz.tzlocal()
 
         # ... because self.pipeline is not optional
         assert self.pipeline is not None
-        assert self.epoch_ms is not None
 
     TASK_ON = dumps({"key": "task.on", "task": "%s"})
     TASK_END = dumps({"key": "task.end", "task": "%s"})
@@ -202,10 +195,18 @@ class Service:
             env_var="EPOCH_MS",
             type=inject_float("epoch_ms", kwargs),
         )
+        parser.add(
+            "-t",
+            "--timezone",
+            help="timezone",
+            env_var="TIMEZONE",
+            type=inject_timezone("timezone", kwargs),
+        )
 
         yield
 
         self.epoch_ms = cast(float, kwargs.get("epoch_ms"))
+        self.timezone = cast(tzinfo, kwargs.get("timezone"))
 
     def dependency(self, key, cls, kwargs):
         """Dependency."""
