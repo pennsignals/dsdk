@@ -160,7 +160,10 @@ def mssql_alchemy_mixin_parser_kwargs():
 )
 @mark.parametrize(
     "kwargs",
-    (mssql_alchemy_mixin_kwargs(), mssql_alchemy_mixin_parser_kwargs(),),
+    (
+        mssql_alchemy_mixin_kwargs(),
+        mssql_alchemy_mixin_parser_kwargs(),
+    ),
 )
 def test_mssql_alchemy_mixin(kwargs: Dict[str, Any]) -> None:
     """Test mssql alchemy mixin."""

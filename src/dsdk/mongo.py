@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from abc import ABC
 from contextlib import contextmanager
+from json import dumps
 from logging import getLogger
 from typing import (
     TYPE_CHECKING,
@@ -50,65 +51,38 @@ class Messages:  # pylint: disable=too-few-public-methods
 
     KEY = "mongo"
 
-    CLOSE = "".join(
-        ("{", ", ".join((f'"key": "{KEY}.close"', '"database": "%s"',)), "}",)
+    CLOSE = dumps({"key": f"{KEY}.close", "database": "%s"})
+    OPEN = dumps({"key": f"{KEY}.open", "database": "%s"})
+    RESULTSET_ERROR = dumps(
+        {
+            "actual": "%s",
+            "collection": "%s.%s",
+            "expected": "%s",
+            "key": f"{KEY}.resultset.error",
+        }
     )
 
-    OPEN = "".join(
-        ("{", ", ".join((f'"key": "{KEY}.open"', '"database": "%s"',)), "}",)
+    INSERT_ONE = dumps(
+        {
+            "collection": "%s.%s",
+            "id": "%s",
+            "key": f"{KEY}.insert_one",
+        }
     )
 
-    RESULTSET_ERROR = "".join(
-        (
-            "{",
-            ", ".join(
-                (
-                    f'"key": "{KEY}.resultset.error"',
-                    '"collection": "%s.%s"',
-                    '"actual": %s',
-                    '"expected": %s',
-                )
-            ),
-            "}",
-        )
+    INSERT_MANY = dumps(
+        {
+            "collection": "%s.%s",
+            "key": f"{KEY}.insert_many",
+            "value": "%s",
+        }
     )
 
-    INSERT_ONE = "".join(
-        (
-            "{",
-            ", ".join(
-                (
-                    f'"key": "{KEY}.insert_one"',
-                    '"collection": "%s.%s"',
-                    '"id": "%s"',
-                )
-            ),
-            "}",
-        )
-    )
-
-    INSERT_MANY = "".join(
-        (
-            "{",
-            ", ".join(
-                (
-                    f'"key": "{KEY}.insert_many"',
-                    '"collection": "%s.%s"',
-                    '"value": %s',
-                )
-            ),
-            "}",
-        )
-    )
-
-    UPDATE_ONE = "".join(
-        (
-            "{",
-            ", ".join(
-                (f'"key": "{KEY}.update_one"', '"collection": "%s.%s"',)
-            ),
-            "}",
-        )
+    UPDATE_ONE = dumps(
+        {
+            "collection": "%s.%s",
+            "key": f"{KEY}.update_one",
+        }
     )
 
 
@@ -221,7 +195,9 @@ class Persistor(Messages):
         """Update one with retry."""
         result = collection.update_one(key, doc)
         logger.info(
-            self.UPDATE_ONE, collection.database.name, collection.name,
+            self.UPDATE_ONE,
+            collection.database.name,
+            collection.name,
         )
         return result
 
@@ -248,7 +224,8 @@ class Mixin(BaseMixin):
 
     @contextmanager
     def inject_arguments(
-        self, parser: ArgumentParser,
+        self,
+        parser: ArgumentParser,
     ) -> Generator[None, None, None]:
         """Inject arguments."""
         with self.mongo_cls.configure(self, parser):
