@@ -29,6 +29,13 @@ def now_utc_datetime() -> datetime:
     return datetime.now(tz=timezone.utc)
 
 
+def local_timezone() -> tzinfo:
+    """Return local timezone."""
+    result = datetime.now().astimezone().tzinfo
+    assert result is not None
+    return result
+
+
 def namespace_directory(root: str = "./", ext: str = ".sql") -> Namespace:
     """Return namespace from code directory."""
     result = Namespace()
