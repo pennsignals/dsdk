@@ -47,20 +47,20 @@ class Batch:  # pylint: disable=too-few-public-methods
         self,
         key: Any,
         execute: Interval,
-        as_of: datetime,
+        as_of_utc_datetime: datetime,
         timezone: tzinfo,
     ) -> None:
         """__init__."""
         self.key = key
         self.execute = execute
-        self.as_of = as_of
+        self.as_of_utc_datetime = as_of_utc_datetime
         self.evidence = Evidence()
         self.timezone = timezone
 
     @property
     def as_of_local_datetime(self) -> datetime:
         """Return as_of local datetime."""
-        return self.as_of.astimezone(self.timezone)
+        return self.as_of_utc_datetime.astimezone(self.timezone)
 
     @property
     def as_of_local_date(self) -> date:
@@ -74,7 +74,7 @@ class Batch:  # pylint: disable=too-few-public-methods
             doc = model.as_doc()
         return {
             "_id": self.key,
-            "as_of": self.as_of,
+            "as_of_utc_datetime": self.as_of_utc_datetime,
             "execute": self.execute.as_doc(),
             "model": doc,
             "timezone": self.timezone,
@@ -229,9 +229,11 @@ class Service:
     ) -> Generator[Batch, None, None]:
         """Open batch."""
         execute = Interval(on=self.now_utc_datetime, end=None)
-        as_of = utc_datetime_from_epoch_ms(self.epoch_ms)
-        logger.info(self.BATCH_OPEN, execute.on, as_of, self.timezone)
-        yield Batch(key, execute, as_of, self.timezone)
+        as_of_utc_datetime = utc_datetime_from_epoch_ms(self.epoch_ms)
+        logger.info(
+            self.BATCH_OPEN, execute.on, as_of_utc_datetime, self.timezone
+        )
+        yield Batch(key, execute, as_of_utc_datetime, self.timezone)
         execute.end = now_utc_datetime()
         logger.info(self.BATCH_CLOSE, execute.end)
 
