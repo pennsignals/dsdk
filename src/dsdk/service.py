@@ -222,7 +222,9 @@ class Service:
         dependency = cls(**kwargs)
         setattr(self, key, dependency)
 
-    BATCH_OPEN = dumps({"key": "batch.open", "on": "%s", "as_of": "%s"})
+    BATCH_OPEN = dumps(
+        {"key": "batch.open", "on": "%s", "as_of": "%s", "timezone": "%s"}
+    )
     BATCH_CLOSE = dumps({"key": "batch.close", "end": "%s"})
 
     @contextmanager
