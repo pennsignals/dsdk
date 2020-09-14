@@ -21,14 +21,12 @@ def epoch_ms_from_utc_datetime(utc: datetime) -> float:
 
 def utc_datetime_from_epoch_ms(epoch_ms: float) -> datetime:
     """Non-naive UTC datetime from UTC epoch ms."""
-    return datetime.utcfromtimestamp(epoch_ms / 1000).replace(
-        tzinfo=timezone.utc
-    )
+    return datetime.fromtimestamp(epoch_ms / 1000, tz=timezone.utc)
 
 
 def now_utc_datetime() -> datetime:
     """Non-naive now UTC datetime."""
-    return datetime.utcnow().replace(tzinfo=timezone.utc)
+    return datetime.now(tz=timezone.utc)
 
 
 def namespace_directory(root: str = "./", ext: str = ".sql") -> Namespace:
