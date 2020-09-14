@@ -2,7 +2,7 @@
 """Dependency injection."""
 
 from argparse import Namespace
-from datetime import datetime, tzinfo
+from datetime import datetime, timezone, tzinfo
 from os import listdir
 from os.path import isdir, join, splitext
 from typing import Any, Callable, Dict, Tuple
@@ -22,13 +22,13 @@ def epoch_ms_from_utc_datetime(utc: datetime) -> float:
 def utc_datetime_from_epoch_ms(epoch_ms: float) -> datetime:
     """Non-naive UTC datetime from UTC epoch ms."""
     return datetime.utcfromtimestamp(epoch_ms / 1000).replace(
-        tzinfo=tz.tzutc()
+        tzinfo=timezone.utc
     )
 
 
 def now_utc_datetime() -> datetime:
     """Non-naive now UTC datetime."""
-    return datetime.utcnow().replace(tzinfo=tz.tzutc())
+    return datetime.utcnow().replace(tzinfo=timezone.utc)
 
 
 def namespace_directory(root: str = "./", ext: str = ".sql") -> Namespace:
