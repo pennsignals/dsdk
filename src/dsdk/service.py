@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from contextlib import contextmanager
-from datetime import datetime, tzinfo
+from datetime import date, datetime, tzinfo
 from json import dumps
 from logging import getLogger
 from sys import argv as sys_argv
@@ -43,31 +43,29 @@ class Interval:  # pylint: disable=too-few-public-methods
 class Batch:  # pylint: disable=too-few-public-methods
     """Batch."""
 
-    def __init__(self, key: Any, execute: Interval, as_of: Interval) -> None:
+    def __init__(
+        self,
+        key: Any,
+        execute: Interval,
+        as_of: datetime,
+        timezone: tzinfo,
+    ) -> None:
         """__init__."""
         self.key = key
         self.execute = execute
         self.as_of = as_of
         self.evidence = Evidence()
+        self.timezone = timezone
 
     @property
-    def start_time(self):
-        """Return start time."""
-        return self.as_of.on
+    def as_of_local_datetime(self) -> datetime:
+        """Return as_of local datetime."""
+        return self.as_of.astimezone(self.timezone)
 
     @property
-    def start_date(self):
-        """Return start date."""
-        on = self.as_of.on
-        return datetime(on.year, on.month, on.day, tzinfo=tz.tzutc())
-
-    @property
-    def end_date(self):
-        """Return end date."""
-        end = self.as_of.end
-        if not end:
-            return end
-        return datetime(end.year, end.month, end.day, tzinfo=tz.tzutc())
+    def as_of_local_date(self) -> date:
+        """Return as of local date."""
+        return self.as_of_local_datetime.date()
 
     def as_insert_doc(self, model) -> Dict[str, Any]:
         """As insert doc."""
@@ -76,9 +74,10 @@ class Batch:  # pylint: disable=too-few-public-methods
             doc = model.as_doc()
         return {
             "_id": self.key,
-            "as_of": self.as_of.as_doc(),
+            "as_of": self.as_of,
             "execute": self.execute.as_doc(),
             "model": doc,
+            "timezone": self.timezone,
         }
 
     def as_update_doc(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
@@ -87,7 +86,6 @@ class Batch:  # pylint: disable=too-few-public-methods
             {"_id": self.key},
             {
                 "$set": {
-                    "as_of": self.as_of.as_doc(),
                     "execute": self.execute.as_doc(),
                 }
             },
@@ -231,10 +229,9 @@ class Service:
     ) -> Generator[Batch, None, None]:
         """Open batch."""
         execute = Interval(on=self.now_utc_datetime, end=None)
-        as_of_utc_datetime = utc_datetime_from_epoch_ms(self.epoch_ms)
-        as_of = Interval(on=as_of_utc_datetime, end=None)
-        logger.info(self.BATCH_OPEN, execute.on, as_of.on)
-        yield Batch(key, execute, as_of)
+        as_of = utc_datetime_from_epoch_ms(self.epoch_ms)
+        logger.info(self.BATCH_OPEN, execute.on, as_of, self.timezone)
+        yield Batch(key, execute, as_of, self.timezone)
         execute.end = now_utc_datetime()
         logger.info(self.BATCH_CLOSE, execute.end)
 
