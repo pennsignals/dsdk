@@ -13,12 +13,12 @@ from typing import Any, Dict, Generator, Optional, Sequence, Tuple, cast
 
 from configargparse import ArgParser as ArgumentParser
 from configargparse import Namespace
-from dateutil import tz
 
 from .dependency import (
     epoch_ms_from_utc_datetime,
     inject_float,
     inject_timezone,
+    local_timezone,
     now_utc_datetime,
     utc_datetime_from_epoch_ms,
 )
@@ -77,7 +77,7 @@ class Batch:  # pylint: disable=too-few-public-methods
             "as_of_utc_datetime": self.as_of_utc_datetime,
             "execute": self.execute.as_doc(),
             "model": doc,
-            "timezone": self.timezone,
+            "timezone": datetime.now(tz=self.timezone).strftime("%z"),
         }
 
     def as_update_doc(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
@@ -143,7 +143,7 @@ class Service:
         if self.epoch_ms is None:
             self.epoch_ms = epoch_ms_from_utc_datetime(self.now_utc_datetime)
         if self.timezone is None:
-            self.timezone = tz.tzlocal()
+            self.timezone = local_timezone()
 
         # ... because self.pipeline is not optional
         assert self.pipeline is not None

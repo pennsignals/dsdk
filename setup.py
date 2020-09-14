@@ -9,7 +9,6 @@ INSTALL_REQUIRES = (
     "pandas>=0.23.4",
     "pip>=19.3.1",
     "pyyaml>=5.3.1",
-    "python-dateutil>=2.8.1",
     "setuptools>=49.2.0",
     "wheel>=0.34.2",
 )
