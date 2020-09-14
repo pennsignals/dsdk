@@ -77,7 +77,9 @@ class Batch:  # pylint: disable=too-few-public-methods
             "as_of_utc_datetime": self.as_of_utc_datetime,
             "execute": self.execute.as_doc(),
             "model": doc,
-            "timezone": datetime.now(tz=self.timezone).strftime("%z"),
+            "timezone": self.as_of_utc_datetime.astimezone(
+                tz=self.timezone
+            ).strftime("%z"),
         }
 
     def as_update_doc(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
