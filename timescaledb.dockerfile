@@ -1,6 +1,6 @@
 FROM timescale/timescaledb-postgis:latest-pg12 as build
 ARG MONGO_FDW=0
-ARG SEMVER=1
+ARG SEMVER=0
 ARG SEMVER_VERSION=0.30.0
 ARG TDS_FDW=1
 ARG TDS_FDW_VERSION=2.0.1
