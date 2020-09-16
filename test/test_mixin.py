@@ -11,12 +11,21 @@ from __future__ import annotations
 
 from abc import ABC
 from argparse import ArgumentParser
+from contextlib import contextmanager
 from json import dump as json_dump
 from json import load as json_load
 from pickle import dump as pickle_dump
 from pickle import load as pickle_load
 from sys import argv as sys_argv
-from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Generator,
+    Optional,
+    Sequence,
+    cast,
+)
 
 
 def dump_pickle_file(obj, path: str) -> None:
@@ -56,20 +65,28 @@ class Service:  # pylint: disable=too-few-public-methods
     ) -> None:
         """__init__."""
         self.service_i = i
-        self.cfg = cfg
+        self.cfg = cast(Dict[str, Any], cfg)
         self.parser = parser
+
         # parsing arguments must be optional
         if parser:
-            self.inject_args(parser)
-            if not argv:
-                argv = sys_argv[1:]
-            parser.parse_args(argv)
+            with self.inject_args(parser):
+                if not argv:
+                    argv = sys_argv[1:]
+                parser.parse_args(argv)
 
-        # self.cfg is not optional
         assert self.cfg is not None
 
-    def inject_args(self, parser: ArgumentParser) -> None:
+    @contextmanager
+    def inject_args(
+        self, parser: ArgumentParser
+    ) -> Generator[None, None, None]:
         """Inject args."""
+
+        # In this example, the injected parameters here are simple:
+        #    because no post parser.parse configuration is needed,
+        #    but this is not necesarily the case, nor desirable.
+        # This is particularly true for the mixins.
 
         def _inject_cfg(path: str) -> Dict[str, Any]:
             cfg = cast(Dict[str, Any], load_json_file(path))
@@ -77,6 +94,14 @@ class Service:  # pylint: disable=too-few-public-methods
             return cfg
 
         parser.add_argument("--cfg", type=_inject_cfg)
+
+        # before parser.parse call
+        yield
+        # after parser.parse call
+
+        # load_json_file or a more complex constructor with multiple parameters
+        #    could be here instead of in the single parameter parse callback
+        #    _inject_cfg.
 
 
 if TYPE_CHECKING:
@@ -93,15 +118,17 @@ class ModelMixin(Mixin):  # pylint: disable=too-few-public-methods
     ) -> None:
         """__init__."""
         self.model_i = i
-        self.model = model
+        self.model = cast(Dict[str, Any], model)
         super().__init__(i=i + 1, **kwargs)
 
         # self.model is not optional
         assert self.model is not None
 
-    def inject_args(self, parser: ArgumentParser) -> None:
+    @contextmanager
+    def inject_args(
+        self, parser: ArgumentParser
+    ) -> Generator[None, None, None]:
         """Inject args."""
-        super().inject_args(parser)
 
         def _inject_model(path: str) -> Dict[str, Any]:
             model = cast(Dict[str, Any], load_pickle_file(path))
@@ -109,6 +136,10 @@ class ModelMixin(Mixin):  # pylint: disable=too-few-public-methods
             return model
 
         parser.add_argument("--model", type=_inject_model)
+        # before parser.parse call
+        with super().inject_args(parser):
+            yield
+        # after parser.parse call
 
 
 class MongoMixin(Mixin):  # pylint: disable=too-few-public-methods
@@ -119,21 +150,25 @@ class MongoMixin(Mixin):  # pylint: disable=too-few-public-methods
     ):
         """__init__."""
         self.mongo_i = i
-        self.mongo_uri = mongo_uri
+        self.mongo_uri = cast(str, mongo_uri)
         super().__init__(i=i + 1, **kwargs)
 
         # self.mongo_uri is not optional
         assert self.mongo_uri is not None
 
-    def inject_args(self, parser: ArgumentParser) -> None:
+    @contextmanager
+    def inject_args(
+        self, parser: ArgumentParser
+    ) -> Generator[None, None, None]:
         """Inject args."""
-        super().inject_args(parser)
 
         def _inject_mongo_uri(mongo_uri: str) -> str:
             self.mongo_uri = mongo_uri
             return mongo_uri
 
         parser.add_argument("--mongo-uri", type=_inject_mongo_uri)
+        with super().inject_args(parser):
+            yield
 
 
 # Service must be last in inheritence

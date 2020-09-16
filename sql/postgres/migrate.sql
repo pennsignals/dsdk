@@ -3,6 +3,18 @@ set search_path = test,public;
 create or replace function up()
 returns void as $$
     -- dependency/alphabetic order
+    create or replace function is_timezone(value varchar(29)) returns boolean as $$
+    declare valid timestamptz;
+    begin
+        valid := now() at time zone time_zone;
+        return true;
+    exception invalid_parameter_value others then
+        return false;
+    end;
+    $$ language plpgsql stable;
+    -- timezone domain/column data type matches no-underscore convention here:
+    create domain timezone as varchar(29)
+        check ( is_timezone(value) );
     create or replace function call_notify()
     returns trigger as $function$
     declare last_id text;
@@ -17,24 +29,32 @@ returns void as $$
     create sequence if not exists models_sequence;
     create table if not exists models (
         id int default nextval('models_sequence') primary key,
-        version semver not null,
+        version varchar not null,
         constraint model_version_must_be_unique
             unique (version)
     );
     create sequence if not exists microservices_sequence;
     create table if not exists microservices (
         id int default nextval('microservices_sequence') primary key,
-        version semver not null,
+        version varchar not null,
         constraint microservice_version_must_be_unique
-            unique (version)
+            unique (version, dsdk_version)
     );
     create sequence if not exists runs_sequence;
+    -- `set timezone` for the session reinterprets all tztimestamp during select with the new time zone
+    -- but the data stored in tztimestamp remains unambiguous
     create table if not exists runs (
         id int default nextval('runs_sequence') primary key,
         microservice_id int not null,
         model_id int not null,
-        -- see how tsrange interacts with drivers, python
         duration tstzrange not null default tstzrange(now(), 'infinity', '[)'),
+        -- allow run epoch_ms and the computed as-of to be in the past
+        as_of timestamptz not null default now(),
+        epoch_ms float not null default (extract(epoch from now() at time zone 'Etc/UTC') * 1000.0),
+        -- allow run to use a non-utc timezone for selection criteria visit date/timestamp intervals
+        -- time zone from the IANA (Olson) database
+        -- time zone column name matches underscore convention here.
+        time_zone timezone not null default 'Etc/UTC',
         constraint runs_require_a_microservice
             foreign key (microservice_id) references microservices (id)
             on delete cascade
@@ -83,6 +103,8 @@ returns void as $$
     drop sequence if exists models_sequence cascade;
     drop sequence if exists microservices_sequence cascade;
     drop function if exists call_notify;
+    drop domain if exists timezone;
+    drop function if exists is_timezone;
 $$ language sql;
 
 select up();

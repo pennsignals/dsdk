@@ -17,7 +17,7 @@ from .postgres import CheckTablePrivileges as CheckPostgresTablePrivileges
 from .postgres import Mixin as PostgresMixin
 from .postgres import Persistor as PostgresPersistor
 from .postgres import PredictionMixin as PostgresPredictionMixin
-from .service import Batch, Service, Task
+from .service import Batch, Delegate, Service, Task
 from .utils import (
     chunks,
     configure_logger,
@@ -30,6 +30,7 @@ from .utils import (
 
 __all__ = (
     "Batch",
+    "Delegate",
     "Model",
     "ModelMixin",
     "MongoMixin",

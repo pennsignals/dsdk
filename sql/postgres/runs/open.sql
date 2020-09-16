@@ -1,13 +1,16 @@
 with args as (
     select
-        cast(%(microservice_version)s as semver) as microservice_version,
-        cast(%(model_version)s as semver) as model_version
+        %(microservice_version)s as microservice_version,
+        %(model_version)s as model_version,
+        %(as_of)s as as_of,
+        %(epoch_ms)s as epoch_ms,
+        %(time_zone)s as time_zone
 ), i_microservices as (
     insert into microservices (
-        version
+        version,
     )
     select
-        microservice_version
+        microservice_version,
     from
         args
     on conflict do nothing
@@ -47,12 +50,19 @@ with args as (
 )
 insert into runs (
     microservice_id,
-    model_id
+    model_id,
+    as_of,
+    epoch_ms,
+    time_zone
 )
 select
     si_microservices.id,
-    si_models.id
+    si_models.id,
+    args.as_of,
+    args.epoch_ms,
+    args.time_zone
 from
-    si_microservices
+    args
+    cross join si_microservices
     cross join si_models
 returning *
