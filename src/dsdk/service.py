@@ -13,85 +13,154 @@ from typing import Any, Dict, Generator, Optional, Sequence, Tuple, cast
 
 from configargparse import ArgParser as ArgumentParser
 from configargparse import Namespace
+from pandas import DataFrame
+from pkg_resources import DistributionNotFound, get_distribution
 
 from .dependency import (
+    Interval,
     epoch_ms_from_utc_datetime,
+    get_tzinfo,
     inject_float,
-    inject_timezone,
-    local_timezone,
+    inject_str,
     now_utc_datetime,
     utc_datetime_from_epoch_ms,
 )
 from .utils import configure_logger
 
+try:
+    __version__ = get_distribution("dsdk").version
+except DistributionNotFound:
+    # package is not installed
+    pass
+
 logger = getLogger(__name__)
 
 
-class Interval:  # pylint: disable=too-few-public-methods
-    """Interval."""
+class Delegate:
+    """Delegate."""
 
-    def __init__(self, on: datetime, end: Optional[datetime] = None):
+    def __init__(self, parent: Any):
         """__init__."""
-        self.on = on
-        self.end = end
-
-    def as_doc(self) -> Dict[str, Any]:
-        """As doc."""
-        return {"end": self.end, "on": self.on}
-
-
-class Batch:  # pylint: disable=too-few-public-methods
-    """Batch."""
-
-    def __init__(
-        self,
-        key: Any,
-        execute: Interval,
-        as_of_utc_datetime: datetime,
-        timezone: tzinfo,
-    ) -> None:
-        """__init__."""
-        self.key = key
-        self.execute = execute
-        self.as_of_utc_datetime = as_of_utc_datetime
-        self.evidence = Evidence()
-        self.timezone = timezone
+        self.parent = parent
 
     @property
     def as_of_local_datetime(self) -> datetime:
-        """Return as_of local datetime."""
-        return self.as_of_utc_datetime.astimezone(self.timezone)
+        """Return as of local datetime."""
+        return self.parent.as_of_local_datetime
+
+    @property
+    def as_of_utc_datetime(self) -> datetime:
+        """Return as of utc datetime."""
+        return self.parent.as_of_utc_datetime
+
+    @property
+    def as_of_local_date(self) -> date:
+        """Return as of local date."""
+        return self.parent.as_of_local_date
+
+    @property
+    def evidence(self) -> Evidence:
+        """Return evidence."""
+        return self.parent.evidence
+
+    @property
+    def predictions(self) -> DataFrame:
+        """Return predictions."""
+        return self.parent.predictions
+
+    @predictions.setter
+    def predictions(self, value: DataFrame) -> None:
+        """Predictions setter."""
+        self.parent.predictions = value
+
+    @property
+    def epoch_ms(self) -> float:
+        """Return epoch_ms."""
+        return self.parent.epoch_ms
+
+    @property
+    def time_zone(self) -> str:
+        """Return time zone."""
+        return self.parent.time_zone
+
+    @property
+    def tz_info(self) -> tzinfo:
+        """Return tzinfo."""
+        return self.parent.tz_info
+
+    def as_insert_doc(self) -> Dict[str, Any]:
+        """As insert doc."""
+        return self.parent.as_insert_doc()
+
+    def as_insert_sql(self) -> Dict[str, Any]:
+        """As insert sql."""
+        return self.parent.as_insert_sql()
+
+    def as_update_doc(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        """As update doc."""
+        return self.parent.as_update_doc()
+
+
+class Batch:
+    """Batch."""
+
+    def __init__(  # pylint: disable=too-many-arguments
+        self,
+        duration: Interval,
+        as_of_utc_datetime: datetime,
+        epoch_ms: float,
+        time_zone: str,
+        model: Optional[Any] = None,  # hack
+    ) -> None:
+        """__init__."""
+        self.duration = duration
+        self.as_of_utc_datetime = as_of_utc_datetime
+        self.epoch_ms = epoch_ms
+        self.evidence = Evidence()
+        self.time_zone = time_zone
+        self.model = model  # hack
+        self.predictions: Optional[DataFrame] = None
+
+    @property
+    def as_of_local_datetime(self) -> datetime:
+        """Return as of local datetime."""
+        return self.as_of_utc_datetime.astimezone(self.tz_info)
 
     @property
     def as_of_local_date(self) -> date:
         """Return as of local date."""
         return self.as_of_local_datetime.date()
 
-    def as_insert_doc(self, model) -> Dict[str, Any]:
+    @property
+    def tz_info(self) -> tzinfo:
+        """Return tz_info."""
+        return get_tzinfo(self.time_zone)
+
+    @property
+    def parent(self) -> Any:
+        """Return parent."""
+        raise ValueError()
+
+    def as_insert_doc(self) -> Dict[str, Any]:
         """As insert doc."""
-        doc: Optional[Dict[str, Any]] = None
-        if model is not None:
-            doc = model.as_doc()
         return {
-            "_id": self.key,
-            "as_of_utc_datetime": self.as_of_utc_datetime,
-            "execute": self.execute.as_doc(),
-            "model": doc,
-            "timezone": self.as_of_utc_datetime.astimezone(
-                tz=self.timezone
-            ).strftime("%z"),
+            "as_of": self.as_of_utc_datetime,
+            "epoch_ms": self.epoch_ms,
+            "time_zone": self.time_zone,
+        }
+
+    def as_insert_sql(self) -> Dict[str, Any]:
+        """As insert sql."""
+        # duration comes from the database clock.
+        return {
+            "as_of": self.as_of_utc_datetime,
+            "epoch_ms": self.epoch_ms,
+            "time_zone": self.time_zone,
         }
 
     def as_update_doc(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """As update doc."""
-        return (
-            {"_id": self.key},
-            {
-                "$set": {
-                    "execute": self.execute.as_doc(),
-                }
-            },
-        )
+        return {}, {"duration": self.duration.as_doc()}
 
 
 class Evidence(OrderedDict):
@@ -125,7 +194,7 @@ class Service:
         parser: Optional[ArgumentParser] = None,
         pipeline: Optional[Sequence[Task]] = None,
         epoch_ms: Optional[float] = None,
-        timezone: Optional[tzinfo] = None,
+        time_zone: Optional[str] = None,
     ) -> None:
         """__init__."""
         self.args: Optional[Namespace] = None
@@ -135,7 +204,7 @@ class Service:
         self.pipeline = cast(Sequence[Task], pipeline)
         self.now_utc_datetime = now_utc_datetime()
         self.epoch_ms = cast(float, epoch_ms)
-        self.timezone = cast(tzinfo, timezone)
+        self.time_zone = cast(str, time_zone)
         if parser:
             with self.inject_arguments(parser):
                 if not argv:
@@ -144,8 +213,8 @@ class Service:
 
         if self.epoch_ms is None:
             self.epoch_ms = epoch_ms_from_utc_datetime(self.now_utc_datetime)
-        if self.timezone is None:
-            self.timezone = local_timezone()
+        if self.time_zone is None:
+            self.time_zone = time_zone = "America/New_York"
 
         # ... because self.pipeline is not optional
         assert self.pipeline is not None
@@ -165,6 +234,11 @@ class Service:
                 logger.info(self.TASK_END, task.__class__.__name__)
             logger.info(self.PIPELINE_END, self.__class__.__name__)
             return batch
+
+    @property
+    def tz_info(self) -> tzinfo:
+        """Return tz_info."""
+        return get_tzinfo(self.time_zone)
 
     @contextmanager
     def inject_arguments(  # pylint: disable=no-self-use,protected-access
@@ -197,16 +271,16 @@ class Service:
         )
         parser.add(
             "-t",
-            "--timezone",
-            help="timezone",
-            env_var="TIMEZONE",
-            type=inject_timezone("timezone", kwargs),
+            "--time-zone",
+            help="time_zone",
+            env_var="TIME_ZONE",
+            type=inject_str("time_zone", kwargs),
         )
 
         yield
 
         self.epoch_ms = cast(float, kwargs.get("epoch_ms"))
-        self.timezone = cast(tzinfo, kwargs.get("timezone"))
+        self.time_zone = cast(str, kwargs.get("time_zone"))
 
     def dependency(self, key, cls, kwargs):
         """Dependency."""
@@ -223,26 +297,29 @@ class Service:
         setattr(self, key, dependency)
 
     BATCH_OPEN = dumps(
-        {"key": "batch.open", "on": "%s", "as_of": "%s", "timezone": "%s"}
+        {"key": "batch.open", "on": "%s", "as_of": "%s", "time_zone": "%s"}
     )
     BATCH_CLOSE = dumps({"key": "batch.close", "end": "%s"})
 
     @contextmanager
-    def open_batch(  # pylint: disable=no-self-use,unused-argument
-        self, key: Any = None, model=None
-    ) -> Generator[Batch, None, None]:
+    def open_batch(self) -> Generator[Any, None, None]:
         """Open batch."""
-        execute = Interval(on=self.now_utc_datetime, end=None)
+        duration = Interval(on=self.now_utc_datetime, end=None)
         as_of_utc_datetime = utc_datetime_from_epoch_ms(self.epoch_ms)
         logger.info(
-            self.BATCH_OPEN, execute.on, as_of_utc_datetime, self.timezone
+            self.BATCH_OPEN,
+            duration.on,
+            as_of_utc_datetime,
+            self.time_zone,
         )
-        yield Batch(key, execute, as_of_utc_datetime, self.timezone)
-        execute.end = now_utc_datetime()
-        logger.info(self.BATCH_CLOSE, execute.end)
+        yield Batch(
+            duration, as_of_utc_datetime, self.epoch_ms, self.time_zone
+        )
+        duration.end = now_utc_datetime()
+        logger.info(self.BATCH_CLOSE, duration.end)
 
     def store_evidence(  # pylint: disable=no-self-use,unused-argument
-        self, batch: Batch, *args, **kwargs
+        self, batch: Any, *args, **kwargs
     ) -> None:
         """Store evidence."""
         # TODO It isn't really evidence if it isn't written to the data store.

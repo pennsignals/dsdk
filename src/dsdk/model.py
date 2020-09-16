@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, Dict, Generator, Type, cast
 from configargparse import ArgParser as ArgumentParser
 
 from .dependency import inject_str
-from .service import Service
+from .service import Delegate, Service
 from .utils import load_pickle_file
 
 logger = getLogger(__name__)
@@ -62,9 +62,28 @@ class Model:  # pylint: disable=too-few-public-methods
         self.name = name
         self.version = version
 
-    def as_doc(self) -> Dict[str, Any]:
-        """As doc."""
-        return {"name": self.name, "on": self.version}
+
+class Batch(Delegate):
+    """Batch."""
+
+    def __init__(self, model_version: str, parent: Any):
+        """__init__."""
+        self.model_version = model_version
+        super().__init__(parent)
+
+    def as_insert_doc(self) -> Dict[str, Any]:
+        """As insert doc."""
+        return {
+            "model_version": self.model_version,
+            **self.parent.as_insert_doc(),
+        }
+
+    def as_insert_sql(self) -> Dict[str, Any]:
+        """As insert sql."""
+        return {
+            "model_version": self.model_version,
+            **self.parent.as_insert_sql(),
+        }
 
 
 class Mixin(BaseMixin):
@@ -84,3 +103,10 @@ class Mixin(BaseMixin):
         with self.model_cls.configure(self, parser):
             with super().inject_arguments(parser):
                 yield
+
+    @contextmanager
+    def open_batch(self) -> Generator[Any, None, None]:
+        """Open batch."""
+        with super().open_batch() as parent:
+            batch = Batch(self.model.version, parent)
+            yield batch

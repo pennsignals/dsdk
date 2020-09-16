@@ -5,13 +5,26 @@ from argparse import Namespace
 from datetime import datetime, timezone, tzinfo
 from os import listdir
 from os.path import isdir, join, splitext
-from typing import Any, Callable, Dict, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple
 
 from dateutil import tz
 
 
 class StubException(Exception):
     """StubException."""
+
+
+class Interval:  # pylint: disable=too-few-public-methods
+    """Interval."""
+
+    def __init__(self, on: datetime, end: Optional[datetime] = None):
+        """__init__."""
+        self.on = on
+        self.end = end
+
+    def as_doc(self) -> Dict[str, Any]:
+        """As doc."""
+        return {"end": self.end, "on": self.on}
 
 
 def epoch_ms_from_utc_datetime(utc: datetime) -> float:
@@ -29,9 +42,9 @@ def now_utc_datetime() -> datetime:
     return datetime.now(tz=timezone.utc)
 
 
-def local_timezone() -> tzinfo:
-    """Return local timezone."""
-    result = datetime.now().astimezone().tzinfo
+def get_tzinfo(key: str) -> tzinfo:
+    """Get tzinfo."""
+    result = tz.gettz(key)
     assert result is not None
     return result
 
@@ -91,18 +104,6 @@ def inject_str_tuple(key: str, kwargs: Dict[str, Any]) -> Callable:
     def _inject(value: str) -> Tuple[str, ...]:
         assert value.__class__ is str
         kwargs[key] = result = tuple(value.split(","))
-        return result
-
-    return _inject
-
-
-def inject_timezone(key: str, kwargs: Dict[str, Any]) -> Callable:
-    """Inject timezone."""
-
-    def _inject(value: str) -> tzinfo:
-        assert value.__class__ is str
-        kwargs[key] = result = tz.gettz(value)
-        assert result is not None
         return result
 
     return _inject

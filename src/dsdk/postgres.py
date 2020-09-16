@@ -7,14 +7,13 @@ from abc import ABC
 from contextlib import contextmanager
 from json import dumps
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Generator, Optional, Type, cast
+from typing import TYPE_CHECKING, Any, Dict, Generator, Type, cast
 
 from configargparse import ArgParser as ArgumentParser
-from pandas import DataFrame
 
-from .dependency import StubException
+from .dependency import Interval, StubException
 from .persistor import Persistor as BasePersistor
-from .service import Service, Task
+from .service import Delegate, Service, Task
 from .utils import retry
 
 logger = getLogger(__name__)
@@ -92,6 +91,43 @@ class Persistor(Messages, BasePersistor):
         with con.cursor(cursor_factory=DictCursor) as cur:
             yield cur
 
+    @contextmanager
+    def open_run(self, parent: Any) -> Generator[Run, None, None]:
+        """Open batch."""
+        # Replace return type with ContextManager[Run] when mypy is fixed.
+        sql = self.sql
+        columns = parent.as_insert_sql()
+        with self.commit() as cur:
+            cur.execute(sql.schema)
+            cur.execute(sql.runs.open, columns)
+            for row in cur:
+                run = Run(
+                    row["id"],
+                    row["microservice_id"],
+                    row["model_id"],
+                    row["duration"],
+                    parent,
+                )
+                break
+
+        yield run
+
+        with self.commit() as cur:
+            cur.execute(sql.schema)
+            predictions = run.predictions
+            if predictions is not None:
+                # pylint: disable=unsupported-assignment-operation
+                predictions["run_id"] = run.id
+                execute_batch(
+                    cur,
+                    sql.predictions.insert,
+                    run.predictions.to_dict("records"),
+                )
+            cur.execute(sql.runs.close, {"id": run.id})
+            for row in cur:
+                run.duration = row["duration"]
+                break
+
     @retry((OperationalError,))
     def retry_connect(self):
         """Retry connect."""
@@ -130,72 +166,44 @@ class Mixin(BaseMixin):
                 yield
 
 
-class Run:  # pylint: disable=too-few-public-methods
+class Run(Delegate):
     """Run."""
 
-    def __init__(self, id_, microservice_id, model_id, duration):
+    def __init__(  # pylint: disable=too-many-arguments
+        self,
+        id_: int,
+        microservice_id: str,
+        model_id: str,
+        duration: Interval,
+        parent: Any,
+    ):
         """__init__."""
         self.id = id_
         self.microservice_id = microservice_id
         self.model_id = model_id
         self.duration = duration
-        self.predictions: Optional[DataFrame] = None
+        super().__init__(parent)
 
-
-class PredictionPersistor(Persistor):
-    """PredictionPersistor."""
-
-    @contextmanager
-    def open_run(
-        self, microservice_version: str, model_version: str
-    ) -> Generator[Run, None, None]:
-        """Open run."""
-        # Replace return type with ContextManager[Run] when mypy is fixed.
-        sql = self.sql
-        with self.commit() as cur:
-            cur.execute(sql.schema)
-            cur.execute(
-                sql.runs.open,
-                {
-                    "microservice_version": microservice_version,
-                    "model_version": model_version,
-                },
-            )
-            for row in cur:
-                run = Run(
-                    row["id"],
-                    row["microservice_id"],
-                    row["model_id"],
-                    row["duration"],
-                )
-                break
-
-        yield run
-
-        with self.commit() as cur:
-            cur.execute(sql.schema)
-            if run.predictions is not None:
-                # pylint: disable=unsupported-assignment-operation
-                run.predictions["run_id"] = run.id
-                execute_batch(
-                    cur,
-                    sql.predictions.insert,
-                    run.predictions.to_dict("records"),
-                )
-            cur.execute(sql.runs.close, {"id": run.id})
-            for row in cur:
-                run.duration = row["duration"]
-                break
+    def as_insert_doc(self) -> Dict[str, Any]:
+        """As insert doc."""
+        return {
+            "run_id": self.id,
+            "microservice_id": self.microservice_id,
+            "model_id": self.model_id,
+            **self.parent.as_insert_doc(),
+        }
 
 
 class PredictionMixin(Mixin):  # pylint: disable=too-few-public-methods.
     """Prediction Mixin."""
 
-    def __init__(  # pylint: disable=useless-super-delegation
-        self, *, postgres_cls=PredictionPersistor, **kwargs
-    ):
-        """__init__."""
-        super().__init__(postgres_cls=postgres_cls, **kwargs)
+    @contextmanager
+    def open_batch(self) -> Generator[Run, None, None]:
+        """Open batch."""
+        # Replace return type with ContextManager[Run] when mypy is fixed.
+        with super().open_batch() as parent:
+            with self.postgres.open_run(parent) as run:
+                yield run
 
 
 class CheckTablePrivileges(Task):  # pylint: disable=too-few-public-methods

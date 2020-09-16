@@ -7,21 +7,12 @@ from abc import ABC
 from contextlib import contextmanager
 from json import dumps
 from logging import getLogger
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Generator,
-    Optional,
-    Sequence,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Dict, Generator, Sequence, Tuple, cast
 
 from configargparse import ArgParser as ArgumentParser
 
-from .dependency import inject_str
-from .model import Model
-from .service import Batch, Service
+from .dependency import Interval, inject_str
+from .service import Delegate, Service
 from .utils import retry
 
 try:
@@ -228,9 +219,38 @@ class Mixin(BaseMixin):
         parser: ArgumentParser,
     ) -> Generator[None, None, None]:
         """Inject arguments."""
+        # Replace return type with ContextManager[None] when mypy is fixed.
         with self.mongo_cls.configure(self, parser):
             with super().inject_arguments(parser):
                 yield
+
+
+class Batch(Delegate):
+    """Batch."""
+
+    def __init__(self, parent: Any):
+        """__init__."""
+        self.key = key = ObjectId()
+        self.duration = Interval(on=key.generation_time, end=None)
+        super().__init__(parent)
+
+    def as_insert_doc(self) -> Dict[str, Any]:
+        """As insert doc."""
+        return {
+            "_id": self.key,
+            "duration": self.duration.as_doc(),
+            **self.parent.as_insert_doc(),
+        }
+
+    def as_update_doc(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        """As update doc."""
+        keys, values = self.parent.as_update_doc()
+        duration = self.duration
+        duration.end = ObjectId().generation_time
+        return (
+            {"_id": self.key, **keys},
+            {"duration": duration.as_doc(), **values},
+        )
 
 
 class EvidenceMixin(Mixin):
@@ -241,24 +261,23 @@ class EvidenceMixin(Mixin):
         super().__init__(mongo_cls=mongo_cls, **kwargs)
 
     @contextmanager
-    def open_batch(
-        self, key: Any = None, model: Optional[Model] = None
-    ) -> Generator[Batch, None, None]:
+    def open_batch(self) -> Generator[Batch, None, None]:
         """Open batch."""
-        if key is None:
-            key = ObjectId()
         mongo = self.mongo
-        with super().open_batch(key) as batch:
-            doc = batch.as_insert_doc(model)  # <- model dependency
+        with super().open_batch() as parent:
+            batch = Batch(parent)
+            doc = batch.as_insert_doc()
             with mongo.connect() as database:
+                logger.info(doc)
                 key = mongo.insert_one(database.batches, doc)
             yield batch
 
-        key, doc = batch.as_update_doc()
+        key, values = batch.as_update_doc()
         with mongo.connect() as database:
-            mongo.update_one(database.batches, key, doc)
+            logger.info(values)
+            mongo.update_one(database.batches, key, {"$set": values})
 
-    def store_evidence(self, batch: Batch, *args, **kwargs) -> None:
+    def store_evidence(self, batch: Any, *args, **kwargs) -> None:
         """Store Evidence."""
         super().store_evidence(batch, *args, **kwargs)
         exclude = kwargs.get("exclude", ())
