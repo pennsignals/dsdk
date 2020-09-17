@@ -1,10 +1,18 @@
 with args as (
     select
-        %(microservice_version)s as microservice_version,
-        %(model_version)s as model_version,
-        %(as_of)s as as_of,
-        %(epoch_ms)s as epoch_ms,
-        %(time_zone)s as time_zone
+        false as extant,
+        cast(null as varchar) as microservice_version,
+        cast(null as varchar) as model_version,
+        cast(null as timestamptz) as as_of,
+        cast(null as float) as epoch_ms,
+        cast(null as timezone) as time_zone
+    union all select
+        true,
+        %(microservice_version)s,
+        %(model_version)s,
+        %(as_of)s,
+        %(epoch_ms)s,
+        %(time_zone)s
 ), i_microservices as (
     insert into microservices (
         version,
@@ -13,6 +21,8 @@ with args as (
         microservice_version,
     from
         args
+    where
+        extant
     on conflict do nothing
     returning *
 ), i_models as (
@@ -23,6 +33,8 @@ with args as (
         model_version
     from
         args
+    where
+        extant
     on conflict do nothing
     returning *
 ), si_microservices as (
@@ -65,4 +77,6 @@ from
     args
     cross join si_microservices
     cross join si_models
+where
+    args.extant
 returning *
