@@ -110,7 +110,7 @@ class Batch:
         as_of_utc_datetime: datetime,
         epoch_ms: float,
         time_zone: str,
-        model: Optional[Any] = None,  # hack
+        microservice_version: str,
     ) -> None:
         """__init__."""
         self.duration = duration
@@ -118,7 +118,7 @@ class Batch:
         self.epoch_ms = epoch_ms
         self.evidence = Evidence()
         self.time_zone = time_zone
-        self.model = model  # hack
+        self.microservice_version = microservice_version
         self.predictions: Optional[DataFrame] = None
 
     @property
@@ -146,6 +146,7 @@ class Batch:
         return {
             "as_of": self.as_of_utc_datetime,
             "epoch_ms": self.epoch_ms,
+            "microservice_version": self.microservice_version,
             "time_zone": self.time_zone,
         }
 
@@ -155,6 +156,7 @@ class Batch:
         return {
             "as_of": self.as_of_utc_datetime,
             "epoch_ms": self.epoch_ms,
+            "microservice_version": self.microservice_version,
             "time_zone": self.time_zone,
         }
 
@@ -178,6 +180,12 @@ class Service:
 
     ON = dumps({"key": "main.on"})
     END = dumps({"key": "main.end"})
+    TASK_ON = dumps({"key": "task.on", "task": "%s"})
+    TASK_END = dumps({"key": "task.end", "task": "%s"})
+    PIPELINE_ON = dumps({"key": "pipeline.on", "pipeline": "%s"})
+    PIPELINE_END = dumps({"key": "pipeline.end", "pipeline": "%s"})
+
+    VERSION = __version__
 
     @classmethod
     def main(cls):
@@ -218,11 +226,6 @@ class Service:
 
         # ... because self.pipeline is not optional
         assert self.pipeline is not None
-
-    TASK_ON = dumps({"key": "task.on", "task": "%s"})
-    TASK_END = dumps({"key": "task.end", "task": "%s"})
-    PIPELINE_ON = dumps({"key": "pipeline.on", "pipeline": "%s"})
-    PIPELINE_END = dumps({"key": "pipeline.end", "pipeline": "%s"})
 
     def __call__(self) -> Batch:
         """Run."""
@@ -313,7 +316,11 @@ class Service:
             self.time_zone,
         )
         yield Batch(
-            duration, as_of_utc_datetime, self.epoch_ms, self.time_zone
+            as_of_utc_datetime=as_of_utc_datetime,
+            duration=duration,
+            epoch_ms=self.epoch_ms,
+            microservice_version=self.VERSION,
+            time_zone=self.time_zone,
         )
         duration.end = now_utc_datetime()
         logger.info(self.BATCH_CLOSE, duration.end)
