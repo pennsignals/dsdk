@@ -1,3 +1,5 @@
+create extension if not exists btree_gist;
+
 create schema if not exists test;
-create extension btree_gist;
 grant usage on schema test to public;
+grant create on schema test to public;
