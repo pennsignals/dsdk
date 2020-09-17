@@ -3,15 +3,16 @@ set search_path = test,public;
 create or replace function up()
 returns void as $$
     -- dependency/alphabetic order
-    create or replace function is_timezone(value varchar(29)) returns boolean as $$
+    create or replace function is_timezone(time_zone text)
+    returns boolean as $function$
     declare valid timestamptz;
     begin
         valid := now() at time zone time_zone;
         return true;
-    exception invalid_parameter_value others then
+    exception when invalid_parameter_value or others then
         return false;
     end;
-    $$ language plpgsql stable;
+    $function$ language plpgsql stable;
     -- timezone domain/column data type matches no-underscore convention here:
     create domain timezone as varchar(29)
         check ( is_timezone(value) );
@@ -38,7 +39,7 @@ returns void as $$
         id int default nextval('microservices_sequence') primary key,
         version varchar not null,
         constraint microservice_version_must_be_unique
-            unique (version, dsdk_version)
+            unique (version)
     );
     create sequence if not exists runs_sequence;
     -- `set timezone` for the session reinterprets all tztimestamp during select with the new time zone
