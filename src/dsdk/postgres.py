@@ -97,7 +97,6 @@ class Persistor(Messages, BasePersistor):
         # Replace return type with ContextManager[Run] when mypy is fixed.
         sql = self.sql
         columns = parent.as_insert_sql()
-        logger.info(str(columns))
         with self.commit() as cur:
             cur.execute(sql.schema)
             cur.execute(sql.runs.open, columns)
