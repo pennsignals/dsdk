@@ -75,8 +75,7 @@ select
     args.time_zone
 from
     args
-    cross join si_microservices
+    inner join si_microservices on
+        args.extant
     cross join si_models
-where
-    args.extant
 returning *
