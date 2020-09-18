@@ -51,7 +51,7 @@ returns void as $$
         -- allow run to use a non-utc timezone for selection criteria visit date/timestamp intervals
         -- time zone from the IANA (Olson) database
         -- time zone column name matches underscore convention here.
-        time_zone timezone not null default 'Etc/UTC',
+        time_zone timezone not null default 'America/New_York',
         constraint runs_require_a_microservice
             foreign key (microservice_id) references microservices (id)
             on delete cascade
