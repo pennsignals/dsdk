@@ -3,7 +3,7 @@ set search_path = test,public;
 create or replace function up()
 returns void as $$
     -- dependency/alphabetic order
-    create or replace function is_timezone(time_zone text)
+    create or replace function is_timezone(time_zone varchar)
     returns boolean as $function$
     declare valid timestamptz;
     begin
