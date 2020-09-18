@@ -7,7 +7,7 @@ from os import listdir
 from os.path import isdir, join, splitext
 from typing import Any, Callable, Dict, Optional, Tuple
 
-from dateutil import tz
+from dateutil import parser, tz
 
 
 class StubException(Exception):
@@ -116,8 +116,12 @@ def inject_utc_non_naive_datetime(
 
     def _inject(value: str) -> datetime:
         assert value.__class__ is str
-        kwargs[key] = result = datetime.fromisoformat(value)
-        assert result.tzinfo == timezone.utc
+        # dateutil.parser can handle timestamptz output copied
+        # from psql directly
+        result = parser.parse(value)
+        assert result.tzinfo == tz.tzutc()
+        result.replace(tzinfo=timezone.utc)
+        kwargs[key] = result
         return result
 
     return _inject
