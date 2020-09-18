@@ -18,12 +18,9 @@ from pkg_resources import DistributionNotFound, get_distribution
 
 from .dependency import (
     Interval,
-    epoch_ms_from_utc_datetime,
     get_tzinfo,
-    inject_float,
     inject_str,
-    now_utc_datetime,
-    utc_datetime_from_epoch_ms,
+    inject_utc_non_naive_datetime,
 )
 from .utils import configure_logger
 
@@ -44,14 +41,29 @@ class Delegate:
         self.parent = parent
 
     @property
+    def duration(self) -> Interval:
+        """Return duration."""
+        return self.parent.duration
+
+    @duration.setter
+    def duration(self, value: Interval):
+        """Duration setter."""
+        self.parent.duration = value
+
+    @property
     def as_of_local_datetime(self) -> datetime:
         """Return as of local datetime."""
         return self.parent.as_of_local_datetime
 
     @property
-    def as_of_utc_datetime(self) -> datetime:
+    def as_of(self) -> datetime:
         """Return as of utc datetime."""
-        return self.parent.as_of_utc_datetime
+        return self.parent.as_of
+
+    @as_of.setter
+    def as_of(self, value: datetime):
+        """Set as_of."""
+        self.parent.as_of = value
 
     @property
     def as_of_local_date(self) -> date:
@@ -74,14 +86,14 @@ class Delegate:
         self.parent.predictions = value
 
     @property
-    def epoch_ms(self) -> float:
-        """Return epoch_ms."""
-        return self.parent.epoch_ms
-
-    @property
     def time_zone(self) -> str:
         """Return time zone."""
         return self.parent.time_zone
+
+    @time_zone.setter
+    def time_zone(self, value: str):
+        """Time zone setter."""
+        self.parent.time_zone = value
 
     @property
     def tz_info(self) -> tzinfo:
@@ -106,16 +118,14 @@ class Batch:
 
     def __init__(  # pylint: disable=too-many-arguments
         self,
-        duration: Interval,
-        as_of_utc_datetime: datetime,
-        epoch_ms: float,
-        time_zone: str,
+        as_of: Optional[datetime],
+        duration: Optional[Interval],
+        time_zone: Optional[str],
         microservice_version: str,
     ) -> None:
         """__init__."""
+        self.as_of = as_of
         self.duration = duration
-        self.as_of_utc_datetime = as_of_utc_datetime
-        self.epoch_ms = epoch_ms
         self.evidence = Evidence()
         self.time_zone = time_zone
         self.microservice_version = microservice_version
@@ -124,7 +134,9 @@ class Batch:
     @property
     def as_of_local_datetime(self) -> datetime:
         """Return as of local datetime."""
-        return self.as_of_utc_datetime.astimezone(self.tz_info)
+        assert self.as_of is not None
+        assert self.tz_info is not None
+        return self.as_of.astimezone(self.tz_info)
 
     @property
     def as_of_local_date(self) -> date:
@@ -134,6 +146,7 @@ class Batch:
     @property
     def tz_info(self) -> tzinfo:
         """Return tz_info."""
+        assert self.time_zone is not None
         return get_tzinfo(self.time_zone)
 
     @property
@@ -144,8 +157,7 @@ class Batch:
     def as_insert_doc(self) -> Dict[str, Any]:
         """As insert doc."""
         return {
-            "as_of": self.as_of_utc_datetime,
-            "epoch_ms": self.epoch_ms,
+            "as_of": self.as_of,
             "microservice_version": self.microservice_version,
             "time_zone": self.time_zone,
         }
@@ -154,14 +166,14 @@ class Batch:
         """As insert sql."""
         # duration comes from the database clock.
         return {
-            "as_of": self.as_of_utc_datetime,
-            "epoch_ms": self.epoch_ms,
+            "as_of": self.as_of,
             "microservice_version": self.microservice_version,
             "time_zone": self.time_zone,
         }
 
     def as_update_doc(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """As update doc."""
+        assert self.duration is not None
         return {}, {"duration": self.duration.as_doc()}
 
 
@@ -201,7 +213,7 @@ class Service:
         argv: Optional[Sequence[str]] = None,
         parser: Optional[ArgumentParser] = None,
         pipeline: Optional[Sequence[Task]] = None,
-        epoch_ms: Optional[float] = None,
+        as_of: Optional[datetime] = None,
         time_zone: Optional[str] = None,
     ) -> None:
         """__init__."""
@@ -210,19 +222,14 @@ class Service:
 
         # inferred type of self.pipeline must not be optional...
         self.pipeline = cast(Sequence[Task], pipeline)
-        self.now_utc_datetime = now_utc_datetime()
-        self.epoch_ms = cast(float, epoch_ms)
-        self.time_zone = cast(str, time_zone)
+        self.duration: Optional[Interval] = None
+        self.as_of = as_of
+        self.time_zone = time_zone
         if parser:
             with self.inject_arguments(parser):
                 if not argv:
                     argv = sys_argv[1:]
                 self.args = parser.parse_args(argv)
-
-        if self.epoch_ms is None:
-            self.epoch_ms = epoch_ms_from_utc_datetime(self.now_utc_datetime)
-        if self.time_zone is None:
-            self.time_zone = time_zone = "America/New_York"
 
         # ... because self.pipeline is not optional
         assert self.pipeline is not None
@@ -241,6 +248,7 @@ class Service:
     @property
     def tz_info(self) -> tzinfo:
         """Return tz_info."""
+        assert self.time_zone is not None
         return get_tzinfo(self.time_zone)
 
     @contextmanager
@@ -266,11 +274,11 @@ class Service:
             env_var="CONFIG",  # make ENV match default metavar
         )
         parser.add(
-            "-e",
-            "--epoch-ms",
-            help="epoch ms",
-            env_var="EPOCH_MS",
-            type=inject_float("epoch_ms", kwargs),
+            "-d",
+            "--as-of",
+            help="as of utc non-naive datetime",
+            env_var="AS_OF",
+            type=inject_utc_non_naive_datetime("as_of", kwargs),
         )
         parser.add(
             "-t",
@@ -282,8 +290,8 @@ class Service:
 
         yield
 
-        self.epoch_ms = cast(float, kwargs.get("epoch_ms"))
-        self.time_zone = cast(str, kwargs.get("time_zone"))
+        self.as_of = kwargs.get("as_of")
+        self.time_zone = kwargs.get("time_zone")
 
     def dependency(self, key, cls, kwargs):
         """Dependency."""
@@ -299,31 +307,24 @@ class Service:
         dependency = cls(**kwargs)
         setattr(self, key, dependency)
 
-    BATCH_OPEN = dumps(
-        {"key": "batch.open", "on": "%s", "as_of": "%s", "time_zone": "%s"}
-    )
-    BATCH_CLOSE = dumps({"key": "batch.close", "end": "%s"})
+    BATCH_OPEN = dumps({"key": "batch.open", "as_of": "%s", "time_zone": "%s"})
+    BATCH_CLOSE = dumps({"key": "batch.close"})
 
     @contextmanager
     def open_batch(self) -> Generator[Any, None, None]:
         """Open batch."""
-        duration = Interval(on=self.now_utc_datetime, end=None)
-        as_of_utc_datetime = utc_datetime_from_epoch_ms(self.epoch_ms)
         logger.info(
             self.BATCH_OPEN,
-            duration.on,
-            as_of_utc_datetime,
+            self.as_of,
             self.time_zone,
         )
         yield Batch(
-            as_of_utc_datetime=as_of_utc_datetime,
-            duration=duration,
-            epoch_ms=self.epoch_ms,
+            as_of=self.as_of,
+            duration=self.duration,
             microservice_version=self.VERSION,
             time_zone=self.time_zone,
         )
-        duration.end = now_utc_datetime()
-        logger.info(self.BATCH_CLOSE, duration.end)
+        logger.info(self.BATCH_CLOSE)
 
     def store_evidence(  # pylint: disable=no-self-use,unused-argument
         self, batch: Any, *args, **kwargs

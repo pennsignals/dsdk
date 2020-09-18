@@ -105,9 +105,14 @@ class Persistor(Messages, BasePersistor):
                     row["id"],
                     row["microservice_id"],
                     row["model_id"],
-                    row["duration"],
                     parent,
                 )
+                parent.as_of = row["as_of"]
+                duration = row["duration"]
+                parent.duration = Interval(
+                    on=duration.lower, end=duration.upper
+                )
+                parent.time_zone = row["time_zone"]
                 break
 
         yield run
@@ -174,14 +179,12 @@ class Run(Delegate):
         id_: int,
         microservice_id: str,
         model_id: str,
-        duration: Interval,
         parent: Any,
     ):
         """__init__."""
         self.id = id_
         self.microservice_id = microservice_id
         self.model_id = model_id
-        self.duration = duration
         super().__init__(parent)
 
     def as_insert_doc(self) -> Dict[str, Any]:
