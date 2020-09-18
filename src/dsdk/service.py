@@ -21,6 +21,7 @@ from .dependency import (
     get_tzinfo,
     inject_str,
     inject_utc_non_naive_datetime,
+    now_utc_datetime,
 )
 from .utils import configure_logger
 
@@ -237,6 +238,10 @@ class Service:
     def __call__(self) -> Batch:
         """Run."""
         with self.open_batch() as batch:
+            if self.as_of is None:
+                self.as_of = now_utc_datetime()
+            if self.time_zone is None:
+                self.time_zone = "America/New_York"
             logger.info(self.PIPELINE_ON, self.__class__.__name__)
             for task in self.pipeline:
                 logger.info(self.TASK_ON, task.__class__.__name__)
