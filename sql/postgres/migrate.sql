@@ -27,31 +27,27 @@ returns void as $$
         return null;
     end;
     $function$ language plpgsql;
-    create sequence if not exists models_sequence;
     create table if not exists models (
-        id int default nextval('models_sequence') primary key,
+        id int primary key generated always as identity,
         version varchar not null,
         constraint model_version_must_be_unique
             unique (version)
     );
-    create sequence if not exists microservices_sequence;
     create table if not exists microservices (
-        id int default nextval('microservices_sequence') primary key,
+        id int primary key generated always as identity,
         version varchar not null,
         constraint microservice_version_must_be_unique
             unique (version)
     );
-    create sequence if not exists runs_sequence;
     -- `set timezone` for the session reinterprets all tztimestamp during select with the new time zone
     -- but the data stored in tztimestamp remains unambiguous
     create table if not exists runs (
-        id int default nextval('runs_sequence') primary key,
+        id int primary key generated always as identity,
         microservice_id int not null,
         model_id int not null,
-        duration tstzrange not null default tstzrange(now(), 'infinity', '[)'),
-        -- allow run epoch_ms and the computed as-of to be in the past
-        as_of timestamptz not null default now(),
-        epoch_ms float not null default (extract(epoch from now() at time zone 'Etc/UTC') * 1000.0),
+        duration tstzrange not null default tstzrange((now() at time zone 'Etc/UTC'), 'infinity', '[)'),
+        -- allow as-of to be in the past
+        as_of timestamptz not null default (now() at time zone 'Etc/UTC'),
         -- allow run to use a non-utc timezone for selection criteria visit date/timestamp intervals
         -- time zone from the IANA (Olson) database
         -- time zone column name matches underscore convention here.
@@ -71,9 +67,8 @@ returns void as $$
             exclude using gist (microservice_id with =, model_id with =, duration with &&)
     );
     create index if not exists runs_duration_index on runs using gist (duration);
-    create sequence if not exists predictions_sequence;
     create table if not exists predictions (
-        id int default nextval('predictions_sequence') primary key,
+        id int primary key generated always as identity,
         run_id int not null,
         subject_id int not null,
         score double precision not null,
@@ -100,9 +95,6 @@ create or replace function down()
 returns void as $$
     drop table if exists models cascade;
     drop table if exists microservices cascade;
-    drop sequence if exists predictions_sequence cascade;
-    drop sequence if exists models_sequence cascade;
-    drop sequence if exists microservices_sequence cascade;
     drop function if exists call_notify;
     drop domain if exists timezone;
     drop function if exists is_timezone;
