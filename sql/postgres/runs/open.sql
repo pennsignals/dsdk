@@ -9,7 +9,7 @@ with args as (
         true,
         %(microservice_version)s,
         %(model_version)s,
-        coalesce(%(as_of)s, now() as of time zone 'Etc/UTC'),
+        coalesce(%(as_of)s, now() at time zone 'Etc/UTC'),
         coalesce(%(time_zone)s, 'Etc/UTC'),
 ), i_microservices as (
     insert into microservices (
