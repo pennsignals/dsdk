@@ -109,6 +109,20 @@ def inject_str_tuple(key: str, kwargs: Dict[str, Any]) -> Callable:
     return _inject
 
 
+def inject_utc_non_naive_datetime(
+    key: str, kwargs: Dict[str, Any]
+) -> Callable:
+    """Inject utc non-naive datetime."""
+
+    def _inject(value: str) -> datetime:
+        assert value.__class__ is str
+        kwargs[key] = result = datetime.fromisoformat(value)
+        assert result.tzinfo == timezone.utc
+        return result
+
+    return _inject
+
+
 def inject_namespace(key: str, kwargs: Dict[str, Any]) -> Callable:
     """Inject namespace."""
 

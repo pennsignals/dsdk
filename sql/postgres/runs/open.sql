@@ -4,15 +4,13 @@ with args as (
         cast(null as varchar) as microservice_version,
         cast(null as varchar) as model_version,
         cast(null as timestamptz) as as_of,
-        cast(null as float) as epoch_ms,
         cast(null as timezone) as time_zone
     union all select
         true,
         %(microservice_version)s,
         %(model_version)s,
-        %(as_of)s,
-        %(epoch_ms)s,
-        %(time_zone)s
+        coalesce(%(as_of)s, now() as of time zone 'Etc/UTC'),
+        coalesce(%(time_zone)s, 'Etc/UTC'),
 ), i_microservices as (
     insert into microservices (
         version,
@@ -64,14 +62,12 @@ insert into runs (
     microservice_id,
     model_id,
     as_of,
-    epoch_ms,
     time_zone
 )
 select
     si_microservices.id,
     si_models.id,
     args.as_of,
-    args.epoch_ms,
     args.time_zone
 from
     args

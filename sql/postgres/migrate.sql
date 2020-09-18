@@ -14,7 +14,7 @@ returns void as $$
     end;
     $function$ language plpgsql stable;
     -- timezone domain/column data type matches no-underscore convention here:
-    create domain timezone as varchar(29)
+    create domain timezone as varchar
         check ( is_timezone(value) );
     create or replace function call_notify()
     returns trigger as $function$
