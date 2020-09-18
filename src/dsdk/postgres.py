@@ -130,7 +130,8 @@ class Persistor(Messages, BasePersistor):
                 )
             cur.execute(sql.runs.close, {"id": run.id})
             for row in cur:
-                run.duration = row["duration"]
+                duration = row["duration"]
+                run.duration = Interval(on=duration.lower, end=duration.upper)
                 break
 
     @retry((OperationalError,))
