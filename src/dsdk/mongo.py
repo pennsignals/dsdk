@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, Dict, Generator, Sequence, Tuple, cast
 
 from configargparse import ArgParser as ArgumentParser
 
-from .dependency import Interval, inject_str
+from .dependency import inject_str
 from .service import Delegate, Service
 from .utils import retry
 
@@ -230,26 +230,22 @@ class Batch(Delegate):
 
     def __init__(self, parent: Any):
         """__init__."""
-        self.key = key = ObjectId()
-        self.duration = Interval(on=key.generation_time, end=None)
+        self.key = ObjectId()
         super().__init__(parent)
 
     def as_insert_doc(self) -> Dict[str, Any]:
         """As insert doc."""
         return {
             "_id": self.key,
-            "duration": self.duration.as_doc(),
             **self.parent.as_insert_doc(),
         }
 
     def as_update_doc(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """As update doc."""
         keys, values = self.parent.as_update_doc()
-        duration = self.duration
-        duration.end = ObjectId().generation_time
         return (
             {"_id": self.key, **keys},
-            {"duration": duration.as_doc(), **values},
+            values,
         )
 
 
