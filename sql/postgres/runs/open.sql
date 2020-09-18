@@ -10,7 +10,7 @@ with args as (
         %(microservice_version)s,
         %(model_version)s,
         coalesce(%(as_of)s, now() at time zone 'Etc/UTC'),
-        coalesce(%(time_zone)s, 'Etc/UTC')
+        coalesce(%(time_zone)s, 'America/New_York')
 ), i_microservices as (
     insert into microservices (
         version,
