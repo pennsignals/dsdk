@@ -16,7 +16,7 @@ with args as (
         version,
     )
     select
-        microservice_version,
+        microservice_version
     from
         args
     where
