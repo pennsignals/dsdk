@@ -19,11 +19,15 @@ PYMSSQL_REQUIRES = ("cython>=0.29.21", "pymssql==2.1.4")
 
 PSYCOPG2_REQUIRES = ("psycopg2-binary>=2.8.5",)
 
-SETUP_REQUIRES = ("pytest-runner>=5.2", "setuptools_scm[toml]>=4.1.2")
+SETUP_REQUIRES = (
+    "pytest-runner>=5.2",
+    "setuptools_scm[toml]>=4.1.2",
+)
 
 SQLALCHEMY_REQUIRES = ("sqlalchemy>=1.3.18",)
 
 TEST_REQUIRES = (
+    "astroid",
     "black",
     "coverage[toml]",
     "flake8",
