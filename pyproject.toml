@@ -66,3 +66,4 @@ norecursedirs = ".env .git build dist"
 python_files = "test.py tests.py test_*.py *_test.py"
 
 [tool.setuptools_scm]
+local_scheme = "dirty-tag"
