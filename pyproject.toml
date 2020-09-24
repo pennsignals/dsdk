@@ -1,21 +1,20 @@
+[build-system]
+requires = [
+    "setuptools>=50.3.0",
+    "setuptools_scm[toml]>=4.1.2",
+    "wheel>=0.35.1",
+]
+
 [project]
-name = "dsdk"
 authors = [
     "Michael Becker",
     "Corey Chivers",
     "Jason Lubken"
 ]
 license = "MIT"
+name = "dsdk"
 python = "^3.7"
-readme = "README.rst"
-
-[build-system]
-requires = [
-    "setuptools>=42.8.0",
-    "setuptools_scm[toml]>=3.3.3",
-    "wheel",
-]
-build-backend = "setuptools.build_meta"
+readme = "readme.md"
 
 [tool.black]
 line-length = 79
@@ -45,10 +44,25 @@ multi_line_output = 3
 known_first_party = ["dsdk"]
 default_section = "THIRDPARTY"
 
+[tool.pylint.basic]
+good-names = '''a,b,c,d,df,i,id,logger,n,on,tz'''
+
+[tool.pylint.message_control]
+disable = '''duplicate-code,C0330'''
+
+[tool.pylint.miscellaneous]
+notes = '''FIXME,XXX'''
+
+[tool.pylint.similarities]
+min-similarity-lines = 4
+ignore-comments = "yes"
+ignore-docstrings = "yes"
+ignore-imports = "yes"
+
 [tool.pytest.ini_options]
 addopts = "-ra --cov=dsdk --cov-report=term-missing --strict --ignore=.eggs --tb=short"
 testpaths = ["test"]
-norecursedirs = ".env .git .tox build dist"
+norecursedirs = ".env .git build dist"
 python_files = "test.py tests.py test_*.py *_test.py"
 
 [tool.setuptools_scm]

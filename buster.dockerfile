@@ -13,7 +13,6 @@ COPY setup.cfg .
 COPY setup.py .
 COPY pyproject.toml .
 COPY .pre-commit-config.yaml .
-COPY .pylintrc .
 COPY .git ./.git
 COPY src ./src
 COPY sql ./sql

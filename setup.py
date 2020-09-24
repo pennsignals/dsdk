@@ -9,8 +9,8 @@ INSTALL_REQUIRES = (
     "pandas>=0.23.4",
     "pip>=19.3.1",
     "pyyaml>=5.3.1",
-    "setuptools>=49.2.0",
-    "wheel>=0.34.2",
+    "setuptools>=50.3.0",
+    "wheel>=0.35.1",
 )
 
 PYMONGO_REQUIRES = ("pymongo>=3.11.0",)
@@ -19,7 +19,7 @@ PYMSSQL_REQUIRES = ("cython>=0.29.21", "pymssql==2.1.4")
 
 PSYCOPG2_REQUIRES = ("psycopg2-binary>=2.8.5",)
 
-SETUP_REQUIRES = ("pytest-runner>=5.2", "setuptools_scm>=4.1.2")
+SETUP_REQUIRES = ("pytest-runner>=5.2", "setuptools_scm[toml]>=4.1.2")
 
 SQLALCHEMY_REQUIRES = ("sqlalchemy>=1.3.18",)
 
@@ -44,7 +44,6 @@ TEST_REQUIRES = (
 )
 
 setup(
-    license="MIT",
     extras_require={
         "all": PSYCOPG2_REQUIRES
         + PYMONGO_REQUIRES
@@ -65,5 +64,4 @@ setup(
     setup_requires=SETUP_REQUIRES,
     tests_require=TEST_REQUIRES,
     use_scm_version={"local_scheme": "dirty-tag"},
-    zip_safe=False,
 )
