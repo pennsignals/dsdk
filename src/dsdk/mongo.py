@@ -264,13 +264,11 @@ class EvidenceMixin(Mixin):
             batch = Batch(parent)
             doc = batch.as_insert_doc()
             with mongo.connect() as database:
-                logger.info(doc)
                 key = mongo.insert_one(database.batches, doc)
             yield batch
 
         key, values = batch.as_update_doc()
         with mongo.connect() as database:
-            logger.info(values)
             mongo.update_one(database.batches, key, {"$set": values})
 
     def store_evidence(self, batch: Any, *args, **kwargs) -> None:
