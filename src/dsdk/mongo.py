@@ -170,6 +170,8 @@ class Persistor(Messages):
         self, collection: Collection, docs: Sequence[Dict[str, Any]]
     ):
         """Insert many with retry."""
+        if not docs:
+            return None
         result = collection.insert_many(docs)
         logger.info(
             self.INSERT_MANY,
