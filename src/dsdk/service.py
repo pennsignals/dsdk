@@ -238,16 +238,29 @@ class Service:
     def __call__(self) -> Batch:
         """Run."""
         with self.open_batch() as batch:
+
+            # if one of the mixins didn't set these properties...
             if batch.as_of is None:
                 batch.as_of = now_utc_datetime()
             if batch.time_zone is None:
                 batch.time_zone = "America/New_York"
+            if batch.duration is None:
+                batch.duration = Interval(
+                    on=batch.as_of,
+                    end=None,
+                )
+
             logger.info(self.PIPELINE_ON, self.__class__.__name__)
             for task in self.pipeline:
                 logger.info(self.TASK_ON, task.__class__.__name__)
                 task(batch, self)
                 logger.info(self.TASK_END, task.__class__.__name__)
             logger.info(self.PIPELINE_END, self.__class__.__name__)
+
+            # if one of the mixins did not set this property...
+            if batch.duration.end is None:
+                batch.duration.end = now_utc_datetime()
+
             return batch
 
     @property
