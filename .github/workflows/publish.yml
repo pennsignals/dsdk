@@ -10,7 +10,7 @@ jobs:
 
     steps:
     - name: checkout
-      uses: actions/checkout@v2.3.2
+      uses: actions/checkout@v2.3.4
 
     - name: version
       run: |
@@ -23,7 +23,7 @@ jobs:
         else
           VERSION=${{ github.sha }}
         fi
-        echo "::set-env name=VERSION::$VERSION"
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
         echo "Version: $VERSION"
 
         export DOCKER_BUILDKIT=1
@@ -38,10 +38,10 @@ jobs:
         for TARGET in $TARGETS
         do
           docker build -f dockerfile . --target $TARGET -t $TARGET
-          IMAGE=$(docker inspect --format '{{ .Config.Env }}' $TARGET | tr -d '[]' | tr ' ' '\n' | grep IMAGE | sed 's/^.*=//')
-          echo "Image: $IMAGE"
+          NAME=$(docker inspect --format '{{index .Config.Labels "name"}}' $TARGET)
+          echo "name: $NAME"
           PUSH="docker.pkg.github.com/${{ github.repository }}/$IMAGE:$VERSION"
-          echo "Push: $PUSH"
+          echo "push: $PUSH"
           docker tag $TARGET $PUSH
           docker push $PUSH
         done
