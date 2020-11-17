@@ -42,7 +42,7 @@ jobs:
           docker build -f dockerfile . --target $TARGET -t $TARGET
           NAME=$(docker inspect --format '{{index .Config.Labels "name"}}' $TARGET)
           echo "name: $NAME"
-          PUSH="docker.pkg.github.com/${{ github.repository }}/$IMAGE:$VERSION"
+          PUSH="docker.pkg.github.com/${{ github.repository }}/$NAME:$VERSION"
           echo "push: $PUSH"
           docker tag $TARGET $PUSH
           docker push $PUSH
