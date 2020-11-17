@@ -27,8 +27,8 @@ RUN \
 
 FROM build as test
 ARG IFLAGS
+LABEL name="dsdk.test"
 WORKDIR /root
-ENV IMAGE dsdk.test
 RUN \
     pip install ${IFLAGS} ".[all]"
 ENTRYPOINT [ "/usr/bin/tini", "--" ]
