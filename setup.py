@@ -7,17 +7,17 @@ INSTALL_REQUIRES = (
     "configargparse>=1.2.3",
     "numpy>=1.17.0",
     "pandas>=0.23.4",
-    "pip>=19.3.1",
+    "pip>=20.2.4",
     "pyyaml>=5.3.1",
-    "setuptools>=50.3.0",
+    "setuptools>=50.3.2",
     "wheel>=0.35.1",
 )
 
 PYMONGO_REQUIRES = ("pymongo>=3.11.0",)
 
-PYMSSQL_REQUIRES = ("cython>=0.29.21", "pymssql==2.1.4")
+PYMSSQL_REQUIRES = ("cython>=0.29.21", "pymssql==2.1.5")
 
-PSYCOPG2_REQUIRES = ("psycopg2-binary>=2.8.5",)
+PSYCOPG2_REQUIRES = ("psycopg2-binary>=2.8.6",)
 
 SETUP_REQUIRES = (
     "pytest-runner>=5.2",
