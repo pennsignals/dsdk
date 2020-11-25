@@ -1,8 +1,8 @@
 # Overview
 
-![Docker Images](https://github.com/pennsignals/dsdk/workflows/.github/workflows/release.yml/badge.svg)
+[![Release](https://github.com/pennsignals/dsdk/workflows/release.yml/badge.svg)](https://github.com/pennsignals/dsdk/actions?query=workflow%3Arelease)
 
-![Test](https://github.com/pennsignals/dsdk/workflows/.github/workflows/test.yml/badge.svg)
+[![Test](https://github.com/pennsignals/dsdk/workflows/test.yml/badge.svg)](https://github.com/pennsignals/dsdk/actions?query=workflow%3Atest)
 
 An opinionated library to help deploy data science projects
 
