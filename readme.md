@@ -1,6 +1,6 @@
 # Overview
 
-![Docker Images](https://github.com/pennsignals/dsdk/workflows/.github/workflows/publish.yml/badge.svg)
+![Docker Images](https://github.com/pennsignals/dsdk/workflows/.github/workflows/release.yml/badge.svg)
 
 ![Test](https://github.com/pennsignals/dsdk/workflows/.github/workflows/test.yml/badge.svg)
 
