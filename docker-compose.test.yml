@@ -21,7 +21,7 @@ services:
   postgres.test:
     build:
       context: ./postgres
-      dockerfile: ./postgres/dockerfile
+      dockerfile: dockerfile
       target: test
     environment:
     - POSTGRES_USER=postgres
