@@ -10,6 +10,7 @@ from logging import getLogger
 from typing import TYPE_CHECKING, Any, Dict, Generator, Type, cast
 
 from configargparse import ArgParser as ArgumentParser
+from pandas import DataFrame
 
 from .dependency import Interval, StubException
 from .persistor import Persistor as BasePersistor
@@ -61,6 +62,22 @@ class Messages:  # pylint: disable=too-few-public-methods
     ON = dumps({"key": f"{KEY}.on"})
     OPEN = dumps({"key": f"{KEY}.open"})
     ROLLBACK = dumps({"key": f"{KEY}.rollback"})
+    DATA_TYPE_ERROR = dumps(
+        {
+            "index": "%s",
+            "key": "f{KEY}.store_evidence",
+            "message": "".join(
+                (
+                    "your dataframe evidence data types",
+                    "may not match",
+                    "your postgres schema data types,",
+                    "most likely your ingest sql needs to",
+                    "cast the upstream data to the correct type",
+                )
+            ),
+            "value": "%s",
+        }
+    )
 
 
 class Persistor(Messages, BasePersistor):
@@ -144,6 +161,62 @@ class Persistor(Messages, BasePersistor):
             port=self.port,
             dbname=self.database,
         )
+
+    def store_evidence(self, batch: Any, *args, **kwargs) -> None:
+        """Store evidence."""
+        exclude = kwargs.get("exclude", ())
+        sql = self.sql
+        schema = sql.schema
+        run_id = batch.id
+        evidence = batch.evidence
+        while args:
+            key, df, *args = args  # type: ignore
+            evidence[key] = df
+            # setattr(batch.evidence, name, data)
+            if df.empty:
+                continue
+            # TODO: this will throw an AttributeError if key is bad, make
+            #  this more friendly
+            insert = getattr(sql, key).insert
+            # Will df.drop break if columns DNE?
+            self._store_df(schema, insert, run_id, df.drop(exclude, axis=1))
+
+    def _store_df(
+        self,
+        schema: str,
+        insert: str,
+        run_id: int,
+        df: DataFrame,
+    ):
+        df["run_id"] = run_id
+        out = df.to_dict("records")
+        try:
+            with self.commit() as cur:
+                cur.execute(schema)
+                execute_batch(
+                    cur,
+                    insert,
+                    out,
+                )
+        except DatabaseError as e:
+            enumeration = enumerate(out)
+            # When types are mismatched, log failures row by row.
+            # Rollback all transactions so it doesn't get commited.
+            # Raise the original exception.
+            while True:
+                with self.rollback() as cur:
+                    # enumeration MUST BE a generator,
+                    # or this will not pick where it left off
+                    for i, row in enumeration:
+                        try:
+                            cur.execute(insert, row)
+                        except DatabaseError:
+                            value = dumps(cur.mogrify(insert, row))
+                            logger.error(self.DATA_TYPE_ERROR, i, value)
+                            break
+                    else:
+                        break
+            raise e
 
 
 class Mixin(BaseMixin):
