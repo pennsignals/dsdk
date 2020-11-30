@@ -14,7 +14,7 @@ from dsdk import (
     Model,
     ModelMixin,
     MongoEvidenceMixin,
-    MongoEvidencePersistor,
+    MongoPersistor,
     MssqlAlchemyMixin,
     MssqlAlchemyPersistor,
     MssqlMixin,
@@ -52,7 +52,7 @@ def test_batch_evidence():
 
     class _MockTask(Task):  # pylint: disable=too-few-public-methods
         def __call__(self, batch: Batch, service: Service) -> None:
-            service.store_evidence(batch, "test", df)
+            batch.evidence["test"] = df
 
     service = Service(pipeline=(_MockTask(),))
     batch = service()
@@ -63,7 +63,7 @@ def test_batch_evidence():
 def mongo_mixin_kwargs() -> Dict[str, Any]:
     """Return mongo mixin kwargs."""
     model = Model(name="test", version="0.0.1")
-    mongo = MongoEvidencePersistor(
+    mongo = MongoPersistor(
         uri="mongodb://mongo/database?authsource=admin",
     )
 
@@ -105,7 +105,7 @@ def test_mongo_mixin(kwargs: Dict[str, Any]) -> None:
 
     service = _Service(**kwargs)
     assert service.model.__class__ is Model
-    assert service.mongo.__class__ is MongoEvidencePersistor
+    assert service.mongo.__class__ is MongoPersistor
 
 
 def mssql_alchemy_mixin_kwargs():

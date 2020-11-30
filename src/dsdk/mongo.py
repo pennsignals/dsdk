@@ -181,6 +181,31 @@ class Persistor(Messages):
         )
         return result
 
+    def store_evidence(self, batch: Any, *args, **kwargs) -> None:
+        """Store Evidence."""
+        exclude = kwargs.get("exclude", ())
+        while args:
+            key, df, *args = args  # type: ignore
+            # TODO We need to check column types and convert as needed
+            # TODO Find a way to add batch_id without mutating df
+            df["batch_id"] = batch.key
+            columns = df[[c for c in df.columns if c not in exclude]]
+            docs = columns.to_dict(orient="records")
+            with self.connect() as database:
+                collection = database[key]
+                result = self.insert_many(collection, docs)
+                actual = len(result.inserted_ids)
+                expected = columns.shape[0]
+                assert actual == expected, self.RESULTSET_ERROR % (
+                    database.name,
+                    collection.name,
+                    actual,
+                    expected,
+                )
+
+                # TODO: Better exception
+            df.drop(columns=["batch_id"], inplace=True)
+
     @retry(AutoReconnect)
     def update_one(
         self, collection: Collection, key: Dict[str, Any], doc: Dict[str, Any]
@@ -193,10 +218,6 @@ class Persistor(Messages):
             collection.name,
         )
         return result
-
-
-class EvidencePersistor(Persistor):
-    """Evidence Persistor."""
 
 
 class Mixin(BaseMixin):
@@ -254,10 +275,6 @@ class Batch(Delegate):
 class EvidenceMixin(Mixin):
     """Evidence Mixin."""
 
-    def __init__(self, *, mongo_cls=EvidencePersistor, **kwargs):
-        """__init__."""
-        super().__init__(mongo_cls=mongo_cls, **kwargs)
-
     @contextmanager
     def open_batch(self) -> Generator[Batch, None, None]:
         """Open batch."""
@@ -272,30 +289,3 @@ class EvidenceMixin(Mixin):
         key, values = batch.as_update_doc()
         with mongo.connect() as database:
             mongo.update_one(database.batches, key, {"$set": values})
-
-    def store_evidence(self, batch: Any, *args, **kwargs) -> None:
-        """Store Evidence."""
-        super().store_evidence(batch, *args, **kwargs)
-        exclude = kwargs.get("exclude", ())
-        while args:
-            key, df, *args = args  # type: ignore
-            # TODO We need to check column types and convert as needed
-            # TODO Find a way to add batch_id without mutating df
-            df["batch_id"] = batch.key
-            columns = df[[c for c in df.columns if c not in exclude]]
-            docs = columns.to_dict(orient="records")
-            mongo = self.mongo
-            with mongo.connect() as database:
-                collection = database[key]
-                result = mongo.insert_many(collection, docs)
-                actual = len(result.inserted_ids)
-                expected = columns.shape[0]
-                assert actual == expected, mongo.RESULTSET_ERROR % (
-                    database.name,
-                    collection.name,
-                    actual,
-                    expected,
-                )
-
-                # TODO: Better exception
-            df.drop(columns=["batch_id"], inplace=True)
