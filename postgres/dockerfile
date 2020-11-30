@@ -1,0 +1,4 @@
+FROM timescale/timescaledb-postgis:latest-pg11 as test
+ENV IMAGE postgres.test
+COPY ./sql/create.sql /docker-entrypoint-initdb.d/003.create.sql
+COPY ./sql/migrate.sql /docker-entrypoint-initdb.d/004.migrate.sql

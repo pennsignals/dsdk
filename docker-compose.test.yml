@@ -1,4 +1,8 @@
 version: "3.8"
+
+volumes:
+  postgres-data:
+
 services:
 
   test:
@@ -6,4 +10,30 @@ services:
       context: .
       dockerfile: dockerfile
       target: test
+    environment:
+    - POSTGRES_HOST=postgres
+    - POSTGRES_USERNAME=postgres
+    - POSTGRES_PASSWORD=password
+    - POSTGRES_DATABASE=test
+    - POSTGRES_PORT=5432
     image: test
+
+  postgres.test:
+    build:
+      context: ./postgres
+      dockerfile: ./postgres/dockerfile
+      target: test
+    environment:
+    - POSTGRES_USER=postgres
+    - POSTGRES_PASSWORD=password
+    - POSTGRES_DB=test
+    expose:
+    - "5432"
+    image: postgres.test
+    ports:
+    - "5432:5432"
+    restart: always
+    stop_signal: SIGINT
+    volumes:
+    - postgres-data:/var/lib/postgresql/data
+    - ./postgres/sql:/sql
