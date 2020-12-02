@@ -162,24 +162,25 @@ class Persistor(Messages, BasePersistor):
             dbname=self.database,
         )
 
-    def store_evidence(self, batch: Any, *args, **kwargs) -> None:
+    def store_evidence(self, run: Any, *args) -> None:
         """Store evidence."""
-        exclude = kwargs.get("exclude", ())
         sql = self.sql
         schema = sql.schema
-        run_id = batch.id
-        evidence = batch.evidence
+        run_id = run.id
+        evidence = run.evidence
         while args:
             key, df, *args = args  # type: ignore
             evidence[key] = df
             # setattr(batch.evidence, name, data)
             if df.empty:
                 continue
-            # TODO: this will throw an AttributeError if key is bad, make
-            #  this more friendly
-            insert = getattr(sql, key).insert
-            # Will df.drop break if columns DNE?
-            self._store_df(schema, insert, run_id, df.drop(exclude, axis=1))
+            try:
+                insert = getattr(sql, key).insert
+            except AttributeError as e:
+                raise FileNotFoundError(
+                    f"Missing sql/postgres/{key}/insert.sql"
+                ) from e
+            self._store_df(schema, insert, run_id, df)
 
     def _store_df(
         self,
