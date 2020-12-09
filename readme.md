@@ -26,7 +26,7 @@ Setup:
 Session:
 
     . .env/bin/activate
-    docker-compose -f docker-compose.test.yml up postgres &
+    docker-compose -f docker-compose.test.yml up postgres --build &
     ...
     pre-commit run --all-files
     ...
@@ -34,6 +34,8 @@ Session:
     ...
     docker-compose -f docker-compose.test.yml down
     deactivate
+
+Rebuild the postgres container and remove the docker volume if the database schema is changed.
 
 ## CI/CD Lint & Test:
 
