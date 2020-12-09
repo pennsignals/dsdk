@@ -207,12 +207,13 @@ class Persistor(Messages, BasePersistor):
             dbname=self.database,
         )
 
-    def store_evidence(self, run: Any, *args) -> None:
+    def store_evidence(self, run: Any, *args, **kwargs) -> None:
         """Store evidence."""
         sql = self.sql
         schema = sql.schema
         run_id = run.id
         evidence = run.evidence
+        exclude = set(kwargs.get("exclude", ()))
         while args:
             key, df, *args = args  # type: ignore
             evidence[key] = df
@@ -225,7 +226,12 @@ class Persistor(Messages, BasePersistor):
                 raise FileNotFoundError(
                     f"Missing sql/postgres/{key}/insert.sql"
                 ) from e
-            self._store_df(schema, insert, run_id, df)
+            self._store_df(
+                schema,
+                insert,
+                run_id,
+                df[set(df.columns) - exclude],
+            )
 
     def _store_df(
         self,
