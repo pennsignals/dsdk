@@ -230,7 +230,7 @@ class Persistor(Messages, BasePersistor):
                 schema,
                 insert,
                 run_id,
-                df[set(df.columns) - exclude],
+                df[list(set(df.columns) - exclude)],
             )
 
     def _store_df(
