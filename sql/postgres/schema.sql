@@ -1,1 +1,1 @@
-set search_path = test,public
+set search_path = dsdk,public

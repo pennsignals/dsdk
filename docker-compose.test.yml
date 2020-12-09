@@ -20,7 +20,7 @@ services:
     volumes:
     - ./sql:/sql
 
-  postgres.test:
+  postgres:
     build:
       context: ./postgres
       dockerfile: dockerfile
@@ -31,7 +31,7 @@ services:
     - POSTGRES_DB=test
     expose:
     - "5432"
-    image: postgres.test
+    image: postgres
     ports:
     - "5432:5432"
     restart: always

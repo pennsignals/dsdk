@@ -10,7 +10,8 @@ from logging import getLogger
 from typing import TYPE_CHECKING, Any, Dict, Generator, Type, cast
 
 from configargparse import ArgParser as ArgumentParser
-from pandas import DataFrame
+from numpy import integer
+from pandas import DataFrame, NaT, isna
 
 from .dependency import Interval, StubException
 from .persistor import Persistor as BasePersistor
@@ -32,6 +33,50 @@ try:
         DictCursor,
         execute_batch,
     )
+    from psycopg2.extensions import (
+        register_adapter,
+        ISQLQuote,
+        Float,
+        AsIs,
+        Int,
+    )
+
+    def na_adapter(as_type):
+        """Na adapter."""
+
+        class _Adapter(ISQLQuote):  # pylint: disable=too-few-public-methods
+            def getquoted(self):
+                """Getquoted escaped against sql injection."""
+                # logger.info(
+                #    '%s: %s -- %s',
+                #    type(self._wrapped),
+                #    repr(self._wrapped),
+                #    dir(self))
+                if isna(self._wrapped):
+                    # logger.info("NULL")
+                    return b"NULL"
+                return as_type(self._wrapped).getquoted()
+
+        return _Adapter
+
+    register_adapter(float, na_adapter(Float))
+    register_adapter(integer, na_adapter(Int))
+    register_adapter(type(NaT), na_adapter(AsIs))
+
+    try:
+        # pylint: disable=ungrouped-imports
+        from pandas._libs.missing import (
+            NAType,
+        )
+
+        # new version of pandas with a proper
+        # NA type for int.
+        register_adapter(NAType, na_adapter(AsIs))
+    except ImportError:
+        # old version of pandas that casts int
+        # columns to float when np.nan is used.
+        pass
+
 except ImportError as import_error:
     logger.warning(import_error)
 
@@ -257,10 +302,10 @@ class Run(Delegate):
         parent: Any,
     ):
         """__init__."""
+        super().__init__(parent)
         self.id = id_
         self.microservice_id = microservice_id
         self.model_id = model_id
-        super().__init__(parent)
 
     def as_insert_doc(self) -> Dict[str, Any]:
         """As insert doc."""

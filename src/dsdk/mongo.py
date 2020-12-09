@@ -253,8 +253,8 @@ class Batch(Delegate):
 
     def __init__(self, parent: Any):
         """__init__."""
-        self.key = ObjectId()
         super().__init__(parent)
+        self.key = ObjectId()
 
     def as_insert_doc(self) -> Dict[str, Any]:
         """As insert doc."""
