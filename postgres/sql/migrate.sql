@@ -1,4 +1,4 @@
-set search_path = test,public;
+set search_path = dsdk,public;
 
 create or replace function up()
 returns void as $$
@@ -59,12 +59,12 @@ returns void as $$
         constraint runs_require_a_model
             foreign key (model_id) references models (id)
             on delete cascade
-            on update cascade,
-        -- pick one of the following two constaints or the index
-        constraint only_one_run_per_duration -- no overlaps or outstanding (crashed) runs
-            exclude using gist (duration with &&),
-        constraint only_one_run_per_duration_microservice_and_model -- simultaneous, blue-green deploys allowed
-            exclude using gist (microservice_id with =, model_id with =, duration with &&)
+            on update cascade
+        -- maybe pick one of the following two constaints on the index
+        -- constraint only_one_run_per_duration -- no overlaps or outstanding (crashed) runs
+        --    exclude using gist (duration with &&),
+        -- constraint only_one_run_per_duration_microservice_and_model -- simultaneous, blue-green deploys allowed
+        --    exclude using gist (microservice_id with =, model_id with =, duration with &&)
     );
     create index if not exists runs_duration_index on runs using gist (duration);
     create table if not exists predictions (
@@ -76,7 +76,10 @@ returns void as $$
             foreign key (run_id) references runs (id)
             on delete cascade
             on update cascade,
-        constraint only_one_prediction_per_subject_id_and_run
+        -- document your assumptions about how many predictions are made per subject
+        -- per visit?
+        -- per run?
+        constraint only_one_prediction_per_subject_and_run
             unique (run_id, subject_id),
         -- pick one of the following two constaints
         constraint prediction_score_must_be_a_normal
@@ -89,6 +92,26 @@ returns void as $$
         referencing new table as inserted
         for each statement
         execute procedure call_notify();
+    create table if not exists features (
+        id int primary key,
+        greenish float not null,
+        is_animal boolean not null,
+        is_vegetable boolean not null,
+        is_mineral boolean not null,
+        constraint features_require_a_prediction
+            foreign key (id) references predictions (id)
+            on delete cascade
+            on update cascade,
+        constraint greenish_is_a_normal
+            check ((0.0 <= greenish) and (greenish <= 1.0)),
+        constraint kind_must_be_one_hot_encoded
+            check (
+                cast(is_animal as int)
+                + cast(is_vegetable as int)
+                + cast(is_mineral as int)
+                = 1
+            )
+    )
 $$ language sql;
 
 create or replace function down()

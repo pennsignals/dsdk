@@ -13,7 +13,7 @@ with args as (
         coalesce(%(time_zone)s, 'America/New_York')
 ), i_microservices as (
     insert into microservices (
-        version,
+        version
     )
     select
         microservice_version
@@ -52,7 +52,7 @@ with args as (
     from
         models as sm
         inner join args
-            on args.models_version = sm.version
+            on args.model_version = sm.version
     union all select
         'inserted', id, version
     from

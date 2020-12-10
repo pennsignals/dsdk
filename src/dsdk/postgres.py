@@ -10,6 +10,8 @@ from logging import getLogger
 from typing import TYPE_CHECKING, Any, Dict, Generator, Type, cast
 
 from configargparse import ArgParser as ArgumentParser
+from numpy import integer
+from pandas import DataFrame, NaT, isna
 
 from .dependency import Interval, StubException
 from .persistor import Persistor as BasePersistor
@@ -31,6 +33,44 @@ try:
         DictCursor,
         execute_batch,
     )
+    from psycopg2.extensions import (
+        register_adapter,
+        ISQLQuote,
+        Float,
+        AsIs,
+        Int,
+    )
+
+    def na_adapter(as_type):
+        """Na adapter."""
+
+        class _Adapter(ISQLQuote):  # pylint: disable=too-few-public-methods
+            def getquoted(self):
+                """Getquoted escaped against sql injection."""
+                if isna(self._wrapped):
+                    return b"NULL"
+                return as_type(self._wrapped).getquoted()
+
+        return _Adapter
+
+    register_adapter(float, na_adapter(Float))
+    register_adapter(integer, na_adapter(Int))
+    register_adapter(type(NaT), na_adapter(AsIs))
+
+    try:
+        # pylint: disable=ungrouped-imports
+        from pandas._libs.missing import (
+            NAType,
+        )
+
+        # new version of pandas with a proper
+        # NA type for int.
+        register_adapter(NAType, na_adapter(AsIs))
+    except ImportError:
+        # old version of pandas that casts int
+        # columns to float when np.nan is used.
+        pass
+
 except ImportError as import_error:
     logger.warning(import_error)
 
@@ -61,6 +101,22 @@ class Messages:  # pylint: disable=too-few-public-methods
     ON = dumps({"key": f"{KEY}.on"})
     OPEN = dumps({"key": f"{KEY}.open"})
     ROLLBACK = dumps({"key": f"{KEY}.rollback"})
+    DATA_TYPE_ERROR = dumps(
+        {
+            "index": "%s",
+            "key": "f{KEY}.store_evidence",
+            "message": "".join(
+                (
+                    "your dataframe evidence data types",
+                    "may not match",
+                    "your postgres schema data types,",
+                    "most likely your ingest sql needs to",
+                    "cast the upstream data to the correct type",
+                )
+            ),
+            "value": "%s",
+        }
+    )
 
 
 class Persistor(Messages, BasePersistor):
@@ -145,6 +201,69 @@ class Persistor(Messages, BasePersistor):
             dbname=self.database,
         )
 
+    def store_evidence(self, run: Any, *args, **kwargs) -> None:
+        """Store evidence."""
+        sql = self.sql
+        schema = sql.schema
+        run_id = run.id
+        evidence = run.evidence
+        exclude = set(kwargs.get("exclude", ()))
+        while args:
+            key, df, *args = args  # type: ignore
+            evidence[key] = df
+            # setattr(batch.evidence, name, data)
+            if df.empty:
+                continue
+            try:
+                insert = getattr(sql, key).insert
+            except AttributeError as e:
+                raise FileNotFoundError(
+                    f"Missing sql/postgres/{key}/insert.sql"
+                ) from e
+            self._store_df(
+                schema,
+                insert,
+                run_id,
+                df[list(set(df.columns) - exclude)],
+            )
+
+    def _store_df(
+        self,
+        schema: str,
+        insert: str,
+        run_id: int,
+        df: DataFrame,
+    ):
+        df["run_id"] = run_id
+        out = df.to_dict("records")
+        try:
+            with self.commit() as cur:
+                cur.execute(schema)
+                execute_batch(
+                    cur,
+                    insert,
+                    out,
+                )
+        except DatabaseError as e:
+            enumeration = enumerate(out)
+            # When types are mismatched, log failures row by row.
+            # Rollback all transactions so it doesn't get commited.
+            # Raise the original exception.
+            while True:
+                with self.rollback() as cur:
+                    # enumeration MUST BE a generator,
+                    # or this will not pick where it left off
+                    for i, row in enumeration:
+                        try:
+                            cur.execute(insert, row)
+                        except DatabaseError:
+                            value = dumps(cur.mogrify(insert, row))
+                            logger.error(self.DATA_TYPE_ERROR, i, value)
+                            break
+                    else:
+                        break
+            raise e
+
 
 class Mixin(BaseMixin):
     """Mixin."""
@@ -183,10 +302,10 @@ class Run(Delegate):
         parent: Any,
     ):
         """__init__."""
+        super().__init__(parent)
         self.id = id_
         self.microservice_id = microservice_id
         self.model_id = model_id
-        super().__init__(parent)
 
     def as_insert_doc(self) -> Dict[str, Any]:
         """As insert doc."""

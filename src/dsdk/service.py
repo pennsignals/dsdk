@@ -77,6 +77,16 @@ class Delegate:
         return self.parent.evidence
 
     @property
+    def id(self) -> int:
+        """Return id."""
+        return self.parent.id
+
+    @id.setter
+    def id(self, value: int):
+        """Set id."""
+        self.parent.id = value
+
+    @property
     def predictions(self) -> DataFrame:
         """Return predictions."""
         return self.parent.predictions
@@ -125,6 +135,7 @@ class Batch:
         microservice_version: str,
     ) -> None:
         """__init__."""
+        self.id: Optional[int] = None
         self.as_of = as_of
         self.duration = duration
         self.evidence = Evidence()
@@ -343,15 +354,6 @@ class Service:
             time_zone=self.time_zone,
         )
         logger.info(self.BATCH_CLOSE)
-
-    def store_evidence(  # pylint: disable=no-self-use,unused-argument
-        self, batch: Any, *args, **kwargs
-    ) -> None:
-        """Store evidence."""
-        # TODO It isn't really evidence if it isn't written to the data store.
-        while args:
-            key, df, *args = args  # type: ignore
-            batch.evidence[key] = df
 
 
 class Task:  # pylint: disable=too-few-public-methods

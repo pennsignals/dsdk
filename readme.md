@@ -12,27 +12,33 @@ An opinionated library to help deploy data science projects
 
     pip install "."
 
-You may also install the development dependencies with:
+## Develop, Lint & Test
 
+Setup:
+
+    python3.7 -m venv .env
+
+    echo "export POSTGRES_HOST=0.0.0.0" >> .env/bin/activate
+    . .env/bin/activate
     pip install ".[all]"
-
-## Develop
-
-To lint:
-
     pre-commit install
+
+Session:
+
+    . .env/bin/activate
+    docker-compose -f docker-compose.test.yml up postgres --build &
+    ...
     pre-commit run --all-files
+    ...
+    git commit -m 'Message'
+    ...
+    docker-compose -f docker-compose.test.yml down
+    deactivate
 
-To lint with docker:
+Rebuild the postgres container and remove the docker volume if the database schema is changed.
 
-    docker-compose -f docker-compose.lint.yml up --build
-    docker-compose -f docker-compose.lint.yml down
-
-To test:
-
-    pytest
-
-To test with docker:
+## CI/CD Lint & Test:
 
     docker-compose -f docker-compose.test.yml up --build
+    ...
     docker-compose -f docker-compose.test.yml down

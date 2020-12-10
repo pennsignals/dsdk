@@ -68,8 +68,8 @@ class Batch(Delegate):
 
     def __init__(self, model_version: str, parent: Any):
         """__init__."""
-        self.model_version = model_version
         super().__init__(parent)
+        self.model_version = model_version
 
     def as_insert_doc(self) -> Dict[str, Any]:
         """As insert doc."""

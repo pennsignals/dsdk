@@ -5,7 +5,6 @@ from .dependency import namespace_directory
 from .model import Mixin as ModelMixin
 from .model import Model
 from .mongo import EvidenceMixin as MongoEvidenceMixin
-from .mongo import EvidencePersistor as MongoEvidencePersistor
 from .mongo import Mixin as MongoMixin
 from .mongo import Persistor as MongoPersistor
 from .mssql import AlchemyMixin as MssqlAlchemyMixin
@@ -36,7 +35,6 @@ __all__ = (
     "MongoMixin",
     "MongoPersistor",
     "MongoEvidenceMixin",
-    "MongoEvidencePersistor",
     "MssqlAlchemyMixin",
     "MssqlAlchemyPersistor",
     "MssqlMixin",
