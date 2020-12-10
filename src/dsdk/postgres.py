@@ -47,13 +47,7 @@ try:
         class _Adapter(ISQLQuote):  # pylint: disable=too-few-public-methods
             def getquoted(self):
                 """Getquoted escaped against sql injection."""
-                # logger.info(
-                #    '%s: %s -- %s',
-                #    type(self._wrapped),
-                #    repr(self._wrapped),
-                #    dir(self))
                 if isna(self._wrapped):
-                    # logger.info("NULL")
                     return b"NULL"
                 return as_type(self._wrapped).getquoted()
 
