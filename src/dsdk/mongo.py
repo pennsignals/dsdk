@@ -184,8 +184,10 @@ class Persistor(Messages):
     def store_evidence(self, batch: Any, *args, **kwargs) -> None:
         """Store Evidence."""
         exclude = kwargs.get("exclude", ())
+        evidence = batch.evidence
         while args:
             key, df, *args = args  # type: ignore
+            evidence[key] = df
             # TODO We need to check column types and convert as needed
             # TODO Find a way to add batch_id without mutating df
             df["batch_id"] = batch.key
