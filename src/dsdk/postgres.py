@@ -246,18 +246,16 @@ class Persistor(Messages, BasePersistor):
                 )
         except DatabaseError as e:
             enumeration = enumerate(out)
-            # When types are mismatched, log failures row by row.
-            # Rollback all transactions so it doesn't get commited.
-            # Raise the original exception.
             while True:
                 with self.rollback() as cur:
-                    # enumeration MUST BE a generator,
-                    # or this will not pick where it left off
+                    # enumeration is a generator
+                    # it will pick up where it left off
                     for i, row in enumeration:
                         try:
                             cur.execute(insert, row)
                         except DatabaseError:
-                            value = dumps(cur.mogrify(insert, row))
+                            # assumes the client encoding is the default utf-8!
+                            value = dumps(cur.mogrify(insert, row).decode())
                             logger.error(self.DATA_TYPE_ERROR, i, value)
                             break
                     else:
