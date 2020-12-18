@@ -24,8 +24,6 @@ SETUP_REQUIRES = (
     "setuptools_scm[toml]>=4.1.2",
 )
 
-SQLALCHEMY_REQUIRES = ("sqlalchemy>=1.3.18",)
-
 TEST_REQUIRES = (
     "astroid",
     "black",
@@ -52,12 +50,10 @@ setup(
         "all": PSYCOPG2_REQUIRES
         + PYMONGO_REQUIRES
         + PYMSSQL_REQUIRES
-        + SQLALCHEMY_REQUIRES
         + TEST_REQUIRES,
         "psycopg2": PSYCOPG2_REQUIRES,
         "pymongo": PYMONGO_REQUIRES,
         "pymssql": PYMSSQL_REQUIRES,
-        "sqlalchemy": SQLALCHEMY_REQUIRES,
         "test": TEST_REQUIRES,
     },
     include_package_data=True,

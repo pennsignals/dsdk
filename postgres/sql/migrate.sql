@@ -1,44 +1,64 @@
 set search_path = dsdk,public;
 
-create or replace function up()
+
+create or replace function up_public()
 returns void as $$
-    -- dependency/alphabetic order
-    create or replace function is_timezone(time_zone varchar)
-    returns boolean as $function$
-    declare valid timestamptz;
+begin
+    -- towards idempotence, do not use "create or *replace*" inside.
+
     begin
-        valid := now() at time zone time_zone;
-        return true;
-    exception when invalid_parameter_value or others then
-        return false;
+        create or replace function is_timezone(time_zone varchar)
+        returns boolean as $function$
+        declare valid timestamptz;
+        begin
+            valid := now() at time zone time_zone;
+            return true;
+        exception when invalid_parameter_value or others then
+            return false;
+        end;
+        $function$ language plpgsql stable;
+    exception when duplicate_function then
+        raise notice 'function "is_timezone" already exists, skipping';
     end;
-    $function$ language plpgsql stable;
-    -- timezone domain/column data type matches no-underscore convention here:
-    create domain timezone as varchar
-        check ( is_timezone(value) );
-    create or replace function call_notify()
-    returns trigger as $function$
-    declare last_id text;
+
     begin
-        select max(id)
-        into last_id
-        from inserted;
-        perform pg_notify(TG_TABLE_SCHEMA || '.' || TG_TABLE_NAME, last_id);
-        return null;
+        -- timezone domain/column data type matches no-underscore convention here:
+        create domain timezone as varchar
+            check ( is_timezone(value) );
+    exception when duplicate_object then
+        raise notice 'domain "timezone" already exists, skipping';
     end;
-    $function$ language plpgsql;
+
+    begin
+        create function call_notify()
+        returns trigger as $function$
+        declare last_id text;
+        begin
+            select max(id)
+            into last_id
+            from inserted;
+            perform pg_notify(TG_TABLE_SCHEMA || '.' || TG_TABLE_NAME, last_id);
+            return null;
+        end;
+        $function$ language plpgsql;
+    exception when duplicate_function then
+        raise notice 'function "call_notify" already exists, skipping';
+    end;
+
     create table if not exists models (
         id int primary key generated always as identity,
         version varchar not null,
         constraint model_version_must_be_unique
             unique (version)
     );
+
     create table if not exists microservices (
         id int primary key generated always as identity,
         version varchar not null,
         constraint microservice_version_must_be_unique
             unique (version)
     );
+
     -- `set timezone` for the session reinterprets all tztimestamp during select with the new time zone
     -- but the data stored in tztimestamp remains unambiguous
     create table if not exists runs (
@@ -66,6 +86,7 @@ returns void as $$
         -- constraint only_one_run_per_duration_microservice_and_model -- simultaneous, blue-green deploys allowed
         --    exclude using gist (microservice_id with =, model_id with =, duration with &&)
     );
+
     create index if not exists runs_duration_index on runs using gist (duration);
     create table if not exists predictions (
         id int primary key generated always as identity,
@@ -87,11 +108,21 @@ returns void as $$
         constraint prediction_score_must_be_a_valence
             check (-1.0 <= score and score <= 1.0)
     );
-    drop trigger if exists predictions_inserted on predictions;
-    create trigger predictions_inserted after insert on predictions
-        referencing new table as inserted
-        for each statement
-        execute procedure call_notify();
+
+    begin
+        create trigger predictions_inserted after insert on predictions
+            referencing new table as inserted
+            for each statement
+            execute procedure call_notify();
+    exception when duplicate_object then
+        raise notice 'trigger "predictions_inserted" already exists, skipping';
+    end;
+end;
+$$ language plpgsql;
+
+
+create or replace function up_private()
+returns void as $$
     create table if not exists features (
         id int primary key,
         greenish float not null,
@@ -114,13 +145,57 @@ returns void as $$
     )
 $$ language sql;
 
+
+create or replace function up_epic()
+returns void as $$
+    create table if not exists epic_notifications (
+        id int primary key generated always as identity,
+        prediction_id int not null,
+        notified_on timestamptz default statement_timestamp(),
+        constraint only_one_epic_notification_per_prediction
+            unique (prediction_id),
+        constraint prediction_epic_notifications_required_a_prediction
+            foreign key (prediction_id) references predictions (id)
+            on delete cascade
+            on update cascade
+    );
+
+    create table if not exists epic_errors (
+        id int primary key generated always as identity,
+        prediction_id int not null,
+        recorded_on timestamptz default statement_timestamp(),
+        acknowledged_on timestamptz default statement_timestamp(),
+        error_name varchar,
+        error_description varchar,
+        constraint prediction_epic_error_required_a_prediction
+            foreign key (prediction_id) references predictions (id)
+            on delete cascade
+            on update cascade
+    );
+$$ language sql;
+
+
+create or replace function up()
+returns void as $$
+    select up_public();
+    select up_private();
+    select up_epic();
+$$ language sql;
+
+
 create or replace function down()
 returns void as $$
+    drop table if exists epic_notifications;
+    drop table if exists epic_errors;
+    drop table if exists features;
+    drop table if exists predictions;
+    drop table if exists runs cascade;
+    drop table if exists microservices;
     drop table if exists models cascade;
-    drop table if exists microservices cascade;
     drop function if exists call_notify;
     drop domain if exists timezone;
     drop function if exists is_timezone;
 $$ language sql;
+
 
 select up();

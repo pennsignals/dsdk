@@ -7,8 +7,6 @@ from .model import Model
 from .mongo import EvidenceMixin as MongoEvidenceMixin
 from .mongo import Mixin as MongoMixin
 from .mongo import Persistor as MongoPersistor
-from .mssql import AlchemyMixin as MssqlAlchemyMixin
-from .mssql import AlchemyPersistor as MssqlAlchemyPersistor
 from .mssql import CheckTablePrivileges as CheckMssqlTablePrivileges
 from .mssql import Mixin as MssqlMixin
 from .mssql import Persistor as MssqlPersistor
@@ -35,8 +33,6 @@ __all__ = (
     "MongoMixin",
     "MongoPersistor",
     "MongoEvidenceMixin",
-    "MssqlAlchemyMixin",
-    "MssqlAlchemyPersistor",
     "MssqlMixin",
     "MssqlPersistor",
     "CheckMssqlTablePrivileges",

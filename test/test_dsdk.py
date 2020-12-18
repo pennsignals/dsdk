@@ -2,7 +2,6 @@
 """Test dsdk."""
 
 from argparse import Namespace
-from sys import version_info
 from typing import Any, Dict
 
 from configargparse import ArgParser as ArgumentParser
@@ -15,8 +14,6 @@ from dsdk import (
     ModelMixin,
     MongoEvidenceMixin,
     MongoPersistor,
-    MssqlAlchemyMixin,
-    MssqlAlchemyPersistor,
     MssqlMixin,
     MssqlPersistor,
     PostgresMixin,
@@ -106,75 +103,6 @@ def test_mongo_mixin(kwargs: Dict[str, Any]) -> None:
     service = _Service(**kwargs)
     assert service.model.__class__ is Model
     assert service.mongo.__class__ is MongoPersistor
-
-
-def mssql_alchemy_mixin_kwargs():
-    """Return mssql alchemy mixin kwargs."""
-    model = Model(name="test", version="0.0.1-rc.1")
-    mssql = MssqlAlchemyPersistor(
-        sql="./sql/mssql",
-        tables=",".join(("foo", "bar", "baz")),
-        uri="mssql+pymssql://mssql?test",
-    )
-    return {
-        "model": model,
-        "mssql": mssql,
-    }
-
-
-def mssql_alchemy_mixin_parser_kwargs():
-    """Return mssql alchemy mixin parser kwargs."""
-    config_path = "./config.json"
-    config: Dict[str, Any] = {
-        "mssql-sql": "./sql/mssql",
-        "mssql-tables": "foo,bar,baz",
-    }
-    dump_json_file(config, config_path)
-
-    model = Model(name="test", version="0.0.1")
-    model_path = "./model.pkl"
-    dump_pickle_file(model, model_path)
-
-    mssql_sql = "./sql/mssql"
-    mssql_tables = ",".join(("foo", "bar", "baz"))
-    mssql_uri = "mssql+pymssql://mssql?test"
-
-    argv = [
-        "--config",
-        config_path,
-        "--model",
-        model_path,
-        "--mssql-sql",
-        mssql_sql,
-        "--mssql-tables",
-        mssql_tables,
-        "--mssql-uri",
-        mssql_uri,
-    ]
-    parser = ArgumentParser()
-    return {"argv": argv, "parser": parser}
-
-
-@mark.skipif(
-    version_info >= (3, 8), reason="pymssql not supported >= python 3.8"
-)
-@mark.parametrize(
-    "kwargs",
-    (
-        mssql_alchemy_mixin_kwargs(),
-        mssql_alchemy_mixin_parser_kwargs(),
-    ),
-)
-def test_mssql_alchemy_mixin(kwargs: Dict[str, Any]) -> None:
-    """Test mssql alchemy mixin."""
-
-    class _Service(MssqlAlchemyMixin, ModelMixin, Service):
-        def __init__(self, **kwargs):
-            pipeline = (_Extract, _Transform, _Predict)
-            super().__init__(pipeline=pipeline, **kwargs)
-
-    service = _Service(**kwargs)
-    assert service.mssql.__class__ is MssqlAlchemyPersistor
 
 
 def mixin_kwargs():

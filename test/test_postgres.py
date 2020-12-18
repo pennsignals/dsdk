@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from os import environ
 from typing import Any, Generator
 
-from pandas import DataFrame
+from pandas import DataFrame, read_sql_query
 
 from dsdk import Batch, PostgresPersistor, configure_logger
 from dsdk.dependency import namespace_directory
@@ -140,7 +140,7 @@ where
     persistor = Persistor()
     model_batch = ModelBatch(model_version="1.0.0", parent=batch)
     with persistor.open_run(parent=model_batch) as run:
-        df = DataFrame(data=data, columns=in_columns)
+        df = DataFrame(data=list(data), columns=in_columns)
         df.set_index("subject_id")
         df["score"] = ~df["is_mineral"] * (
             (df["is_animal"] * df["greenish"])
@@ -150,9 +150,9 @@ where
 
     with persistor.rollback() as cur:
         cur.execute(persistor.sql.schema)
-        cur.execute(check, {"run_id": run.id})
-        out_columns = tuple(d[0] for d in cur.description)
-        df = DataFrame(cur.fetchall(), columns=out_columns)
+        df = read_sql_query(
+            sql=check, con=cur.connection, params={"run_id": run.id}
+        )
         df.set_index("subject_id")
 
     # reorder columns to match run.predictions
