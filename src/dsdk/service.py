@@ -9,7 +9,16 @@ from datetime import date, datetime, tzinfo
 from json import dumps
 from logging import getLogger
 from sys import argv as sys_argv
-from typing import Any, Dict, Generator, Optional, Sequence, Tuple, cast
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generator,
+    Optional,
+    Sequence,
+    Tuple,
+    cast,
+)
 
 from configargparse import ArgParser as ArgumentParser
 from configargparse import Namespace
@@ -227,6 +236,7 @@ class Service:
         pipeline: Optional[Sequence[Task]] = None,
         as_of: Optional[datetime] = None,
         time_zone: Optional[str] = None,
+        batch_cls: Callable = Batch,
     ) -> None:
         """__init__."""
         self.args: Optional[Namespace] = None
@@ -237,6 +247,7 @@ class Service:
         self.duration: Optional[Interval] = None
         self.as_of = as_of
         self.time_zone = time_zone
+        self.batch_cls = batch_cls
         if parser:
             with self.inject_arguments(parser):
                 if not argv:
@@ -347,7 +358,7 @@ class Service:
             self.as_of,
             self.time_zone,
         )
-        yield Batch(
+        yield self.batch_cls(
             as_of=self.as_of,
             duration=self.duration,
             microservice_version=self.VERSION,
