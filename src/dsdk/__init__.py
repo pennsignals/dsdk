@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Data Science Deployment Kit."""
 
-from .dependency import Interval, namespace_directory
+from .dependency import Interval, namespace_directory, now_utc_datetime
 from .model import Mixin as ModelMixin
 from .model import Model
 from .mongo import EvidenceMixin as MongoEvidenceMixin
@@ -50,5 +50,6 @@ __all__ = (
     "load_json_file",
     "load_pickle_file",
     "namespace_directory",
+    "now_utc_datetime",
     "retry",
 )
