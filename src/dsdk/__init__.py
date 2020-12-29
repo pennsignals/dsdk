@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Data Science Deployment Kit."""
 
-from .dependency import namespace_directory
+from .dependency import Interval, namespace_directory
 from .model import Mixin as ModelMixin
 from .model import Model
 from .mongo import EvidenceMixin as MongoEvidenceMixin
@@ -28,6 +28,7 @@ from .utils import (
 __all__ = (
     "Batch",
     "Delegate",
+    "Interval",
     "Model",
     "ModelMixin",
     "MongoMixin",
