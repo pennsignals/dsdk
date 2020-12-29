@@ -187,7 +187,10 @@ create or replace function down()
 returns void as $$
     drop table if exists epic_errors;
     drop table if exists epic_notifications;
+
     drop table if exists features;
+
+    drop trigger if exists predictions_inserted on predictions;
     drop table if exists predictions;
     drop table if exists runs cascade;
     drop table if exists microservices;

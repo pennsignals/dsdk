@@ -5,7 +5,7 @@ from setuptools import find_packages, setup
 
 INSTALL_REQUIRES = (
     "configargparse>=1.2.3",
-    "numpy>=1.17.0",
+    "numpy>=1.15.4",
     "pandas>=0.23.4",
     "pip>=20.2.4",
     "pyyaml>=5.3.1",

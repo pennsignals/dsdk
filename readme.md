@@ -16,10 +16,10 @@ An opinionated library to help deploy data science projects
 
 Setup:
 
-    python3.7 -m venv .env
+    python3.7 -m venv .venv
 
     echo "export POSTGRES_HOST=0.0.0.0" >> .env/bin/activate
-    . .env/bin/activate
+    . .venv/bin/activate
     pip install ".[all]"
     pre-commit install
 
