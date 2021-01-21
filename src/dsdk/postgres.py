@@ -30,7 +30,7 @@ try:
         connect,
     )
     from psycopg2.extras import (
-        DictCursor,
+        RealDictCursor,
         execute_batch,
     )
     from psycopg2.extensions import (
@@ -144,7 +144,7 @@ class Persistor(Messages, BasePersistor):
     def cursor(self, con) -> Generator[Any, None, None]:
         """Yield a cursor that provides dicts."""
         # Replace return type with ContextManager[Any] when mypy is fixed.
-        with con.cursor(cursor_factory=DictCursor) as cur:
+        with con.cursor(cursor_factory=RealDictCursor) as cur:
             yield cur
 
     @contextmanager
