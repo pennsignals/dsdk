@@ -227,8 +227,8 @@ class Service:  # pylint: disable=too-many-instance-attributes
 
     VERSION = __version__
 
-    @contextmanager
     @classmethod
+    @contextmanager
     def context(cls):
         """Context."""
         configure_logger("dsdk")
