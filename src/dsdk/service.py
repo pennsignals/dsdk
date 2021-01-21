@@ -237,22 +237,22 @@ class Service:  # pylint: disable=too-many-instance-attributes
         logger.info(cls.END)
 
     @classmethod
-    def main(cls) -> Batch:
+    def main(cls):
         """Main."""
         with cls.context() as service:
-            return service()
+            service()
 
     @classmethod
-    def create_gold(cls) -> Batch:
+    def create_gold(cls):
         """Create gold."""
         with cls.context() as service:
-            return service.on_create_gold()
+            service.on_create_gold()
 
     @classmethod
-    def validate_gold(cls) -> Batch:
+    def validate_gold(cls):
         """Validate gold."""
         with cls.context() as service:
-            return service.on_validate_gold()
+            service.on_validate_gold()
 
     def __init__(  # pylint: disable=too-many-arguments
         self,
