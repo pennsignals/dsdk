@@ -212,8 +212,8 @@ class Evidence(OrderedDict):
 class Service:  # pylint: disable=too-many-instance-attributes
     """Service."""
 
-    ON = dumps({"key": "main.on"})
-    END = dumps({"key": "main.end"})
+    ON = dumps({"key": "%s.on"})
+    END = dumps({"key": "%s.end"})
     BATCH_OPEN = dumps({"key": "batch.open", "as_of": "%s", "time_zone": "%s"})
     BATCH_CLOSE = dumps({"key": "batch.close"})
     TASK_ON = dumps({"key": "task.on", "task": "%s"})
@@ -229,29 +229,29 @@ class Service:  # pylint: disable=too-many-instance-attributes
 
     @classmethod
     @contextmanager
-    def context(cls):
+    def context(cls, key: str):
         """Context."""
         configure_logger("dsdk")
-        logger.info(cls.ON)
+        logger.info(cls.ON, key)
         yield cls(parser=ArgumentParser())
-        logger.info(cls.END)
+        logger.info(cls.END, key)
 
     @classmethod
     def main(cls):
         """Main."""
-        with cls.context() as service:
+        with cls.context("main") as service:
             service()
 
     @classmethod
     def create_gold(cls):
         """Create gold."""
-        with cls.context() as service:
+        with cls.context("create_gold") as service:
             service.on_create_gold()
 
     @classmethod
     def validate_gold(cls):
         """Validate gold."""
-        with cls.context() as service:
+        with cls.context("validate_gold") as service:
             service.on_validate_gold()
 
     def __init__(  # pylint: disable=too-many-arguments
