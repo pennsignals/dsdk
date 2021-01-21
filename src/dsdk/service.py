@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import pickle
 from collections import OrderedDict
 from contextlib import contextmanager
 from datetime import date, datetime, tzinfo
@@ -208,26 +209,50 @@ class Evidence(OrderedDict):
         super().__setitem__(key, value)
 
 
-class Service:
+class Service:  # pylint: disable=too-many-instance-attributes
     """Service."""
 
     ON = dumps({"key": "main.on"})
     END = dumps({"key": "main.end"})
+    BATCH_OPEN = dumps({"key": "batch.open", "as_of": "%s", "time_zone": "%s"})
+    BATCH_CLOSE = dumps({"key": "batch.close"})
     TASK_ON = dumps({"key": "task.on", "task": "%s"})
     TASK_END = dumps({"key": "task.end", "task": "%s"})
     PIPELINE_ON = dumps({"key": "pipeline.on", "pipeline": "%s"})
     PIPELINE_END = dumps({"key": "pipeline.end", "pipeline": "%s"})
+    COUNT = dumps(
+        {"key": "validate.count", "scores": "%s", "test": "%s", "status": "%s"}
+    )
+    MATCH = dumps({"key": "validate.match", "status": "%s"})
 
     VERSION = __version__
 
+    @contextmanager
     @classmethod
-    def main(cls):
-        """Main."""
+    def context(cls):
+        """Context."""
         configure_logger("dsdk")
         logger.info(cls.ON)
-        service = cls(parser=ArgumentParser())
-        _ = service()
+        yield cls(parser=ArgumentParser())
         logger.info(cls.END)
+
+    @classmethod
+    def main(cls) -> Batch:
+        """Main."""
+        with cls.context() as service:
+            return service()
+
+    @classmethod
+    def create_gold(cls) -> Batch:
+        """Create gold."""
+        with cls.context() as service:
+            return service.on_create_gold()
+
+    @classmethod
+    def validate_gold(cls) -> Batch:
+        """Validate gold."""
+        with cls.context() as service:
+            return service.on_validate_gold()
 
     def __init__(  # pylint: disable=too-many-arguments
         self,
@@ -235,12 +260,14 @@ class Service:
         parser: Optional[ArgumentParser] = None,
         pipeline: Optional[Sequence[Task]] = None,
         as_of: Optional[datetime] = None,
+        gold: Optional[str] = None,
         time_zone: Optional[str] = None,
         batch_cls: Callable = Batch,
     ) -> None:
         """__init__."""
         self.args: Optional[Namespace] = None
         self.parser = parser
+        self.gold = gold
 
         # inferred type of self.pipeline must not be optional...
         self.pipeline = cast(Sequence[Task], pipeline)
@@ -321,6 +348,13 @@ class Service:
             type=inject_utc_non_naive_datetime("as_of", kwargs),
         )
         parser.add(
+            "-g",
+            "--gold",
+            help="gold validation file",
+            env_var="GOLD",
+            type=inject_str("gold", kwargs),
+        )
+        parser.add(
             "-t",
             "--time-zone",
             help="time_zone",
@@ -330,6 +364,7 @@ class Service:
 
         yield
 
+        self.gold = kwargs.get("gold")
         self.as_of = kwargs.get("as_of")
         self.time_zone = kwargs.get("time_zone")
 
@@ -347,8 +382,71 @@ class Service:
         dependency = cls(**kwargs)
         setattr(self, key, dependency)
 
-    BATCH_OPEN = dumps({"key": "batch.open", "as_of": "%s", "time_zone": "%s"})
-    BATCH_CLOSE = dumps({"key": "batch.close"})
+    def on_create_gold(self) -> Batch:
+        """On create gold."""
+        path = self.gold
+        assert path is not None
+
+        run = self()
+
+        scores = self.scores(run.id)
+        n_scores = scores.shape[0]
+        logger.info("Write %s scores to %s", n_scores, path)
+        with open(path, "wb") as fout:
+            pickle.dump(
+                {
+                    "as_of": run.as_of,
+                    "microservice_version": self.VERSION,
+                    # pylint: disable=no-member
+                    "model_version": self.model.version,  # type: ignore
+                    "scores": scores,
+                    "time_zone": run.time_zone,
+                },
+                fout,
+            )
+        return run
+
+    def on_validate_gold(self) -> Batch:
+        """On validate gold."""
+        path = self.gold
+        assert path is not None
+
+        with open(path, "rb") as fin:
+            gold = pickle.load(fin)
+
+        # just set as_of and time_zone from gold
+        # do not trust that config parameters match
+        self.as_of = gold["as_of"]
+        self.time_zone = gold["time_zone"]
+        scores = gold["scores"]
+        n_scores = scores.shape[0]
+
+        run = self()
+
+        test = self.scores(run.id)
+        n_test = test.shape[0]
+
+        n_tests = 0
+        n_passes = 0
+
+        n_tests += 1
+        try:
+            assert n_scores == n_test
+            logger.info(self.COUNT, n_scores, n_test, "pass")
+            n_passes += 1
+        except AssertionError:
+            logger.error(self.COUNT, n_scores, n_test, "FAIL")
+
+        n_tests += 1
+        try:
+            assert (scores == test).all()
+            logger.info(self.MATCH, "pass")
+            n_passes += 1
+        except AssertionError:
+            logger.error(self.MATCH, "FAIL")
+
+        assert n_tests == n_passes
+        return run
 
     @contextmanager
     def open_batch(self) -> Generator[Any, None, None]:
@@ -365,6 +463,10 @@ class Service:
             time_zone=self.time_zone,
         )
         logger.info(self.BATCH_CLOSE)
+
+    def scores(self, run_id):
+        """Get scores."""
+        raise NotImplementedError()
 
 
 class Task:  # pylint: disable=too-few-public-methods

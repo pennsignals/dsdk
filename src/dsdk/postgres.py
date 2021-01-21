@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, Dict, Generator, Type, cast
 
 from configargparse import ArgParser as ArgumentParser
 from numpy import integer
-from pandas import DataFrame, NaT, isna
+from pandas import DataFrame, NaT, Series, isna
 
 from .dependency import Interval, StubException
 from .persistor import Persistor as BasePersistor
@@ -201,6 +201,17 @@ class Persistor(Messages, BasePersistor):
             dbname=self.database,
         )
 
+    def scores(self, run_id) -> Series:
+        """Return scores series."""
+        sql = self.sql
+        with self.rollback() as cur:
+            cur.execute(sql.schema)
+            return self.df_from_query(
+                cur,
+                sql.predictions.gold,
+                {"run_id": run_id},
+            ).score.values  # pylint: disable=no-member
+
     def store_evidence(self, run: Any, *args, **kwargs) -> None:
         """Store evidence."""
         sql = self.sql
@@ -287,6 +298,10 @@ class Mixin(BaseMixin):
         with self.postgres_cls.configure(self, parser):
             with super().inject_arguments(parser):
                 yield
+
+    def scores(self, run_id) -> Series:
+        """Get scores."""
+        return self.postgres.scores(run_id)
 
 
 class Run(Delegate):
