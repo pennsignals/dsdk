@@ -18,9 +18,7 @@ class Persistor(PostgresPersistor):
     """Persistor."""
 
     def __init__(
-        self,
-        env=None,
-        **kwargs,
+        self, env=None, **kwargs,
     ):
         """__init__."""
         if env is None:

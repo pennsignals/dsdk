@@ -294,10 +294,7 @@ class Service:  # pylint: disable=too-many-instance-attributes
             if batch.time_zone is None:
                 batch.time_zone = "America/New_York"
             if batch.duration is None:
-                batch.duration = Interval(
-                    on=batch.as_of,
-                    end=None,
-                )
+                batch.duration = Interval(on=batch.as_of, end=None,)
 
             logger.info(self.PIPELINE_ON, self.__class__.__name__)
             for task in self.pipeline:
@@ -452,9 +449,7 @@ class Service:  # pylint: disable=too-many-instance-attributes
     def open_batch(self) -> Generator[Any, None, None]:
         """Open batch."""
         logger.info(
-            self.BATCH_OPEN,
-            self.as_of,
-            self.time_zone,
+            self.BATCH_OPEN, self.as_of, self.time_zone,
         )
         yield self.batch_cls(
             as_of=self.as_of,

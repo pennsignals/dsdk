@@ -59,9 +59,7 @@ try:
 
     try:
         # pylint: disable=ungrouped-imports
-        from pandas._libs.missing import (
-            NAType,
-        )
+        from pandas._libs.missing import NAType
 
         # new version of pandas with a proper
         # NA type for int.
@@ -158,10 +156,7 @@ class Persistor(Messages, BasePersistor):
             cur.execute(sql.runs.open, columns)
             for row in cur:
                 run = Run(
-                    row["id"],
-                    row["microservice_id"],
-                    row["model_id"],
-                    parent,
+                    row["id"], row["microservice_id"], row["model_id"], parent,
                 )
                 parent.as_of = row["as_of"]
                 duration = row["duration"]
@@ -207,9 +202,7 @@ class Persistor(Messages, BasePersistor):
         with self.rollback() as cur:
             cur.execute(sql.schema)
             return self.df_from_query(
-                cur,
-                sql.predictions.gold,
-                {"run_id": run_id},
+                cur, sql.predictions.gold, {"run_id": run_id},
             ).score.values  # pylint: disable=no-member
 
     def store_evidence(self, run: Any, *args, **kwargs) -> None:
@@ -232,18 +225,11 @@ class Persistor(Messages, BasePersistor):
                     f"Missing sql/postgres/{key}/insert.sql"
                 ) from e
             self._store_df(
-                schema,
-                insert,
-                run_id,
-                df[list(set(df.columns) - exclude)],
+                schema, insert, run_id, df[list(set(df.columns) - exclude)],
             )
 
     def _store_df(
-        self,
-        schema: str,
-        insert: str,
-        run_id: int,
-        df: DataFrame,
+        self, schema: str, insert: str, run_id: int, df: DataFrame,
     ):
         df["run_id"] = run_id
         out = df.to_dict("records")
@@ -251,9 +237,7 @@ class Persistor(Messages, BasePersistor):
             with self.commit() as cur:
                 cur.execute(schema)
                 execute_batch(
-                    cur,
-                    insert,
-                    out,
+                    cur, insert, out,
                 )
         except DatabaseError as e:
             enumeration = enumerate(out)
@@ -278,11 +262,7 @@ class Mixin(BaseMixin):
     """Mixin."""
 
     def __init__(
-        self,
-        *,
-        postgres=None,
-        postgres_cls: Type = Persistor,
-        **kwargs,
+        self, *, postgres=None, postgres_cls: Type = Persistor, **kwargs,
     ):
         """__init__."""
         self.postgres = cast(Persistor, postgres)
@@ -308,11 +288,7 @@ class Run(Delegate):
     """Run."""
 
     def __init__(  # pylint: disable=too-many-arguments
-        self,
-        id_: int,
-        microservice_id: str,
-        model_id: str,
-        parent: Any,
+        self, id_: int, microservice_id: str, model_id: str, parent: Any,
     ):
         """__init__."""
         super().__init__(parent)

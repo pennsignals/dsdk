@@ -50,10 +50,7 @@ class AbstractPersistor:
 
     @classmethod
     def df_from_query(
-        cls,
-        cur,
-        query: str,
-        parameters: Optional[Dict[str, Any]],
+        cls, cur, query: str, parameters: Optional[Dict[str, Any]],
     ) -> DataFrame:
         """Return DataFrame from query."""
         if parameters is None:

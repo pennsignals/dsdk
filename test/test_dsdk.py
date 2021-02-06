@@ -60,9 +60,7 @@ def test_batch_evidence():
 def mongo_mixin_kwargs() -> Dict[str, Any]:
     """Return mongo mixin kwargs."""
     model = Model(name="test", version="0.0.1")
-    mongo = MongoPersistor(
-        uri="mongodb://mongo/database?authsource=admin",
-    )
+    mongo = MongoPersistor(uri="mongodb://mongo/database?authsource=admin",)
 
     return {"model": model, "mongo": mongo}
 

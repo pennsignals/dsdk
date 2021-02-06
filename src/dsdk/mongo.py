@@ -54,27 +54,14 @@ class Messages:  # pylint: disable=too-few-public-methods
     )
 
     INSERT_ONE = dumps(
-        {
-            "collection": "%s.%s",
-            "id": "%s",
-            "key": f"{KEY}.insert_one",
-        }
+        {"collection": "%s.%s", "id": "%s", "key": f"{KEY}.insert_one"}
     )
 
     INSERT_MANY = dumps(
-        {
-            "collection": "%s.%s",
-            "key": f"{KEY}.insert_many",
-            "value": "%s",
-        }
+        {"collection": "%s.%s", "key": f"{KEY}.insert_many", "value": "%s"}
     )
 
-    UPDATE_ONE = dumps(
-        {
-            "collection": "%s.%s",
-            "key": f"{KEY}.update_one",
-        }
-    )
+    UPDATE_ONE = dumps({"collection": "%s.%s", "key": f"{KEY}.update_one"})
 
 
 class Persistor(Messages):
@@ -215,9 +202,7 @@ class Persistor(Messages):
         """Update one with retry."""
         result = collection.update_one(key, doc)
         logger.info(
-            self.UPDATE_ONE,
-            collection.database.name,
-            collection.name,
+            self.UPDATE_ONE, collection.database.name, collection.name,
         )
         return result
 
@@ -240,8 +225,7 @@ class Mixin(BaseMixin):
 
     @contextmanager
     def inject_arguments(
-        self,
-        parser: ArgumentParser,
+        self, parser: ArgumentParser,
     ) -> Generator[None, None, None]:
         """Inject arguments."""
         # Replace return type with ContextManager[None] when mypy is fixed.
