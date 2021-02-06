@@ -70,6 +70,7 @@ begin
         $function$ language plpgsql;
     exception when duplicate_function then
     end;
+
     if not install('patch'::varchar, array[]::varchar[]) then
         return;
     end if;
@@ -84,6 +85,7 @@ begin
     if not uninstall('patch'::varchar) then
         return;
     end if;
+
     drop table patch_requires;
     drop table patches;
 end;
@@ -291,6 +293,7 @@ begin
 end;
 $$ language plpgsql;
 
+
 create or replace function down_epic()
 returns void as
 $$
@@ -303,7 +306,6 @@ begin
     drop table epic_notifications;
 end;
 $$ language plpgsql;
-
 
 
 create or replace function up()
