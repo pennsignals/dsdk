@@ -1,3 +1,5 @@
 FROM timescale/timescaledb-postgis:latest-pg11 as postgres
-ENV IMAGE postgres
-COPY ./sql/*.sql /docker-entrypoint-initdb.d/
+LABEL name=postgres
+COPY ./docker-entrypoint.sh /usr/local/bin/
+COPY ./sql/initdb.d/*.sql /docker-entrypoint-initdb.d/
+COPY ./sql/patchdb.d/*.sql /docker-entrypoint-patchdb.d/

@@ -33,4 +33,4 @@ services:
     stop_signal: SIGINT
     volumes:
     - postgres-data:/var/lib/postgresql/data
-    - ./secrets:/secrets:ro
+    - ./postgres/sql/patchdb.d:/docker-entrypoint-patchdb.d
