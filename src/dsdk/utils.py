@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from functools import wraps
 from json import dump as json_dump
 from json import load as json_load
@@ -10,8 +11,9 @@ from logging import INFO, Formatter, StreamHandler, getLogger
 from pickle import dump as pickle_dump
 from pickle import load as pickle_load
 from sys import stdout
+from time import perf_counter_ns
 from time import sleep as default_sleep
-from typing import Any, Callable, Sequence
+from typing import Any, Callable, Generator, Sequence
 
 logger = getLogger(__name__)
 
@@ -67,6 +69,19 @@ def load_pickle_file(path: str) -> object:
     """Load pickle from file."""
     with open(path, "rb") as fin:
         return pickle_load(fin)
+
+
+@contextmanager
+def profile(key: str) -> Generator[Any, None, None]:
+    """Profile."""
+    # Replace return type with ContextManager[Any] when mypy is fixed.
+    begin = perf_counter_ns()
+    logger.info('{"key": "%s.begin", "ns": "%s"}', key, begin)
+    yield
+    end = perf_counter_ns()
+    logger.info(
+        '{"key": "%s.end", "ns": "%s", "elapsed": "%s"}', key, end, end - begin
+    )
 
 
 def retry(

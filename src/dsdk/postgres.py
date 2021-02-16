@@ -29,10 +29,7 @@ try:
         OperationalError,
         connect,
     )
-    from psycopg2.extras import (
-        RealDictCursor,
-        execute_batch,
-    )
+    from psycopg2.extras import execute_batch
     from psycopg2.extensions import (
         register_adapter,
         ISQLQuote,
@@ -139,13 +136,6 @@ class Persistor(Messages, BasePersistor):
             logger.info(self.CLOSE)
 
     @contextmanager
-    def cursor(self, con) -> Generator[Any, None, None]:
-        """Yield a cursor that provides dicts."""
-        # Replace return type with ContextManager[Any] when mypy is fixed.
-        with con.cursor(cursor_factory=RealDictCursor) as cur:
-            yield cur
-
-    @contextmanager
     def open_run(self, parent: Any) -> Generator[Run, None, None]:
         """Open batch."""
         # Replace return type with ContextManager[Run] when mypy is fixed.
@@ -155,15 +145,21 @@ class Persistor(Messages, BasePersistor):
             cur.execute(sql.schema)
             cur.execute(sql.runs.open, columns)
             for row in cur:
-                run = Run(
-                    row["id"], row["microservice_id"], row["model_id"], parent,
-                )
-                parent.as_of = row["as_of"]
-                duration = row["duration"]
+                (
+                    id_,
+                    microservice_id,
+                    model_id,
+                    duration,
+                    as_of,
+                    time_zone,
+                    *_,
+                ) = row
+                run = Run(id_, microservice_id, model_id, parent,)
+                parent.as_of = as_of
                 parent.duration = Interval(
                     on=duration.lower, end=duration.upper
                 )
-                parent.time_zone = row["time_zone"]
+                parent.time_zone = time_zone
                 break
 
         yield run
@@ -181,7 +177,7 @@ class Persistor(Messages, BasePersistor):
                 )
             cur.execute(sql.runs.close, {"id": run.id})
             for row in cur:
-                duration = row["duration"]
+                _, _, _, duration, _, _, *_ = row
                 run.duration = Interval(on=duration.lower, end=duration.upper)
                 break
 
