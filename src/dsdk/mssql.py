@@ -101,13 +101,6 @@ class Persistor(Messages, BasePersistor):
             con.close()
             logger.info(self.CLOSE)
 
-    @contextmanager
-    def cursor(self, con) -> Generator[Any, None, None]:
-        """Yield cursor that provides dicts."""
-        # Replace return type with ContextManager[Any] when mypy is fixed.
-        with con.cursor(as_dict=True) as cur:
-            yield cur
-
 
 class Mixin(BaseMixin):
     """Mixin."""

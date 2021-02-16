@@ -56,8 +56,14 @@ class AbstractPersistor:
         if parameters is None:
             parameters = {}
         cur.execute(query, parameters)
+        columns = (each[0] for each in cur.description)
         rows = cur.fetchall()
-        return DataFrame(rows)
+        if rows:
+            df = DataFrame(rows)
+            df.columns = columns
+        else:
+            df = DataFrame(columns=columns)
+        return df
 
     @classmethod
     def df_from_query_by_ids(  # pylint: disable=too-many-arguments
@@ -72,11 +78,19 @@ class AbstractPersistor:
         if parameters is None:
             parameters = {}
         dfs = []
+        columns = None
+        chunk = None
         for chunk in chunks(ids, size):
             cur.execute(query, {"ids": chunk, **parameters})
             rows = cur.fetchall()
-            dfs.append(DataFrame(rows))
-        return concat(dfs, ignore_index=True)
+            if rows:
+                dfs.append(DataFrame(rows))
+        if chunk is None:
+            raise ValueError("Parameter ids must not be empty")
+        columns = (each[0] for each in cur.description)
+        df = concat(dfs, ignore_index=True)
+        df.columns = columns
+        return df
 
     def __init__(self, sql: Namespace, tables: Tuple[str, ...]):
         """__init__."""
@@ -93,7 +107,7 @@ class AbstractPersistor:
                 logger.info(self.EXTANT, statement)
                 cur.execute(statement)
                 for row in cur:
-                    n = row["n"]
+                    n, *_ = row
                     assert n == 1
                     continue
             except exceptions:
@@ -125,10 +139,11 @@ class AbstractPersistor:
         raise NotImplementedError()
 
     @contextmanager
-    def cursor(self, con):
+    def cursor(self, con):  # pylint: disable=no-self-use
         """Yield a cursor that provides dicts."""
         # Replace return type with ContextManager[Any] when mypy is fixed.
-        raise NotImplementedError()
+        with con.cursor() as cursor:
+            yield cursor
 
     def extant(self, table: str) -> str:
         """Return extant table sql."""

@@ -15,7 +15,7 @@ INSTALL_REQUIRES = (
 
 PYMONGO_REQUIRES = ("pymongo>=3.11.0",)
 
-PYMSSQL_REQUIRES = ("cython>=0.29.21", "pymssql==2.1.5")
+PYMSSQL_REQUIRES = ("cython>=0.29.21", "pymssql>=2.1.4")
 
 PSYCOPG2_REQUIRES = ("psycopg2-binary>=2.8.6",)
 

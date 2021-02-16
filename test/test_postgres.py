@@ -94,7 +94,8 @@ def test_cursor():
     with persistor.rollback() as cur:
         cur.execute("""select 1 as n""")
         for row in cur.fetchall():
-            assert row["n"] == 1
+            n, *_ = row
+            assert n == 1
 
 
 def test_open_run(
