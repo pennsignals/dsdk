@@ -66,7 +66,7 @@ class Persistor(Messages, BasePersistor):
                 logger.info(self.EXTANT, statement)
                 cur.execute(statement)
                 for row in cur:
-                    n = row["n"]
+                    n, *_ = row
                     assert n == 1
                     continue
             # pylint: disable=catching-non-exception
