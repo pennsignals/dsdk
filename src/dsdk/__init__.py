@@ -51,6 +51,7 @@ __all__ = (
     "load_json_file",
     "load_pickle_file",
     "namespace_directory",
+    "profile",
     "now_utc_datetime",
     "retry",
 )
