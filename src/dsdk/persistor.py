@@ -117,7 +117,9 @@ class AbstractPersistor:
             key: cls.union_all(cur, sequence) for key, sequence in keys.items()
         }
         query = query.format(**keys)
-        logger.info(query)
+        with open("tmp.sql") as fout:
+            fout.write(cls.mogrify(cur, query, parameters).decode("utf-8"))
+
         cur.execute(query, parameters)
         rows = cur.fetchall()
         df = DataFrame(rows)

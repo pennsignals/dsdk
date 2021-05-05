@@ -59,7 +59,7 @@ class Persistor(Messages, BasePersistor):
     @classmethod
     def mogrify(cls, cur, query: str, parameters: Any,) -> bytes:
         """Safely mogrify parameters into query or fragment."""
-        return _mssql.substitute_params(query, parameters)
+        return _mssql.substitute_params(query, parameters)  # type: ignore
 
     def check(self, cur, exceptions=(DatabaseError, InterfaceError)):
         """check."""
