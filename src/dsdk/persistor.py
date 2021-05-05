@@ -116,6 +116,8 @@ class AbstractPersistor:
         keys = {
             key: cls.union_all(cur, sequence) for key, sequence in keys.items()
         }
+        for key, value in keys.items():
+            logger.info("%s: %s", key, value)
         query = query.format(keys)
         cur.execute(query, parameters)
         rows = cur.fetchall()
