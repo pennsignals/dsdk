@@ -114,7 +114,7 @@ class AbstractPersistor:
         if parameters is None:
             parameters = {}
         keys = {
-            key: cls.union_all(cur, values) for key, values in keys.items()
+            key: cls.union_all(cur, sequence) for key, sequence in keys.items()
         }
         query = query.format(keys)
         cur.execute(query, parameters)
