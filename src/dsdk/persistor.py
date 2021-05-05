@@ -113,11 +113,10 @@ class AbstractPersistor:
             keys = {}
         if parameters is None:
             parameters = {}
-        logger.info("%s", tuple(keys.keys()))
         keys = {
             key: cls.union_all(cur, sequence) for key, sequence in keys.items()
         }
-        query = query.format(keys)
+        query = query.format(**keys)
         cur.execute(query, parameters)
         rows = cur.fetchall()
         df = DataFrame(rows)
