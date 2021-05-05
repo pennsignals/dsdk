@@ -7,7 +7,7 @@ from abc import ABC
 from contextlib import contextmanager
 from json import dumps
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Dict, Generator, Type, cast
+from typing import TYPE_CHECKING, Any, Dict, Generator, Sequence, Type, cast
 
 from configargparse import ArgParser as ArgumentParser
 from numpy import integer
@@ -116,6 +116,17 @@ class Messages:  # pylint: disable=too-few-public-methods
 
 class Persistor(Messages, BasePersistor):
     """Persistor."""
+
+    @classmethod
+    def union_all(cls, cur, keys: Sequence[Any],) -> str:
+        """Return 'union all select %s...' clause."""
+        union = "".join("    union all select %s\n" for _ in keys)
+        union = cur.mogrify(union, keys)
+        # in case the mogrified strings have %
+        # mistaken for python placeholders
+        # when mogrified twice.
+        union = union.replace("%", "%%")
+        return union
 
     def check(self, cur, exceptions=(DatabaseError, InterfaceError)):
         """Check."""

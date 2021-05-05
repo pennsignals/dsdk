@@ -80,6 +80,11 @@ class AbstractPersistor:
         dfs = []
         columns = None
         chunk = None
+        # The sql 'in (<item, ...>)' used for ids is problematic
+        # - limit on the number of items
+        # - hard query plan
+        # - renders as multiple 'or' after query planning
+        # - poor performance
         for chunk in chunks(ids, size):
             cur.execute(query, {"ids": chunk, **parameters})
             rows = cur.fetchall()
@@ -91,6 +96,38 @@ class AbstractPersistor:
         df = concat(dfs, ignore_index=True)
         df.columns = columns
         return df
+
+    @classmethod
+    def df_from_query_by_keys(
+        cls,
+        cur,
+        query: str,
+        keys: Dict[str, Sequence[Any]] = None,
+        parameters: Optional[Dict[str, Any]] = None,
+    ) -> DataFrame:
+        """Return df from query by key sequences and parameters.
+
+        Query is expected to use {name} for keys and %(name)s for parameters.
+        """
+        if keys is None:
+            keys = {}
+        if parameters is None:
+            parameters = {}
+        keys = {
+            key: cls.union_all(cur, values) for key, values in keys.items()
+        }
+        query = query.format(keys)
+        cur.execute(query, parameters)
+        rows = cur.fetchall()
+        df = DataFrame(rows)
+        columns = (each[0] for each in cur.description)
+        df.columns = columns
+        return df
+
+    @classmethod
+    def union_all(cls, cur, keys: Sequence[Any],) -> str:
+        """Return 'union all select %s...' clause."""
+        raise NotImplementedError()
 
     def __init__(self, sql: Namespace, tables: Tuple[str, ...]):
         """__init__."""
