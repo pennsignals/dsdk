@@ -117,7 +117,7 @@ class AbstractPersistor:
             key: cls.union_all(cur, sequence) for key, sequence in keys.items()
         }
         query = query.format(**keys)
-        with open("tmp.sql") as fout:
+        with open("tmp.sql", "w") as fout:
             fout.write(cls.mogrify(cur, query, parameters).decode("utf-8"))
 
         cur.execute(query, parameters)
