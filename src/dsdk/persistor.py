@@ -136,7 +136,7 @@ class AbstractPersistor:
     def union_all(cls, cur, keys: Sequence[Any],) -> str:
         """Return 'union all select %s...' clause."""
         parameters = tuple(keys)
-        union = "".join("    union all select %s\n" for _ in parameters)
+        union = "\n    ".join("union all select %s" for _ in parameters)
         union = cls.mogrify(cur, union, parameters).decode("utf-8")
         # in case the mogrified strings have %
         # mistaken for python placeholders
