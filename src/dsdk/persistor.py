@@ -117,6 +117,7 @@ class AbstractPersistor:
             key: cls.union_all(cur, sequence) for key, sequence in keys.items()
         }
         query = query.format(**keys)
+        logger.info(query)
         cur.execute(query, parameters)
         rows = cur.fetchall()
         df = DataFrame(rows)
@@ -125,9 +126,21 @@ class AbstractPersistor:
         return df
 
     @classmethod
+    def mogrify(cls, cur, query: str, parameters: Any,) -> bytes:
+        """Safely mogrify parameters into query or fragment."""
+        raise NotImplementedError()
+
+    @classmethod
     def union_all(cls, cur, keys: Sequence[Any],) -> str:
         """Return 'union all select %s...' clause."""
-        raise NotImplementedError()
+        parameters = tuple(keys)
+        union = "".join("    union all select %s\n" for _ in parameters)
+        union = cls.mogrify(cur, union, parameters).decode("utf-8")
+        # in case the mogrified strings have %
+        # mistaken for python placeholders
+        # when mogrified twice.
+        union = union.replace("%", "%%")
+        return union
 
     def __init__(self, sql: Namespace, tables: Tuple[str, ...]):
         """__init__."""
