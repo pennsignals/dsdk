@@ -121,7 +121,7 @@ class Persistor(Messages, BasePersistor):
     def union_all(cls, cur, keys: Sequence[Any],) -> str:
         """Return 'union all select %s...' clause."""
         union = "".join("    union all select %s\n" for _ in keys)
-        union = cur.mogrify(union, keys)
+        union = cur.mogrify(union, keys).decode("utf-8")
         # in case the mogrified strings have %
         # mistaken for python placeholders
         # when mogrified twice.
