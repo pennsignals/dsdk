@@ -119,7 +119,7 @@ class AbstractPersistor:
         }
         query = query.format(**keys)
         rendered = cls.mogrify(cur, query, parameters).decode("utf-8")
-        with NamedTemporaryFile("w", delete="false", suffix=".sql") as fout:
+        with NamedTemporaryFile("w", delete=False, suffix=".sql") as fout:
             fout.write(rendered)
         cur.execute(rendered)
         rows = cur.fetchall()
