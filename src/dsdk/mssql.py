@@ -68,7 +68,8 @@ class Persistor(Messages, BasePersistor):
         for table in self.tables:
             try:
                 statement = self.extant(table)
-                logger.info(self.EXTANT, statement)
+                logger.info(self.EXTANT, table)
+                logger.debug(self.EXTANT, statement)
                 cur.execute(statement)
                 for row in cur:
                     n, *_ = row
