@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from json import dumps
 from logging import getLogger
 from re import compile as re_compile
+from tempfile import NamedTemporaryFile
 from typing import Any, Dict, Generator, Optional, Sequence, Tuple
 
 from pandas import DataFrame, concat
@@ -118,7 +119,7 @@ class AbstractPersistor:
         }
         query = query.format(**keys)
         rendered = cls.mogrify(cur, query, parameters).decode("utf-8")
-        with open("tmp.sql", "w") as fout:
+        with NamedTemporaryFile("w", delete="false", suffix=".sql") as fout:
             fout.write(rendered)
         cur.execute(rendered)
         rows = cur.fetchall()
