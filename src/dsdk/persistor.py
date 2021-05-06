@@ -139,10 +139,6 @@ class AbstractPersistor:
         parameters = tuple(keys)
         union = "\n    ".join("union all select %s" for _ in parameters)
         union = cls.mogrify(cur, union, parameters).decode("utf-8")
-        # in case the mogrified strings have %
-        # mistaken for python placeholders
-        # when mogrified twice.
-        union = union.replace("%", "%%")
         return union
 
     def __init__(self, sql: Namespace, tables: Tuple[str, ...]):
