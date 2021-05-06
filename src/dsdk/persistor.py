@@ -108,7 +108,17 @@ class AbstractPersistor:
     ) -> DataFrame:
         """Return df from query by key sequences and parameters.
 
-        Query is expected to use {name} for keys and %(name)s for parameters.
+        Query is expected to use {name} for key sequences and %(name)s
+        for parameters.
+        The mogrified fragments produced by union_all are mogrified again.
+        There is a chance that python placeholders could be injected py the
+        first pass from sequence data.
+        However, it seems that percent in `'...%s...'` or `'...'%(name)s...'`
+        inside string literals produced from the first mogrification pass are
+        not interpreted as parameter placeholders in the second pass by
+        the pymssql driver.
+        Actual placeholders to by interpolacted by the driver are not
+        inside quotes.
         """
         if keys is None:
             keys = {}
