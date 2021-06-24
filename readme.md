@@ -16,9 +16,9 @@ An opinionated library to help deploy data science projects
 
 Setup:
 
-    python3.7 -m venv .venv
+    python3.9 -m venv .venv
 
-    echo "export POSTGRES_HOST=0.0.0.0" >> .env/bin/activate
+    echo "export POSTGRES_HOST=0.0.0.0" >> .venv/bin/activate
     . .venv/bin/activate
     pip install ".[all]"
     pre-commit install
@@ -26,19 +26,19 @@ Setup:
 Session:
 
     . .env/bin/activate
-    docker-compose -f docker-compose.test.yml up postgres --build &
+    docker-compose up --build postgres &
     ...
     pre-commit run --all-files
     ...
     git commit -m 'Message'
     ...
-    docker-compose -f docker-compose.test.yml down
+    docker-compose down
     deactivate
 
 Rebuild the postgres container and remove the docker volume if the database schema is changed.
 
 ## CI/CD Lint & Test:
 
-    docker-compose -f docker-compose.test.yml up --build
+    docker-compose up --build test &
     ...
-    docker-compose -f docker-compose.test.yml down
+    docker-compose down
