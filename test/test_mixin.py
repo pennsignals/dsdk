@@ -20,6 +20,7 @@ from sys import argv as sys_argv
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Dict,
     Generator,
     Optional,
@@ -85,7 +86,10 @@ class Service:  # pylint: disable=too-few-public-methods
 
         # In this example, the injected parameters here are simple:
         #    because no post parser.parse configuration is needed,
-        #    but this is not necesarily the case, nor desirable.
+        #    but this is not necesarily the case.
+        # Using only one configuration file is not desirable if
+        #    if it is more difficult to validate.
+        # Concider using separate files for tabular configuration.
         # This is particularly true for the mixins.
 
         def _inject_cfg(path: str) -> Dict[str, Any]:
@@ -142,39 +146,72 @@ class ModelMixin(Mixin):  # pylint: disable=too-few-public-methods
         # after parser.parse call
 
 
-class MongoMixin(Mixin):  # pylint: disable=too-few-public-methods
-    """Mongo Mixin."""
+class Postgres:
+    """Postgres."""
 
     def __init__(
-        self, *, i: int = 0, mongo_uri: Optional[str] = None, **kwargs
-    ):
+        self,
+        username: str,
+        password: str,
+        host: str,
+        database: str,
+    ) -> None:
         """__init__."""
-        self.mongo_i = i
-        self.mongo_uri = cast(str, mongo_uri)
+        self.username = username
+        self.password = password
+        self.host = host
+        self.database = database
+
+
+class PostgresMixin(Mixin):  # pylint: disable=too-few-public-methods
+    """Postgres Mixin."""
+
+    def __init__(
+        self, *, i, postgres: Optional[Postgres] = None,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        host: Optional[str] = None,
+        database: Optional[str] = None,
+        **kwargs,
+    ) -> None:
+        """__init__."""
+        self.postgres_i = i
+        self.postgres = cast(Postgres, postgres)
         super().__init__(i=i + 1, **kwargs)
 
-        # self.mongo_uri is not optional
-        assert self.mongo_uri is not None
+        # self.model is not optional
+        assert self.postgres is not None
 
     @contextmanager
     def inject_args(
         self, parser: ArgumentParser
     ) -> Generator[None, None, None]:
         """Inject args."""
+        kwargs: Dict[str, Any] = {}
 
-        def _inject_mongo_uri(mongo_uri: str) -> str:
-            self.mongo_uri = mongo_uri
-            return mongo_uri
+        def _inject_str(key: str) -> Callable[str, str]:
+            def _inject(value: str) -> str:
+                kwargs[key] = value
+                return value
+            return _inject
 
-        parser.add_argument("--mongo-uri", type=_inject_mongo_uri)
+        parser.add_argument("--username", type=_inject_str("username"))
+        parser.add_argument("--password", type=_inject_str("password"))
+        parser.add_argument("--host", type=_inject_str("host"))
+        parser.add_argument("--database", type=_inject_str("database"))
+
+        # before parser.parse call
         with super().inject_args(parser):
             yield
+        # after parser.parse call
+
+        self.postgres = Postgres(**kwargs)
 
 
 # Service must be last in inheritence
 #    to ensure mixin methods are all called.
 class App(
-    MongoMixin, ModelMixin, Service
+    PostgresMixin, ModelMixin, Service
 ):  # pylint: disable=too-few-public-methods
     """App."""
 
@@ -185,7 +222,7 @@ class App(
 
         # Assert correct order of initialization
         assert self.app_i == 0
-        assert self.mongo_i == 1
+        assert self.postgres_i == 1
         assert self.model_i == 2
         assert self.service_i == 3
 
@@ -201,10 +238,16 @@ def test_mixin_with_parser():
     argv = [
         "--cfg",
         cfg_path,
-        "--mongo-uri",
-        "mongodb://mongo/test",
         "--model",
         model_path,
+        "--username",
+        "username",
+        "--password",
+        "password",
+        "--host",
+        "host",
+        "--database",
+        "database",
     ]
 
     parser = ArgumentParser()
@@ -215,19 +258,40 @@ def test_mixin_without_parser():
     """Test mixin without parser."""
     model: Dict[str, Any] = {}
     cfg: Dict[str, Any] = {}
-    mongo_uri = ""
+    username = "username"
+    password = "password"
+    host = "host"
+    database = "database"
+    postgres = Postgres(
+        username=username,
+        password=password,
+        host=host,
+        database=database,
+    )
 
-    App(cfg=cfg, model=model, mongo_uri=mongo_uri)
+    App(
+        cfg=cfg,
+        model=model,
+        postgres=postgres,
+    )
 
 
 def test_mixins_are_abstract():
     """Test mixins are abstract."""
     # pylint: disable=abstract-class-instantiated
-    mongo_uri = ""
+    username = "username"
+    password = "password"
+    host = "host"
+    database = "database"
 
     try:
-        MongoMixin(mongo_uri=mongo_uri)
-        raise AssertionError("Ensure MongoMixin is abstract.")
+        PostgresMixin(
+            username=username,
+            password=password,
+            host=host,
+            database=database,
+        )
+        raise AssertionError("Ensure PostgresMixin is abstract.")
     except TypeError:
         pass
 

@@ -1,10 +1,10 @@
 ARG IFLAGS="--quiet --no-cache-dir --user"
 
-FROM python:3.7.7-slim-buster as build
+FROM python:3.9.4-slim-buster as build
 ARG IFLAGS
 WORKDIR /root
 ENV PATH /root/.local/bin:$PATH
-ENV TINI_VERSION v0.16.1
+ENV TINI_VERSION v0.19.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /usr/bin/tini
 COPY freetds.conf /etc/freetds/
 COPY readme.md .

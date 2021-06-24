@@ -1,21 +1,9 @@
 version: "3.8"
 
 volumes:
-  mongo-data:
   postgres-data:
 
 services:
-  mongo:
-    command: [--noauth, --smallfiles, --quiet]
-    expose:
-    - "27017"
-    image: mongo:4.0.19-xenial
-    ports:
-    - "27017:27017"
-    restart: always
-    stop_signal: SIGINT
-    volumes:
-    - mongo-data:/data/db
 
   postgres:
     build:
@@ -34,3 +22,15 @@ services:
     volumes:
     - postgres-data:/var/lib/postgresql/data
     - ./postgres/sql/patchdb.d:/docker-entrypoint-patchdb.d
+
+  test:
+    build:
+      context: .
+      target: test
+    depends_on:
+      - postgres
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_USERNAME=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DATABASE=test
