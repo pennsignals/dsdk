@@ -43,6 +43,9 @@ TEST_REQUIRES = (
     "pylint",
     "pytest",
     "pytest-cov",
+    "types-pkg-resources",
+    "types-python-dateutil",
+    "types-pyyaml",
 )
 
 setup(

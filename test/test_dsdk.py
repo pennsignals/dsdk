@@ -12,15 +12,12 @@ from dsdk import (
     Batch,
     Model,
     ModelMixin,
-    MongoEvidenceMixin,
-    MongoPersistor,
     MssqlMixin,
     MssqlPersistor,
     PostgresMixin,
     PostgresPersistor,
     Service,
     Task,
-    dump_json_file,
     dump_pickle_file,
     namespace_directory,
     retry,
@@ -55,52 +52,6 @@ def test_batch_evidence():
     batch = service()
     assert len(batch.evidence) == 1
     assert batch.evidence["test"] is df
-
-
-def mongo_mixin_kwargs() -> Dict[str, Any]:
-    """Return mongo mixin kwargs."""
-    model = Model(name="test", version="0.0.1")
-    mongo = MongoPersistor(uri="mongodb://mongo/database?authsource=admin",)
-
-    return {"model": model, "mongo": mongo}
-
-
-def mongo_mixin_parser_kwargs() -> Dict[str, Any]:
-    """Mongo mixin with parser."""
-    config_path = "./config.json"
-    config: Dict[str, Any] = {}
-    dump_json_file(config, config_path)
-
-    model = Model(name="test", version="0.0.1")
-    model_path = "./model.pkl"
-    dump_pickle_file(model, model_path)
-
-    mongo_uri = "mongodb://mongo/database?authsource=admin"
-
-    argv = [
-        "--model",
-        model_path,
-        "--mongo-uri",
-        mongo_uri,
-    ]
-    parser = ArgumentParser()
-    return {"argv": argv, "parser": parser}
-
-
-@mark.parametrize(
-    "kwargs", (mongo_mixin_kwargs(), mongo_mixin_parser_kwargs())
-)
-def test_mongo_mixin(kwargs: Dict[str, Any]) -> None:
-    """Test mongo mixin."""
-
-    class _Service(MongoEvidenceMixin, ModelMixin, Service):
-        def __init__(self, **kwargs):
-            pipeline = (_Extract, _Transform, _Predict)
-            super().__init__(pipeline=pipeline, **kwargs)
-
-    service = _Service(**kwargs)
-    assert service.model.__class__ is Model
-    assert service.mongo.__class__ is MongoPersistor
 
 
 def mixin_kwargs():
