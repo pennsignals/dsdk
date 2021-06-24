@@ -146,15 +146,11 @@ class ModelMixin(Mixin):  # pylint: disable=too-few-public-methods
         # after parser.parse call
 
 
-class Postgres:
+class Postgres:  # pylint: disable=too-few-public-methods
     """Postgres."""
 
     def __init__(
-        self,
-        username: str,
-        password: str,
-        host: str,
-        database: str,
+        self, username: str, password: str, host: str, database: str,
     ) -> None:
         """__init__."""
         self.username = username
@@ -167,12 +163,7 @@ class PostgresMixin(Mixin):  # pylint: disable=too-few-public-methods
     """Postgres Mixin."""
 
     def __init__(
-        self, *, i, postgres: Optional[Postgres] = None,
-        username: Optional[str] = None,
-        password: Optional[str] = None,
-        host: Optional[str] = None,
-        database: Optional[str] = None,
-        **kwargs,
+        self, *, i: int = 0, postgres: Optional[Postgres] = None, **kwargs,
     ) -> None:
         """__init__."""
         self.postgres_i = i
@@ -189,10 +180,11 @@ class PostgresMixin(Mixin):  # pylint: disable=too-few-public-methods
         """Inject args."""
         kwargs: Dict[str, Any] = {}
 
-        def _inject_str(key: str) -> Callable[str, str]:
+        def _inject_str(key: str) -> Callable[[str], str]:
             def _inject(value: str) -> str:
                 kwargs[key] = value
                 return value
+
             return _inject
 
         parser.add_argument("--username", type=_inject_str("username"))
@@ -263,16 +255,11 @@ def test_mixin_without_parser():
     host = "host"
     database = "database"
     postgres = Postgres(
-        username=username,
-        password=password,
-        host=host,
-        database=database,
+        username=username, password=password, host=host, database=database,
     )
 
     App(
-        cfg=cfg,
-        model=model,
-        postgres=postgres,
+        cfg=cfg, model=model, postgres=postgres,
     )
 
 
@@ -286,10 +273,7 @@ def test_mixins_are_abstract():
 
     try:
         PostgresMixin(
-            username=username,
-            password=password,
-            host=host,
-            database=database,
+            username=username, password=password, host=host, database=database,
         )
         raise AssertionError("Ensure PostgresMixin is abstract.")
     except TypeError:
