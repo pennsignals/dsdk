@@ -1,6 +1,6 @@
 name: test
 
-on: [push]
+on: push
 
 jobs:
   test:
@@ -12,5 +12,6 @@ jobs:
 
     - name: test
       run: |
-        docker-compose -f docker-compose.test.yml up --exit-code-from test
-        docker-compose -f docker-compose.test.yml down
+        echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
+
+        docker-compose run test
