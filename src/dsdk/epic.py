@@ -1,0 +1,141 @@
+# -*- coding: utf-8 -*-
+"""Epic microservices."""
+
+from logging import getLogger
+from select import select
+from urllib.request import urlopen
+
+logger = getLogger(__name__)
+
+
+class Abstract:
+    """Abstract Service."""
+
+    def __init__(self, postgres, uri, poll_timeout=60, uri_timeout=5) -> None:
+        """__init__."""
+        self.postgres = postgres
+        self.uri = uri
+        self.poll_timeout = poll_timeout
+        self.uri_timeout = uri_timeout
+
+    def listen(self, listen):
+        """Listen."""
+        while True:
+            readers, _, exceptions = select(
+                [listen], [], [], self.poll_timeout
+            )
+            if listen.poll():
+                while listen.notifies:
+                    self.on_notify(listen.notifies.pop())
+
+
+class Notification:
+    """Notification Service."""
+
+    URI = "?".join(
+        (
+            "api/epic/2011/Clinical/Patient/AddFlowsheetValue/FlowsheetValue",
+            "&".join(
+                (
+                    "PatientID=%(empi)s",
+                    "PatientIDType={patient_id_type}",
+                    "ContactID=%(csn)s",
+                    "ContactIDType={contact_id_type}",
+                    "UserID=PENNSIGNALS",
+                    "UserIDType=EXTERNAL",
+                    "FlowsheetID={flowsheet_id}",
+                    "FlowsheetIDType={flowsheet_id_type}",
+                    "Value=%(score)s",
+                    "Comment={comment}",
+                    "InstantValueTaken={instant_value_taken}",
+                    "FlowsheetTemplateID={flowsheet_template_id}",
+                    "FlowsheetTemplateIDType={flowsheet_template_id_type}",
+                )
+            ),
+        )
+    )
+
+    def __init__(
+        self, postgres, uri=URI, poll_timeout=60, uri_timeout=5
+    ) -> None:
+        """__init__."""
+        super().__init__(postgres, uri, poll_timeout, uri_timeout)
+
+    def __call__(self):
+        """__call__."""
+        postgres = self.postgres
+        sql = postgres.sql
+        with postgres.listen(sql.prediction.listen) as listen:
+            with postgres.commit() as cur:
+                self.recover(cur)
+            self.listen(listen)
+
+    def recover(self, cur):
+        """Recover."""
+        sql = self.postgres.sql
+        cur.execute(sql.epic.notification.recover)
+        for each in cur.fetchall():
+            self.call_uri(each, cur)
+
+    def on_notify(self, notify):
+        """On notify."""
+        logger.debug(f"NOTIFY: {notify.pid}.{notify.channel}.{notify.payload}")
+
+    def call_uri(self, prediction, cur):
+        """Call uri."""
+        sql = self.postgres.sql
+        uri = self.uri % {
+            "csn": prediction["csn"],
+            "empi": prediction["empi"],
+            "score": prediction["score"],
+        }
+        response = urlopen(uri, self.timeout)
+        if response.status_code in [200, 201]:
+            cur.execute(
+                sql.epic.notification.insert,
+                {"prediction_id": prediction["id"],},
+            )
+
+
+class Verification:
+    """Verification Service."""
+
+    URI = "api/epic/2014/Clinical/Patient/GetFlowsheetRows/FlowsheetRows"
+
+    @classmethod
+    def main(cls):
+        """__main__."""
+        pass
+
+    def __init__(
+        self, postgres, uri=URI, poll_timeout=60, uri_timeout=5
+    ) -> None:
+        """__init__."""
+        super().__init__(postgres, uri, poll_timeout, uri_timeout)
+
+    def __call__(self):
+        """__call__."""
+        postgres = self.postgres
+        sql = postgres.sql
+        with postgres.listen(sql.notification.listen) as listen:
+            with postgres.commit() as cur:
+                self.recover(cur)
+            self.listen(listen)
+
+    def recover(self, cur):
+        """Recover."""
+        sql = self.postgres.sql
+        cur.execute(sql.epic.verification.recover)
+        for each in cur.fetchall():
+            self.call_uri(each, cur)
+
+    def on_notify(self, notify):
+        """On notify."""
+        logger.debug(f"NOTIFY: {notify.pid}.{notify.channel}.{notify.payload}")
+
+    def call_uri(self, prediction, cur):
+        """Call uri."""
+        sql = self.postgres.sql
+        response = urlopen(self.uri, self.timeout)
+        if response.status_code in [200, 201]:
+            cur.execute(sql.epic.notification.insert, prediction.id)

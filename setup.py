@@ -13,8 +13,6 @@ INSTALL_REQUIRES = (
     "wheel>=0.35.1",
 )
 
-PYMONGO_REQUIRES = ("pymongo>=3.11.0",)
-
 PYMSSQL_REQUIRES = ("cython>=0.29.21", "pymssql>=2.1.4")
 
 PSYCOPG2_REQUIRES = ("psycopg2-binary>=2.8.6",)
@@ -49,13 +47,15 @@ TEST_REQUIRES = (
 )
 
 setup(
+    entry_points={
+        "console_scripts": [
+            "epic-notify = dsdk.epic:Notify.main",
+            "epic-validate = dsdk.epic:Validate.main",
+        ]
+    },
     extras_require={
-        "all": PSYCOPG2_REQUIRES
-        + PYMONGO_REQUIRES
-        + PYMSSQL_REQUIRES
-        + TEST_REQUIRES,
+        "all": PSYCOPG2_REQUIRES + PYMSSQL_REQUIRES + TEST_REQUIRES,
         "psycopg2": PSYCOPG2_REQUIRES,
-        "pymongo": PYMONGO_REQUIRES,
         "pymssql": PYMSSQL_REQUIRES,
         "test": TEST_REQUIRES,
     },

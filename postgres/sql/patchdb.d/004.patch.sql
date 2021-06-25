@@ -1,4 +1,4 @@
-set search_path = dsdk;
+set search_path = example;
 
 
 create or replace function up_patch()
@@ -47,7 +47,9 @@ begin
                 in_id, unnest(in_requires);
             return true;
         end;
-        $function$ language plpgsql;
+        $function$
+            language plpgsql
+            search_path example;
     exception when duplicate_function then
     end;
 
@@ -67,7 +69,9 @@ begin
             delete from patches where id = in_id;
             return true;
         end;
-        $function$ language plpgsql;
+        $function$
+            language plpgsql
+            search_path example;
     exception when duplicate_function then
     end;
 
@@ -75,7 +79,9 @@ begin
         return;
     end if;
 end;
-$$ language plpgsql;
+$$
+    language plpgsql
+    search_path example;
 
 
 create or replace function down_patch()
@@ -89,7 +95,9 @@ begin
     drop table patch_requires;
     drop table patches;
 end;
-$$ language plpgsql;
+$$
+    language plpgsql
+    search_path example;
 
 
 select up_patch();

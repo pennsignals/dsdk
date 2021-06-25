@@ -1,4 +1,4 @@
-set search_path = dsdk;
+set search_path = example;
 
 
 create or replace function up_epic()
@@ -14,26 +14,32 @@ begin
         notified_on timestamptz default statement_timestamp(),
         constraint only_one_epic_notification_per_prediction
             unique (prediction_id),
-        constraint prediction_epic_notifications_required_a_prediction
+        constraint epic_notifications_require_a_prediction
             foreign key (prediction_id) references predictions (id)
             on delete cascade
             on update cascade
     );
+    create trigger epic_notifications_inserted after insert on epic_notifications
+        referencing new table as inserted
+        for each statement
+        execute procedure call_notify();
 
     create table epic_errors (
         id int primary key generated always as identity,
         prediction_id int not null,
         recorded_on timestamptz default statement_timestamp(),
-        acknowledged_on timestamptz default statement_timestamp(),
+        acknowledged_on timestamptz default null,
         error_name varchar,
         error_description varchar,
-        constraint prediction_epic_error_required_a_prediction
+        constraint epic_errors_require_a_prediction
             foreign key (prediction_id) references predictions (id)
             on delete cascade
             on update cascade
     );
 end;
-$$ language plpgsql;
+$$
+    language plpgsql
+    search_path example;
 
 
 create or replace function down_epic()
@@ -47,7 +53,9 @@ begin
     drop table epic_errors;
     drop table epic_notifications;
 end;
-$$ language plpgsql;
+$$
+    language plpgsql
+    search_path example;
 
 
 select up_epic();

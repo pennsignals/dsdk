@@ -1,4 +1,4 @@
-set search_path = dsdk;
+set search_path = example;
 
 
 create or replace function up_private()
@@ -29,7 +29,9 @@ begin
             )
     );
 end;
-$$ language plpgsql;
+$$
+    language plpgsql
+    search_path example;
 
 
 create or replace function down_private()
@@ -41,7 +43,9 @@ begin
 
     drop table features;
 end;
-$$ language plpgsql;
+$$
+    language plpgsql
+    search_path example;
 
 
 select up_private();

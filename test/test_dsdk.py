@@ -66,7 +66,7 @@ def mixin_kwargs():
         host="host",
         port=1433,
         database="database",
-        sql=namespace_directory("./sql/mssql"),
+        sql=namespace_directory("./asset/mssql"),
         tables=("foo", "bar", "baz"),
     )
     postgres = PostgresPersistor(
@@ -75,7 +75,7 @@ def mixin_kwargs():
         host="host",
         port=5432,
         database="database",
-        sql=namespace_directory("./sql/postgres"),
+        sql=namespace_directory("./asset/postgres"),
         tables=("foo", "bar", "baz"),
     )
     return {
@@ -95,7 +95,7 @@ def mixin_parser_kwargs():
     mssql.host = "host"
     mssql.password = "password"
     mssql.port = 1433
-    mssql.sql = "./sql/mssql"
+    mssql.sql = "./asset/mssql"
     mssql.tables = ("foo", "bar", "baz")
     mssql.username = "username"
 
@@ -104,7 +104,7 @@ def mixin_parser_kwargs():
     postgres.host = "host"
     postgres.password = "password"
     postgres.port = 5432
-    postgres.sql = "./sql/postgres"
+    postgres.sql = "./asset/postgres"
     postgres.tables = ("foo", "bar", "baz")
     postgres.username = "username"
 

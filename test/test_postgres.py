@@ -37,7 +37,7 @@ class Persistor(PostgresPersistor):
                 "database", env.get("POSTGRES_DATABASE", "test")
             ),
             sql=namespace_directory(
-                kwargs.get("sql", env.get("POSTGRES_SQL", "./sql/postgres"))
+                kwargs.get("sql", env.get("POSTGRES_SQL", "./asset/postgres"))
             ),
             tables=kwargs.get(
                 "tables",

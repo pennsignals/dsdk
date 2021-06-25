@@ -1,4 +1,4 @@
-set search_path = dsdk;
+set search_path = example;
 
 
 create or replace function up_public()
@@ -17,7 +17,10 @@ begin
     exception when invalid_parameter_value or others then
         return false;
     end;
-    $function$ language plpgsql stable;
+    $function$
+        language plpgsql
+        search_path example
+        stable;
 
     create domain timezone as varchar
         check ( is_timezone(value) );
@@ -32,7 +35,9 @@ begin
         perform pg_notify(TG_TABLE_SCHEMA || '.' || TG_TABLE_NAME, last_id);
         return null;
     end;
-    $function$ language plpgsql;
+    $function$
+        language plpgsql
+        search_path example;
 
     create table models (
         id int primary key generated always as identity,
@@ -103,7 +108,9 @@ begin
         for each statement
         execute procedure call_notify();
 end;
-$$ language plpgsql;
+$$
+    language plpgsql
+    search_path example;
 
 
 create or replace function down_public()
@@ -122,7 +129,9 @@ begin
     drop domain timezone;
     drop function is_timezone;
 end;
-$$ language plpgsql;
+$$
+    language plpgsql
+    search_path example;
 
 
 select up_public();

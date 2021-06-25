@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from abc import ABC
+from collections import deque
 from contextlib import contextmanager
 from json import dumps
 from logging import getLogger
@@ -32,6 +33,7 @@ try:
     from psycopg2.extras import execute_batch
     from psycopg2.extensions import (
         register_adapter,
+        ISOLATION_LEVEL_AUTOCOMMIT,
         ISQLQuote,
         Float,
         AsIs,
@@ -93,6 +95,7 @@ class Messages:  # pylint: disable=too-few-public-methods
     ERROR = dumps({"key": f"{KEY}.table.error", "table": "%s"})
     ERRORS = dumps({"key": f"{KEY}.tables.error", "tables": "%s"})
     EXTANT = dumps({"key": f"{KEY}.sql.extant", "value": "%s"})
+    LISTEN = dumps({"key": f"{KEY}.listen", "value": "%s"})
     ON = dumps({"key": f"{KEY}.on"})
     OPEN = dumps({"key": f"{KEY}.open"})
     ROLLBACK = dumps({"key": f"{KEY}.rollback"})
@@ -125,6 +128,25 @@ class Persistor(Messages, BasePersistor):
     def check(self, cur, exceptions=(DatabaseError, InterfaceError)):
         """Check."""
         super().check(cur, exceptions)
+
+    @contextmanager
+    def listen(self, *listens: str) -> Generator[Any, None, None]:
+        """Listen."""
+        con = self.retry_connect()
+        con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        logger.info(self.OPEN)
+        try:
+            # replace list with a deque to allow
+            # users to pop the last notify
+            con.notifies = deque(con.notifies)
+            with con.cursor() as cur:
+                for each in listens:
+                    logger.debug(self.LISTEN, each)
+                    cur.execute(each)
+            yield con
+        finally:
+            con.close()
+            logger.info(self.CLOSE)
 
     @contextmanager
     def connect(self) -> Generator[Any, None, None]:
