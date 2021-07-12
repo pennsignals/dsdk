@@ -1,5 +1,7 @@
 set search_path = example;
 
+\dn
+
 
 create or replace function up_patch()
 returns void as $$
@@ -49,7 +51,7 @@ begin
         end;
         $function$
             language plpgsql
-            search_path example;
+            set search_path = example;
     exception when duplicate_function then
     end;
 
@@ -71,7 +73,7 @@ begin
         end;
         $function$
             language plpgsql
-            search_path example;
+            set search_path = example;
     exception when duplicate_function then
     end;
 
@@ -81,7 +83,7 @@ begin
 end;
 $$
     language plpgsql
-    search_path example;
+    set search_path = example;
 
 
 create or replace function down_patch()
@@ -97,7 +99,7 @@ begin
 end;
 $$
     language plpgsql
-    search_path example;
+    set search_path = example;
 
 
 select up_patch();

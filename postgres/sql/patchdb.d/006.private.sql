@@ -31,7 +31,7 @@ begin
 end;
 $$
     language plpgsql
-    search_path example;
+    set search_path = example;
 
 
 create or replace function down_private()
@@ -45,7 +45,7 @@ begin
 end;
 $$
     language plpgsql
-    search_path example;
+    set search_path = example;
 
 
 select up_private();

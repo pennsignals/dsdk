@@ -9,9 +9,9 @@ from json import dumps
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, Dict, Generator, Sequence, Tuple, cast
 
-from configargparse import ArgParser as ArgumentParser
+from configargparse import ArgumentParser
 
-from .dependency import inject_str
+from .dependency import as_type_str
 from .service import Delegate, Service
 from .utils import retry
 
@@ -75,7 +75,7 @@ class Persistor(Messages):
         """Dependencies."""
         kwargs: Dict[str, Any] = {}
 
-        for key, help_, inject in (
+        for key, help_, as_type in (
             (
                 "uri",
                 " ".join(
@@ -92,7 +92,7 @@ class Persistor(Messages):
                         "Specifically, check url encoding of PASSWORD.",
                     )
                 ),
-                inject_str,
+                as_type_str,
             ),
         ):
             parser.add(
@@ -100,7 +100,7 @@ class Persistor(Messages):
                 env_var=f"{cls.KEY.upper()}_{key.upper()}",
                 help=help_,
                 required=True,
-                type=inject(key, kwargs),
+                type=as_type(key, kwargs),
             )
         yield
 

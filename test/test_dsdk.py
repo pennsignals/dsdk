@@ -66,7 +66,7 @@ def mixin_kwargs():
         host="host",
         port=1433,
         database="database",
-        sql=namespace_directory("./asset/mssql"),
+        sql=namespace_directory("./assets/mssql"),
         tables=("foo", "bar", "baz"),
     )
     postgres = PostgresPersistor(
@@ -75,7 +75,7 @@ def mixin_kwargs():
         host="host",
         port=5432,
         database="database",
-        sql=namespace_directory("./asset/postgres"),
+        sql=namespace_directory("./assets/postgres"),
         tables=("foo", "bar", "baz"),
     )
     return {
@@ -87,7 +87,7 @@ def mixin_kwargs():
 
 def mixin_parser_kwargs():
     """Return mixin parser kwargs."""
-    model = "./model.pkl"
+    model = "./model/model.pkl"
     dump_pickle_file(Model(name="test", version="0.0.1"), model)
 
     mssql = Namespace()
@@ -95,7 +95,7 @@ def mixin_parser_kwargs():
     mssql.host = "host"
     mssql.password = "password"
     mssql.port = 1433
-    mssql.sql = "./asset/mssql"
+    mssql.sql = "./assets/mssql"
     mssql.tables = ("foo", "bar", "baz")
     mssql.username = "username"
 
@@ -104,7 +104,7 @@ def mixin_parser_kwargs():
     postgres.host = "host"
     postgres.password = "password"
     postgres.port = 5432
-    postgres.sql = "./asset/postgres"
+    postgres.sql = "./assets/postgres"
     postgres.tables = ("foo", "bar", "baz")
     postgres.username = "username"
 

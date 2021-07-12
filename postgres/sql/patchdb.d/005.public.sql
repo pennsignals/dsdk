@@ -19,7 +19,7 @@ begin
     end;
     $function$
         language plpgsql
-        search_path example
+        set search_path = example
         stable;
 
     create domain timezone as varchar
@@ -37,7 +37,7 @@ begin
     end;
     $function$
         language plpgsql
-        search_path example;
+        set search_path = example;
 
     create table models (
         id int primary key generated always as identity,
@@ -110,7 +110,7 @@ begin
 end;
 $$
     language plpgsql
-    search_path example;
+    set search_path = example;
 
 
 create or replace function down_public()
@@ -131,7 +131,7 @@ begin
 end;
 $$
     language plpgsql
-    search_path example;
+    set search_path = example;
 
 
 select up_public();

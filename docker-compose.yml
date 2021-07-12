@@ -36,4 +36,4 @@ services:
     - POSTGRES_DATABASE=test
     - POSTGRES_PORT=5432
     volumes:
-    - ./sql:/sql
+    - ./assets/sql:/sql

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Dict, Generator, Type, cast
 
 from configargparse import ArgParser as ArgumentParser
 
-from .dependency import inject_str
+from .dependency import as_type_str
 from .service import Delegate, Service
 from .utils import load_pickle_file
 
@@ -51,7 +51,7 @@ class Model:  # pylint: disable=too-few-public-methods
             env_var=f"{cls.KEY.upper()}",
             help="Path to pickled model.",
             required=True,
-            type=inject_str("path", kwargs),
+            type=as_type_str("path", kwargs),
         )
         yield
 

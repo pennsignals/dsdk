@@ -4,11 +4,13 @@
 from __future__ import annotations
 
 import pickle
+from argparse import Namespace
 from collections import OrderedDict
 from contextlib import contextmanager
 from datetime import date, datetime, tzinfo
 from json import dumps
 from logging import getLogger
+from os import environ
 from sys import argv as sys_argv
 from typing import (
     Any,
@@ -21,16 +23,16 @@ from typing import (
     cast,
 )
 
-from configargparse import ArgParser as ArgumentParser
-from configargparse import Namespace
+from configargparse import ArgumentParser
 from pandas import DataFrame
 from pkg_resources import DistributionNotFound, get_distribution
 
 from .dependency import (
     Interval,
+    as_type_str,
+    as_type_utc_non_naive_datetime,
+    as_type_yaml_dict,
     get_tzinfo,
-    inject_str,
-    inject_utc_non_naive_datetime,
     now_utc_datetime,
 )
 from .utils import configure_logger
@@ -317,46 +319,48 @@ class Service:  # pylint: disable=too-many-instance-attributes
 
     @contextmanager
     def inject_arguments(  # pylint: disable=no-self-use,protected-access
-        self, parser: ArgumentParser
+        self, parser: ArgumentParser, env: Dict[str, Any] = environ,
     ) -> Generator[None, None, None]:
         """Inject arguments."""
         kwargs: Dict[str, Any] = {}
-        parser._default_config_files = [
-            "/local/config.yaml",
-            "/local/config.yml",
-            "/local/.yml",
-            "/secrets/config.yaml",
-            "/secrets/config.yml",
-            "/secrets/.yml",
-        ]
-        parser._ignore_unknown_config_file_keys = True
-        parser.add(
+        # TODO: force config file to be .yaml file
+        parser.add_argument(
             "-c",
             "--config",
             is_config_file=True,
             help="config file path",
-            env_var="CONFIG",  # make ENV match default metavar
+            default="/local/config.yaml",
+            env_var="CONFIG",
         )
-        parser.add(
+        # TODO: force secrets file to be .env file
+        parser.add_argument(
+            "-s",
+            "--secrets",
+            is_config_file=True,
+            default="/secrets/secrets.env",
+            env_var="SECRETS",
+            help="secrets env file path",
+        )
+        parser.add_argument(
             "-d",
             "--as-of",
-            help="as of utc non-naive datetime",
             env_var="AS_OF",
-            type=inject_utc_non_naive_datetime("as_of", kwargs),
+            help="as of utc non-naive datetime",
+            type=as_type_utc_non_naive_datetime("as_of", kwargs),
         )
-        parser.add(
+        parser.add_argument(
             "-g",
             "--gold",
-            help="gold validation file",
             env_var="GOLD",
-            type=inject_str("gold", kwargs),
+            help="gold validation file",
+            type=as_type_str("gold", kwargs),
         )
-        parser.add(
+        parser.add_argument(
             "-t",
             "--time-zone",
-            help="time_zone",
             env_var="TIME_ZONE",
-            type=inject_str("time_zone", kwargs),
+            help="time_zone",
+            type=as_type_str("time_zone", kwargs),
         )
 
         yield

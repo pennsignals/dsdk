@@ -37,7 +37,7 @@ class Persistor(PostgresPersistor):
                 "database", env.get("POSTGRES_DATABASE", "test")
             ),
             sql=namespace_directory(
-                kwargs.get("sql", env.get("POSTGRES_SQL", "./asset/postgres"))
+                kwargs.get("sql", env.get("POSTGRES_SQL", "./assets/postgres"))
             ),
             tables=kwargs.get(
                 "tables",
@@ -45,10 +45,10 @@ class Persistor(PostgresPersistor):
                     "POSTGRES_TABLES",
                     ",".join(
                         (
-                            "dsdk.models",
-                            "dsdk.microservices",
-                            "dsdk.runs",
-                            "dsdk.predictions",
+                            "example.models",
+                            "example.microservices",
+                            "example.runs",
+                            "example.predictions",
                         )
                     ),
                 ).split(","),

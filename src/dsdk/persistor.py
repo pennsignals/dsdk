@@ -14,10 +14,10 @@ from typing import Any, Dict, Generator, Optional, Sequence, Tuple
 from pandas import DataFrame, concat
 
 from .dependency import (
-    inject_int,
-    inject_namespace,
-    inject_str,
-    inject_str_tuple,
+    as_type_int,
+    as_type_namespace,
+    as_type_str,
+    as_type_yaml_tuple,
 )
 from .service import Service
 from .utils import chunks
@@ -82,10 +82,11 @@ class AbstractPersistor:
         columns = None
         chunk = None
         # The sql 'in (<item, ...>)' used for ids is problematic
-        # - limit on the number of items
-        # - hard query plan
-        # - renders as multiple 'or' after query planning
-        # - poor performance
+        # - different implementation than set-based join
+        #   - arbitrary limit on the number of items
+        # - terrible performance
+        #   - renders as multiple 'or' after query planning
+        #   - cpu branch prediction failure?
         for chunk in chunks(ids, size):
             cur.execute(query, {"ids": chunk, **parameters})
             rows = cur.fetchall()
@@ -111,13 +112,13 @@ class AbstractPersistor:
         Query is expected to use {name} for key sequences and %(name)s
         for parameters.
         The mogrified fragments produced by union_all are mogrified again.
-        There is a chance that python placeholders could be injected py the
+        There is a chance that python placeholders could be injected by the
         first pass from sequence data.
         However, it seems that percent in `'...%s...'` or `'...'%(name)s...'`
         inside string literals produced from the first mogrification pass are
         not interpreted as parameter placeholders in the second pass by
         the pymssql driver.
-        Actual placeholders to by interpolacted by the driver are not
+        Actual placeholders to by interpolated by the driver are not
         inside quotes.
         """
         if keys is None:
@@ -236,25 +237,37 @@ class Persistor(AbstractPersistor):
         # Replace return type with ContextManager[None] when mypy is fixed.
         kwargs: Dict[str, Any] = {}
 
-        for key, help_, inject in (
-            ("database", "The database name", inject_str),
-            ("host", "The database host name or ip address", inject_str),
-            ("password", "The database password", inject_str),
-            ("port", "The database port", inject_int),
-            ("sql", "A nested directory of sql fragments.", inject_namespace),
+        for key, help_, nargs, as_type in (
+            ("database", "The database name", None, as_type_str),
+            (
+                "host",
+                "The database host name or ip address",
+                None,
+                as_type_str,
+            ),
+            ("password", "The database password", None, as_type_str),
+            ("port", "The database port", None, as_type_int),
+            (
+                "sql",
+                "A nested directory of sql fragments.",
+                None,
+                as_type_namespace,
+            ),
             (
                 "tables",
-                "A comma delimited list of tables to check",
-                inject_str_tuple,
+                "A yaml list of tables to check",
+                "+",
+                as_type_yaml_tuple,
             ),
-            ("username", "The database username", inject_str),
+            ("username", "The database username", None, as_type_str),
         ):
             parser.add(
                 f"--{cls.KEY}-{key}",
                 env_var=f"{cls.KEY.upper()}_{key.upper()}",
                 help=help_,
                 required=True,
-                type=inject(key, kwargs),
+                nargs=nargs,
+                type=as_type(key, kwargs),
             )
 
         yield

@@ -39,7 +39,7 @@ begin
 end;
 $$
     language plpgsql
-    search_path example;
+    set search_path = example;
 
 
 create or replace function down_epic()
@@ -55,7 +55,7 @@ begin
 end;
 $$
     language plpgsql
-    search_path example;
+    set search_path = example;
 
 
 select up_epic();

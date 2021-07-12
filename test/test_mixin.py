@@ -28,6 +28,9 @@ from typing import (
     cast,
 )
 
+from yaml import safe_dump as yaml_dump
+from yaml import safe_load as yaml_load
+
 
 def dump_pickle_file(obj, path: str) -> None:
     """Dump pickle to file."""
@@ -51,6 +54,18 @@ def load_json_file(path: str) -> object:
     """Load json from file."""
     with open(path, "r") as fin:
         return json_load(fin)
+
+
+def dump_yaml_file(obj, path: str) -> None:
+    """Dump yaml to file."""
+    with open(path, "w") as fout:
+        yaml_dump(obj, fout)
+
+
+def load_yaml_file(path: str) -> object:
+    """Load yaml from file."""
+    with open(path, "r") as fin:
+        return yaml_load(fin)
 
 
 class Service:  # pylint: disable=too-few-public-methods
@@ -85,15 +100,16 @@ class Service:  # pylint: disable=too-few-public-methods
         """Inject args."""
 
         # In this example, the injected parameters here are simple:
-        #    because no post parser.parse configuration is needed,
-        #    but this is not necesarily the case.
-        # Using only one configuration file is not desirable if
-        #    if it is more difficult to validate.
-        # Concider using separate files for tabular configuration.
-        # This is particularly true for the mixins.
+        #    because no configuration is needed after the parse.parse
+        #    call, but this is not necesarily the case.
+        # Notice that the configuration is not validated before it is
+        #    used, but it should be.
+        # Also using only one configuration file is not desirable if
+        #    if it is more difficult to edit and validate.
+        # Consider using separate files for tabular configuration.
 
         def _inject_cfg(path: str) -> Dict[str, Any]:
-            cfg = cast(Dict[str, Any], load_json_file(path))
+            cfg = cast(Dict[str, Any], load_yaml_file(path))
             self.cfg = cfg
             return cfg
 
@@ -103,7 +119,7 @@ class Service:  # pylint: disable=too-few-public-methods
         yield
         # after parser.parse call
 
-        # load_json_file or a more complex constructor with multiple parameters
+        # load_*_file or a more complex constructor with multiple parameters
         #    could be here instead of in the single parameter parse callback
         #    _inject_cfg.
 
@@ -221,8 +237,8 @@ class App(
 
 def test_mixin_with_parser():
     """Test mixin with parser."""
-    model_path = "./model.pkl"
-    cfg_path = "./cfg.json"
+    model_path = "./model/model.pkl"
+    cfg_path = "./local/test.yaml"
     obj = {}
     dump_pickle_file(obj, model_path)
     dump_json_file(obj, cfg_path)
