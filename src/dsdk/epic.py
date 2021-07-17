@@ -93,7 +93,7 @@ class Notification:
         if response.status_code in [200, 201]:
             cur.execute(
                 sql.epic.notification.insert,
-                {"prediction_id": prediction["id"],},
+                {"prediction_id": prediction["id"]},
             )
 
 

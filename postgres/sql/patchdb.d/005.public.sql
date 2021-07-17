@@ -8,7 +8,7 @@ begin
         return;
     end if;
 
-    create or replace function is_timezone(time_zone varchar)
+    create function is_timezone(time_zone varchar)
     returns boolean as $function$
     declare valid timestamptz;
     begin

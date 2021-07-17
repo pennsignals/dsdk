@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from datetime import datetime, timezone, tzinfo
 from functools import wraps
 from json import dump as json_dump
 from json import load as json_load
@@ -15,7 +16,22 @@ from time import perf_counter_ns
 from time import sleep as default_sleep
 from typing import Any, Callable, Generator, Sequence
 
+from dateutil import parser, tz
+from yaml import safe_dump as yaml_dumps
+from yaml import safe_load as yaml_loads
+
 logger = getLogger(__name__)
+
+
+def as_utc_non_naive_datetime(value: str) -> datetime:
+    """As utc non-naive datetime."""
+    assert value.__class__ is str
+    # dateutil.parser can handle timestamptz output copied
+    # from psql directly
+    result = parser.parse(value)
+    assert result.tzinfo == tz.tzutc()
+    result.replace(tzinfo=timezone.utc)
+    return result
 
 
 def configure_logger(name, level=INFO):
@@ -59,6 +75,24 @@ def dump_pickle_file(obj: Any, path: str) -> None:
         pickle_dump(obj, fout)
 
 
+def dump_yaml_file(obj: Any, path: str) -> None:
+    """Dump yaml file."""
+    with open(path, "w") as fout:
+        yaml_dumps(obj, fout)
+
+
+def epoch_ms_from_utc_datetime(utc: datetime) -> float:
+    """Epoch ms from non-naive UTC datetime."""
+    return utc.timestamp() * 1000
+
+
+def get_tzinfo(key: str) -> tzinfo:
+    """Get tzinfo."""
+    result = tz.gettz(key)
+    assert result is not None
+    return result
+
+
 def load_json_file(path: str) -> object:
     """Load json from file."""
     with open(path, "r") as fin:
@@ -69,6 +103,17 @@ def load_pickle_file(path: str) -> object:
     """Load pickle from file."""
     with open(path, "rb") as fin:
         return pickle_load(fin)
+
+
+def load_yaml_file(path: str):
+    """Load yaml file."""
+    with open(path) as fin:
+        return yaml_loads(fin.read())
+
+
+def now_utc_datetime() -> datetime:
+    """Non-naive now UTC datetime."""
+    return datetime.now(tz=timezone.utc)
 
 
 @contextmanager
@@ -127,3 +172,12 @@ def retry(
         return wrapped
 
     return wrapper
+
+
+def utc_datetime_from_epoch_ms(epoch_ms: float) -> datetime:
+    """Non-naive UTC datetime from UTC epoch ms."""
+    return datetime.fromtimestamp(epoch_ms / 1000, tz=timezone.utc)
+
+
+class StubError(Exception):
+    """StubError."""

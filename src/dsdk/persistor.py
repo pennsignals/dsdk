@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-from argparse import Namespace
 from contextlib import contextmanager
 from json import dumps
 from logging import getLogger
@@ -12,14 +11,9 @@ from tempfile import NamedTemporaryFile
 from typing import Any, Dict, Generator, Optional, Sequence, Tuple
 
 from pandas import DataFrame, concat
+from yaml import SafeDumper, SafeLoader, add_constructor, add_representer
 
-from .dependency import (
-    as_type_int,
-    as_type_namespace,
-    as_type_str,
-    as_type_yaml_tuple,
-)
-from .service import Service
+from .asset import Asset
 from .utils import chunks
 
 logger = getLogger(__name__)
@@ -42,12 +36,6 @@ class AbstractPersistor:
     ON = dumps({"key": f"{KEY}.on"})
     OPEN = dumps({"key": f"{KEY}.open"})
     ROLLBACK = dumps({"key": f"{KEY}.rollback"})
-
-    @classmethod
-    @contextmanager
-    def configure(cls, service: Service, parser):
-        """Configure."""
-        raise NotImplementedError()
 
     @classmethod
     def df_from_query(
@@ -152,7 +140,7 @@ class AbstractPersistor:
         union = cls.mogrify(cur, union, parameters).decode("utf-8")
         return union
 
-    def __init__(self, sql: Namespace, tables: Tuple[str, ...]):
+    def __init__(self, sql: Asset, tables: Tuple[str, ...]):
         """__init__."""
         self.sql = sql
         self.tables = tables
@@ -228,69 +216,54 @@ class AbstractPersistor:
 class Persistor(AbstractPersistor):
     """Persistor."""
 
+    YAML = ""
+
     @classmethod
-    @contextmanager
-    def configure(
-        cls, service: Service, parser
-    ) -> Generator[None, None, None]:
-        """Configure."""
-        # Replace return type with ContextManager[None] when mypy is fixed.
-        kwargs: Dict[str, Any] = {}
+    def as_yaml_type(cls) -> None:
+        """As yaml type."""
+        add_constructor(cls.YAML, cls._yaml_init, Loader=SafeLoader)
+        add_representer(cls, cls._yaml_repr, Dumper=SafeDumper)
 
-        for key, help_, nargs, as_type in (
-            ("database", "The database name", None, as_type_str),
-            (
-                "host",
-                "The database host name or ip address",
-                None,
-                as_type_str,
-            ),
-            ("password", "The database password", None, as_type_str),
-            ("port", "The database port", None, as_type_int),
-            (
-                "sql",
-                "A nested directory of sql fragments.",
-                None,
-                as_type_namespace,
-            ),
-            (
-                "tables",
-                "A yaml list of tables to check",
-                "+",
-                as_type_yaml_tuple,
-            ),
-            ("username", "The database username", None, as_type_str),
-        ):
-            parser.add(
-                f"--{cls.KEY}-{key}",
-                env_var=f"{cls.KEY.upper()}_{key.upper()}",
-                help=help_,
-                required=True,
-                nargs=nargs,
-                type=as_type(key, kwargs),
-            )
+    @classmethod
+    def _yaml_init(cls, loader, node):
+        """Yaml init."""
+        return cls(**loader.construct_mapping(node, deep=True))
 
-        yield
-
-        service.dependency(cls.KEY, cls, kwargs)
+    @classmethod
+    def _yaml_repr(cls, dumper, self):
+        """Yaml repr."""
+        return dumper.represent_mapping(cls.YAML, self.as_yaml())
 
     def __init__(  # pylint: disable=too-many-arguments
         self,
-        username: str,
-        password: str,
-        host: str,
-        port: int,
+        *,
         database: str,
-        sql: Namespace,
+        host: str,
+        password: str,
+        port: int,
+        sql: Asset,
         tables: Tuple[str, ...],
+        username: str,
     ):
         """__init__."""
-        self.username = username
-        self.password = password
-        self.host = host
-        self.port = port
         self.database = database
+        self.host = host
+        self.password = password
+        self.port = port
+        self.username = username
         super().__init__(sql, tables)
+
+    def as_yaml(self) -> Dict[str, Any]:
+        """As yaml."""
+        return {
+            "database": self.database,
+            "host": self.host,
+            "password": self.password,
+            "port": self.port,
+            "sql": self.sql,
+            "tables": self.tables,
+            "username": self.username,
+        }
 
     @contextmanager
     def connect(self) -> Generator[Any, None, None]:

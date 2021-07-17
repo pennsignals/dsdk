@@ -4,38 +4,34 @@
 from __future__ import annotations
 
 import pickle
-from argparse import Namespace
+from argparse import ArgumentParser
 from collections import OrderedDict
 from contextlib import contextmanager
 from datetime import date, datetime, tzinfo
 from json import dumps
 from logging import getLogger
-from os import environ
+from os import environ as os_env
 from sys import argv as sys_argv
 from typing import (
     Any,
     Callable,
     Dict,
     Generator,
+    List,
+    Mapping,
     Optional,
     Sequence,
-    Tuple,
-    cast,
 )
 
-from configargparse import ArgumentParser
 from pandas import DataFrame
 from pkg_resources import DistributionNotFound, get_distribution
+from yaml import SafeDumper, SafeLoader, add_constructor, add_representer
+from yaml import safe_load as yaml_loads
 
-from .dependency import (
-    Interval,
-    as_type_str,
-    as_type_utc_non_naive_datetime,
-    as_type_yaml_dict,
-    get_tzinfo,
-    now_utc_datetime,
-)
-from .utils import configure_logger
+from .asset import Asset
+from .env import Env
+from .interval import Interval
+from .utils import configure_logger, get_tzinfo, now_utc_datetime
 
 try:
     __version__ = get_distribution("dsdk").version
@@ -123,17 +119,9 @@ class Delegate:
         """Return tzinfo."""
         return self.parent.tz_info
 
-    def as_insert_doc(self) -> Dict[str, Any]:
-        """As insert doc."""
-        return self.parent.as_insert_doc()
-
     def as_insert_sql(self) -> Dict[str, Any]:
         """As insert sql."""
         return self.parent.as_insert_sql()
-
-    def as_update_doc(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-        """As update doc."""
-        return self.parent.as_update_doc()
 
 
 class Batch:
@@ -178,14 +166,6 @@ class Batch:
         """Return parent."""
         raise ValueError()
 
-    def as_insert_doc(self) -> Dict[str, Any]:
-        """As insert doc."""
-        return {
-            "as_of": self.as_of,
-            "microservice_version": self.microservice_version,
-            "time_zone": self.time_zone,
-        }
-
     def as_insert_sql(self) -> Dict[str, Any]:
         """As insert sql."""
         # duration comes from the database clock.
@@ -194,11 +174,6 @@ class Batch:
             "microservice_version": self.microservice_version,
             "time_zone": self.time_zone,
         }
-
-    def as_update_doc(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-        """As update doc."""
-        assert self.duration is not None
-        return {}, {"duration": self.duration.as_doc()}
 
 
 class Evidence(OrderedDict):
@@ -226,23 +201,29 @@ class Service:  # pylint: disable=too-many-instance-attributes
         {"key": "validate.count", "scores": "%s", "test": "%s", "status": "%s"}
     )
     MATCH = dumps({"key": "validate.match", "status": "%s"})
+    YAML = ""
 
     VERSION = __version__
 
     @classmethod
+    def as_yaml_type(cls) -> None:
+        """As yaml type."""
+        add_constructor(cls.YAML, cls._yaml_init, Loader=SafeLoader)
+        add_representer(cls, cls._yaml_repr, Dumper=SafeDumper)
+
+    @classmethod
     @contextmanager
-    def context(cls, key: str):
+    def context(
+        cls,
+        key: str,
+        argv: Optional[List[str]] = None,
+        env: Optional[Mapping[str, str]] = None,
+    ):
         """Context."""
         configure_logger("dsdk")
         logger.info(cls.ON, key)
-        yield cls(parser=ArgumentParser())
+        yield cls.parse(argv=argv, env=env)
         logger.info(cls.END, key)
-
-    @classmethod
-    def main(cls):
-        """Main."""
-        with cls.context("main") as service:
-            service()
 
     @classmethod
     def create_gold(cls):
@@ -251,40 +232,135 @@ class Service:  # pylint: disable=too-many-instance-attributes
             service.on_create_gold()
 
     @classmethod
+    def main(cls):
+        """Main."""
+        with cls.context("main") as service:
+            service()
+
+    @classmethod
+    def parse(
+        cls,
+        *,
+        argv: Optional[List[str]] = None,
+        env: Optional[Mapping[str, str]] = None,
+    ) -> Service:
+        """Parse."""
+        if argv is None:
+            argv = sys_argv[1:]
+        assert argv is not None
+        if env is None:
+            env = os_env
+        assert env is not None
+
+        parser = ArgumentParser()
+        parser.add_argument(
+            "-c",
+            "--config",
+            dest="config_file",
+            type=str,
+            help="configuration yaml file",
+            default=env.get("CONFIG", None),
+        )
+        parser.add_argument(
+            "-e",
+            "--env",
+            dest="env_file",
+            type=str,
+            help="env file",
+            default=env.get("env", None),
+        )
+        args = parser.parse_args(argv)
+        if args.config_file is None:
+            parser.error(
+                " ".join(
+                    (
+                        "the following arguments are required:",
+                        "-c/--config or CONFIG from env variable",
+                    )
+                )
+            )
+        return cls.load(
+            config_file=args.config_file, env=env, env_file=args.env_file,
+        )
+
+    @classmethod
+    def load(
+        cls,
+        *,
+        config_file: str,
+        env: Optional[Mapping[str, str]] = None,
+        env_file: Optional[str] = None,
+    ):
+        """Load."""
+        if env is None:
+            env = os_env
+        assert env is not None
+
+        if env_file:
+            with open(env_file) as fin:
+                envs = fin.read()
+            logger.debug("Environment variables are only from %s", env_file)
+        else:
+            logger.debug("Environment variables are being used.")
+
+        with open(config_file) as fin:
+            configs = fin.read()
+        return cls.loads(configs=configs, env=env, envs=envs)
+
+    @classmethod
+    def loads(
+        cls,
+        *,
+        configs: str,
+        env: Mapping[str, str],
+        envs: Optional[str] = None,
+    ) -> Service:
+        """Loads from strings."""
+        if envs is not None:
+            env = Env.loads(envs)
+
+        Env.as_yaml_type(env=env)
+
+        cls.yaml_types()
+        return yaml_loads(configs)
+
+    @classmethod
     def validate_gold(cls):
         """Validate gold."""
         with cls.context("validate_gold") as service:
             service.on_validate_gold()
 
+    @classmethod
+    def yaml_types(cls) -> None:
+        """Yaml types."""
+        Asset.as_yaml_type()
+        Interval.as_yaml_type()
+
+    @classmethod
+    def _yaml_init(cls, loader, node):
+        """Yaml init."""
+        return cls(**loader.construct_mapping(node, deep=True))
+
+    @classmethod
+    def _yaml_repr(cls, dumper, self):
+        """Yaml repr."""
+        return dumper.represent_mapping(cls.YAML, self.as_yaml())
+
     def __init__(  # pylint: disable=too-many-arguments
         self,
-        argv: Optional[Sequence[str]] = None,
-        parser: Optional[ArgumentParser] = None,
-        pipeline: Optional[Sequence[Task]] = None,
+        pipeline: Sequence[Task] = None,
         as_of: Optional[datetime] = None,
         gold: Optional[str] = None,
-        time_zone: Optional[str] = None,
+        time_zone: Optional[datetime] = None,
         batch_cls: Callable = Batch,
     ) -> None:
         """__init__."""
-        self.args: Optional[Namespace] = None
-        self.parser = parser
         self.gold = gold
-
-        # inferred type of self.pipeline must not be optional...
-        self.pipeline = cast(Sequence[Task], pipeline)
+        self.pipeline = pipeline
         self.duration: Optional[Interval] = None
         self.as_of = as_of
         self.time_zone = time_zone
         self.batch_cls = batch_cls
-        if parser:
-            with self.inject_arguments(parser):
-                if not argv:
-                    argv = sys_argv[1:]
-                self.args = parser.parse_args(argv)
-
-        # ... because self.pipeline is not optional
-        assert self.pipeline is not None
 
     def __call__(self) -> Batch:
         """Run."""
@@ -317,58 +393,6 @@ class Service:  # pylint: disable=too-many-instance-attributes
         assert self.time_zone is not None
         return get_tzinfo(self.time_zone)
 
-    @contextmanager
-    def inject_arguments(  # pylint: disable=no-self-use,protected-access
-        self, parser: ArgumentParser, env: Dict[str, Any] = environ,
-    ) -> Generator[None, None, None]:
-        """Inject arguments."""
-        kwargs: Dict[str, Any] = {}
-        # TODO: force config file to be .yaml file
-        parser.add_argument(
-            "-c",
-            "--config",
-            is_config_file=True,
-            help="config file path",
-            default="/local/config.yaml",
-            env_var="CONFIG",
-        )
-        # TODO: force secrets file to be .env file
-        parser.add_argument(
-            "-s",
-            "--secrets",
-            is_config_file=True,
-            default="/secrets/secrets.env",
-            env_var="SECRETS",
-            help="secrets env file path",
-        )
-        parser.add_argument(
-            "-d",
-            "--as-of",
-            env_var="AS_OF",
-            help="as of utc non-naive datetime",
-            type=as_type_utc_non_naive_datetime("as_of", kwargs),
-        )
-        parser.add_argument(
-            "-g",
-            "--gold",
-            env_var="GOLD",
-            help="gold validation file",
-            type=as_type_str("gold", kwargs),
-        )
-        parser.add_argument(
-            "-t",
-            "--time-zone",
-            env_var="TIME_ZONE",
-            help="time_zone",
-            type=as_type_str("time_zone", kwargs),
-        )
-
-        yield
-
-        self.gold = kwargs.get("gold")
-        self.as_of = kwargs.get("as_of")
-        self.time_zone = kwargs.get("time_zone")
-
     def dependency(self, key, cls, kwargs):
         """Dependency."""
         dependency = getattr(self, key)
@@ -382,6 +406,15 @@ class Service:  # pylint: disable=too-many-instance-attributes
         )
         dependency = cls(**kwargs)
         setattr(self, key, dependency)
+
+    def as_yaml(self) -> Dict[str, Any]:
+        """As yaml."""
+        return {
+            "as_of": self.as_of,
+            "duration": self.duration,
+            "gold": self.gold,
+            "time_zone": self.time_zone,
+        }
 
     def on_create_gold(self) -> Batch:
         """On create gold."""

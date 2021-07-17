@@ -8,16 +8,15 @@ from collections import deque
 from contextlib import contextmanager
 from json import dumps
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Dict, Generator, Type, cast
+from typing import TYPE_CHECKING, Any, Dict, Generator
 
-from configargparse import ArgParser as ArgumentParser
 from numpy import integer
 from pandas import DataFrame, NaT, Series, isna
 
-from .dependency import Interval, StubException
+from .interval import Interval
 from .persistor import Persistor as BasePersistor
 from .service import Delegate, Service, Task
-from .utils import retry
+from .utils import StubError, retry
 
 logger = getLogger(__name__)
 
@@ -71,7 +70,7 @@ try:
 except ImportError as import_error:
     logger.warning(import_error)
 
-    DatabaseError = InterfaceError = OperationalError = StubException
+    DatabaseError = InterfaceError = OperationalError = StubError
 
     def connect(*args, **kwargs):
         """Connect stub."""
@@ -119,6 +118,8 @@ class Messages:  # pylint: disable=too-few-public-methods
 
 class Persistor(Messages, BasePersistor):
     """Persistor."""
+
+    YAML = "!postgres"
 
     @classmethod
     def mogrify(cls, cur, query: str, parameters: Any,) -> bytes:
@@ -284,23 +285,23 @@ class Persistor(Messages, BasePersistor):
 class Mixin(BaseMixin):
     """Mixin."""
 
-    def __init__(
-        self, *, postgres=None, postgres_cls: Type = Persistor, **kwargs,
-    ):
+    @classmethod
+    def yaml_types(cls) -> None:
+        """Yaml types."""
+        Persistor.as_yaml_type()
+        super().yaml_types()
+
+    def __init__(self, *, postgres: Persistor, **kwargs):
         """__init__."""
-        self.postgres = cast(Persistor, postgres)
-        self.postgres_cls = postgres_cls
+        self.postgres = postgres
         super().__init__(**kwargs)
 
-    @contextmanager
-    def inject_arguments(
-        self, parser: ArgumentParser
-    ) -> Generator[None, None, None]:
-        """Inject arguments."""
-        # Replace return type with ContextManager[None] when mypy is fixed.
-        with self.postgres_cls.configure(self, parser):
-            with super().inject_arguments(parser):
-                yield
+    def as_yaml(self) -> Dict[str, Any]:
+        """As yaml."""
+        return {
+            "postgres": self.postgres,
+            **super().as_yaml(),
+        }
 
     def scores(self, run_id) -> Series:
         """Get scores."""
@@ -318,15 +319,6 @@ class Run(Delegate):
         self.id = id_
         self.microservice_id = microservice_id
         self.model_id = model_id
-
-    def as_insert_doc(self) -> Dict[str, Any]:
-        """As insert doc."""
-        return {
-            "run_id": self.id,
-            "microservice_id": self.microservice_id,
-            "model_id": self.model_id,
-            **self.parent.as_insert_doc(),
-        }
 
 
 class PredictionMixin(Mixin):  # pylint: disable=too-few-public-methods.
