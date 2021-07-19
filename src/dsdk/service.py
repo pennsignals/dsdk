@@ -25,13 +25,19 @@ from typing import (
 
 from pandas import DataFrame
 from pkg_resources import DistributionNotFound, get_distribution
-from yaml import SafeDumper, SafeLoader, add_constructor, add_representer
 from yaml import safe_load as yaml_loads
 
 from .asset import Asset
 from .env import Env
 from .interval import Interval
 from .utils import configure_logger, get_tzinfo, now_utc_datetime
+
+try:
+    from yaml import CSafeDumper as Dumper  # type: ignore[misc]
+    from yaml import CSafeLoader as Loader  # type: ignore[misc]
+except ImportError:
+    from yaml import SafeDumper as Dumper  # type: ignore[misc]
+    from yaml import SafeLoader as Loader  # type: ignore[misc]
 
 try:
     __version__ = get_distribution("dsdk").version
@@ -208,8 +214,8 @@ class Service:  # pylint: disable=too-many-instance-attributes
     @classmethod
     def as_yaml_type(cls) -> None:
         """As yaml type."""
-        add_constructor(cls.YAML, cls._yaml_init, Loader=SafeLoader)
-        add_representer(cls, cls._yaml_repr, Dumper=SafeDumper)
+        Loader.add_constructor(cls.YAML, cls._yaml_init)
+        Dumper.add_representer(cls, cls._yaml_repr)
 
     @classmethod
     @contextmanager
@@ -280,7 +286,9 @@ class Service:  # pylint: disable=too-many-instance-attributes
                 )
             )
         return cls.load(
-            config_file=args.config_file, env=env, env_file=args.env_file,
+            config_file=args.config_file,
+            env=env,
+            env_file=args.env_file,
         )
 
     @classmethod
@@ -346,12 +354,13 @@ class Service:  # pylint: disable=too-many-instance-attributes
         """Yaml repr."""
         return dumper.represent_mapping(cls.YAML, self.as_yaml())
 
-    def __init__(  # pylint: disable=too-many-arguments
+    def __init__(
         self,
-        pipeline: Sequence[Task] = None,
+        *,
+        pipeline: Sequence[Task],
         as_of: Optional[datetime] = None,
         gold: Optional[str] = None,
-        time_zone: Optional[datetime] = None,
+        time_zone: Optional[str] = None,
         batch_cls: Callable = Batch,
     ) -> None:
         """__init__."""
@@ -372,7 +381,10 @@ class Service:  # pylint: disable=too-many-instance-attributes
             if batch.time_zone is None:
                 batch.time_zone = "America/New_York"
             if batch.duration is None:
-                batch.duration = Interval(on=batch.as_of, end=None,)
+                batch.duration = Interval(
+                    on=batch.as_of,
+                    end=None,
+                )
 
             logger.info(self.PIPELINE_ON, self.__class__.__name__)
             for task in self.pipeline:
@@ -426,13 +438,14 @@ class Service:  # pylint: disable=too-many-instance-attributes
         scores = self.scores(run.id)
         n_scores = scores.shape[0]
         logger.info("Write %s scores to %s", n_scores, path)
+        # pylint: disable=no-member
+        model_version = self.model.version  # type: ignore[attr-defined]
         with open(path, "wb") as fout:
             pickle.dump(
                 {
                     "as_of": run.as_of,
                     "microservice_version": self.VERSION,
-                    # pylint: disable=no-member
-                    "model_version": self.model.version,  # type: ignore
+                    "model_version": model_version,
                     "scores": scores,
                     "time_zone": run.time_zone,
                 },
@@ -486,7 +499,9 @@ class Service:  # pylint: disable=too-many-instance-attributes
     def open_batch(self) -> Generator[Any, None, None]:
         """Open batch."""
         logger.info(
-            self.BATCH_OPEN, self.as_of, self.time_zone,
+            self.BATCH_OPEN,
+            self.as_of,
+            self.time_zone,
         )
         yield self.batch_cls(
             as_of=self.as_of,

@@ -4,7 +4,12 @@
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from yaml import SafeDumper, SafeLoader, add_constructor, add_representer
+try:
+    from yaml import CSafeDumper as Dumper  # type: ignore[misc]
+    from yaml import CSafeLoader as Loader  # type: ignore[misc]
+except ImportError:
+    from yaml import SafeDumper as Dumper  # type: ignore[misc]
+    from yaml import SafeLoader as Loader  # type: ignore[misc]
 
 
 class Interval:
@@ -15,8 +20,8 @@ class Interval:
     @classmethod
     def as_yaml_type(cls):
         """As yaml type."""
-        add_constructor(cls.YAML, cls._yaml_init, Loader=SafeLoader)
-        add_representer(cls, cls._yaml_repr, Dumper=SafeDumper)
+        Loader.add_constructor(cls.YAML, cls._yaml_init)
+        Dumper.add_representer(cls, cls._yaml_repr)
 
     @classmethod
     def _yaml_init(cls, loader, node):

@@ -5,6 +5,7 @@ from typing import Any, Callable, Dict, Tuple
 
 from pandas import DataFrame
 from pytest import mark
+from yaml import safe_dump as yaml_dumps
 
 from dsdk import (
     Asset,
@@ -52,10 +53,10 @@ def test_batch_evidence():
     assert batch.evidence["test"] is df
 
 
-class TestService(ModelMixin, MssqlMixin, PostgresMixin, Service):
-    """TestService."""
+class MyService(ModelMixin, MssqlMixin, PostgresMixin, Service):
+    """MyService."""
 
-    YAML = "!test"
+    YAML = "!myservice"
 
     @classmethod
     def yaml_types(cls):
@@ -69,7 +70,7 @@ class TestService(ModelMixin, MssqlMixin, PostgresMixin, Service):
         super().__init__(pipeline=pipeline, **kwargs)
 
 
-def build_from_parameters() -> Tuple[Callable, Dict[str, Any]]:
+def build_from_parameters(cls) -> Tuple[Callable, Dict[str, Any]]:
     """Build from parameters."""
     model = Model(name="test", path="./test/model.pkl", version="0.0.1-rc.1")
     mssql = Mssql(
@@ -91,12 +92,12 @@ def build_from_parameters() -> Tuple[Callable, Dict[str, Any]]:
         tables=("foo", "bar", "baz"),
     )
     return (
-        TestService,
+        cls,
         {"model": model, "mssql": mssql, "postgres": postgres},
     )
 
 
-def build_from_yaml() -> Tuple[Callable, Dict[str, Any]]:
+def build_from_yaml(cls) -> Tuple[Callable, Dict[str, Any]]:
     """Build from yaml."""
     pickle_file = "./test/model.pkl"
     dump_pickle_file(
@@ -104,7 +105,7 @@ def build_from_yaml() -> Tuple[Callable, Dict[str, Any]]:
     )
 
     configs = """
-!test
+!myservice
 mssql: !mssql
   database: test
   host: 0.0.0.0
@@ -135,21 +136,26 @@ MSSQL_PASSWORD=password
 POSTGRES_PASSWORD=password
 """
     return (
-        TestService.loads,
+        cls.loads,
         {"configs": configs, "env": env, "envs": envs},
     )
 
 
-@mark.parametrize("cls,kwargs", (build_from_yaml(), build_from_parameters()))
+@mark.parametrize(
+    "cls,kwargs",
+    (build_from_yaml(MyService), build_from_parameters(MyService)),
+)
 def test_service(cls, kwargs: Dict[str, Any]):
     """Test parameters, config, and env."""
     service = cls(**kwargs)
-    assert service.__class__ is TestService
+    assert service.__class__ is cls
     assert service.model.__class__ is Model
     assert service.postgres.__class__ is Postgres
     assert service.mssql.__class__ is Mssql
     assert service.postgres.password == "password"
     assert service.mssql.password == "password"
+    # yaml = yaml_dumps(service)
+    # print(yaml)
 
 
 def test_retry_other_exception():

@@ -11,10 +11,17 @@ from tempfile import NamedTemporaryFile
 from typing import Any, Dict, Generator, Optional, Sequence, Tuple
 
 from pandas import DataFrame, concat
-from yaml import SafeDumper, SafeLoader, add_constructor, add_representer
 
 from .asset import Asset
 from .utils import chunks
+
+try:
+    from yaml import CSafeDumper as Dumper  # type: ignore[misc]
+    from yaml import CSafeLoader as Loader  # type: ignore[misc]
+except ImportError:
+    from yaml import SafeDumper as Dumper  # type: ignore[misc]
+    from yaml import SafeLoader as Loader  # type: ignore[misc]
+
 
 logger = getLogger(__name__)
 
@@ -39,7 +46,10 @@ class AbstractPersistor:
 
     @classmethod
     def df_from_query(
-        cls, cur, query: str, parameters: Optional[Dict[str, Any]],
+        cls,
+        cur,
+        query: str,
+        parameters: Optional[Dict[str, Any]],
     ) -> DataFrame:
         """Return DataFrame from query."""
         if parameters is None:
@@ -128,12 +138,21 @@ class AbstractPersistor:
         return df
 
     @classmethod
-    def mogrify(cls, cur, query: str, parameters: Any,) -> bytes:
+    def mogrify(
+        cls,
+        cur,
+        query: str,
+        parameters: Any,
+    ) -> bytes:
         """Safely mogrify parameters into query or fragment."""
         raise NotImplementedError()
 
     @classmethod
-    def union_all(cls, cur, keys: Sequence[Any],) -> str:
+    def union_all(
+        cls,
+        cur,
+        keys: Sequence[Any],
+    ) -> str:
         """Return 'union all select %s...' clause."""
         parameters = tuple(keys)
         union = "\n    ".join("union all select %s" for _ in parameters)
@@ -221,8 +240,8 @@ class Persistor(AbstractPersistor):
     @classmethod
     def as_yaml_type(cls) -> None:
         """As yaml type."""
-        add_constructor(cls.YAML, cls._yaml_init, Loader=SafeLoader)
-        add_representer(cls, cls._yaml_repr, Dumper=SafeDumper)
+        Loader.add_constructor(cls.YAML, cls._yaml_init)
+        Dumper.add_representer(cls, cls._yaml_repr)
 
     @classmethod
     def _yaml_init(cls, loader, node):

@@ -8,10 +8,16 @@ from contextlib import contextmanager
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, Dict, Generator, Optional
 
-from yaml import SafeDumper, SafeLoader, add_constructor, add_representer
-
 from .service import Delegate, Service
 from .utils import load_pickle_file
+
+try:
+    from yaml import CSafeDumper as Dumper  # type: ignore[misc]
+    from yaml import CSafeLoader as Loader  # type: ignore[misc]
+except ImportError:
+    from yaml import SafeDumper as Dumper  # type: ignore[misc]
+    from yaml import SafeLoader as Loader  # type: ignore[misc]
+
 
 logger = getLogger(__name__)
 
@@ -30,8 +36,8 @@ class Model:  # pylint: disable=too-few-public-methods
     @classmethod
     def as_yaml_type(cls) -> None:
         """As yaml type."""
-        add_constructor(cls.YAML, cls._yaml_init, Loader=SafeLoader)
-        add_representer(cls, cls._yaml_repr, Dumper=SafeDumper)
+        Loader.add_constructor(cls.YAML, cls._yaml_init)
+        Dumper.add_representer(cls, cls._yaml_repr)
 
     @classmethod
     def _yaml_init(cls, loader, node):
@@ -39,7 +45,7 @@ class Model:  # pylint: disable=too-few-public-methods
         path = loader.construct_scalar(node)
         pkl = load_pickle_file(path)
         if pkl.__class__ is dict:
-            pkl = cls(path=path, **pkl)  # type: ignore
+            pkl = cls(path=path, **pkl)
         else:
             pkl.path = path
         assert isinstance(pkl, Model)
@@ -51,7 +57,11 @@ class Model:  # pylint: disable=too-few-public-methods
         return dumper.represent_scalar(cls.YAML, self.as_yaml())
 
     def __init__(
-        self, *, name: str, version: str, path: Optional[str] = None,
+        self,
+        *,
+        name: str,
+        version: str,
+        path: Optional[str] = None,
     ) -> None:
         """__init__."""
         self.name = name

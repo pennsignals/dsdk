@@ -7,7 +7,10 @@ from os import environ as os_env
 from re import compile as re_compile
 from typing import Mapping, Optional
 
-from yaml import SafeLoader, add_constructor, add_implicit_resolver
+try:
+    from yaml import CSafeLoader as Loader  # type: ignore[misc]
+except ImportError:
+    from yaml import SafeLoader as Loader  # type: ignore[misc]
 
 
 class Env:
@@ -25,8 +28,8 @@ class Env:
             """This closure passed env."""
             return cls._yaml_init(loader, node, _env)
 
-        add_implicit_resolver(cls.YAML, cls.PATTERN, None, Loader=SafeLoader)
-        add_constructor(cls.YAML, _yaml_init, Loader=SafeLoader)
+        Loader.add_implicit_resolver(cls.YAML, cls.PATTERN, None)
+        Loader.add_constructor(cls.YAML, _yaml_init)
 
     @classmethod
     def _yaml_init(cls, loader, node, env: Mapping[str, str]):

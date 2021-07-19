@@ -18,19 +18,21 @@ repos:
   - id: requirements-txt-fixer
   - id: trailing-whitespace
 - repo: http://github.com/pre-commit/pygrep-hooks
-  rev: v1.4.2
+  rev: v1.9.0
   hooks:
   - id: python-check-blanket-noqa
+  - id: python-check-blanket-type-ignore
+  - id: python-no-eval
+  - id: python-no-log-warn
   - id: python-use-type-annotations
   - id: rst-backticks
-# - repo: https://github.com/pre-commit/mirrors-isort
-- repo: https://github.com/timothycrosley/isort
-  rev: 4.3.21-2
+- repo: https://github.com/pycqa/isort
+  rev: 5.8.0
   hooks:
   - id: isort
     additional_dependencies: [toml]
 - repo: https://github.com/psf/black
-  rev: 19.10b0
+  rev: 21.7b0
   hooks:
   - id: black
     language_version: python3.9

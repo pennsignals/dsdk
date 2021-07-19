@@ -29,15 +29,15 @@ try:
         OperationalError,
         connect,
     )
-    from psycopg2.extras import execute_batch
     from psycopg2.extensions import (
-        register_adapter,
         ISOLATION_LEVEL_AUTOCOMMIT,
-        ISQLQuote,
-        Float,
         AsIs,
+        Float,
         Int,
+        ISQLQuote,
+        register_adapter,
     )
+    from psycopg2.extras import execute_batch
 
     def na_adapter(as_type):
         """Na adapter."""
@@ -122,7 +122,12 @@ class Persistor(Messages, BasePersistor):
     YAML = "!postgres"
 
     @classmethod
-    def mogrify(cls, cur, query: str, parameters: Any,) -> bytes:
+    def mogrify(
+        cls,
+        cur,
+        query: str,
+        parameters: Any,
+    ) -> bytes:
         """Safely mogrify parameters into query or fragment."""
         return cur.mogrify(query, parameters)
 
@@ -182,7 +187,12 @@ class Persistor(Messages, BasePersistor):
                     time_zone,
                     *_,
                 ) = row
-                run = Run(id_, microservice_id, model_id, parent,)
+                run = Run(
+                    id_,
+                    microservice_id,
+                    model_id,
+                    parent,
+                )
                 parent.as_of = as_of
                 parent.duration = Interval(
                     on=duration.lower, end=duration.upper
@@ -226,7 +236,9 @@ class Persistor(Messages, BasePersistor):
         with self.rollback() as cur:
             cur.execute(sql.schema)
             return self.df_from_query(
-                cur, sql.predictions.gold, {"run_id": run_id},
+                cur,
+                sql.predictions.gold,
+                {"run_id": run_id},
             ).score.values  # pylint: disable=no-member
 
     def store_evidence(self, run: Any, *args, **kwargs) -> None:
@@ -237,7 +249,7 @@ class Persistor(Messages, BasePersistor):
         evidence = run.evidence
         exclude = set(kwargs.get("exclude", ()))
         while args:
-            key, df, *args = args  # type: ignore
+            key, df, *args = args  # type: ignore[assignment]
             evidence[key] = df
             # setattr(batch.evidence, name, data)
             if df.empty:
@@ -249,11 +261,18 @@ class Persistor(Messages, BasePersistor):
                     f"Missing sql/postgres/{key}/insert.sql"
                 ) from e
             self._store_df(
-                schema, insert, run_id, df[list(set(df.columns) - exclude)],
+                schema,
+                insert,
+                run_id,
+                df[list(set(df.columns) - exclude)],
             )
 
     def _store_df(
-        self, schema: str, insert: str, run_id: int, df: DataFrame,
+        self,
+        schema: str,
+        insert: str,
+        run_id: int,
+        df: DataFrame,
     ):
         df["run_id"] = run_id
         out = df.to_dict("records")
@@ -261,7 +280,9 @@ class Persistor(Messages, BasePersistor):
             with self.commit() as cur:
                 cur.execute(schema)
                 execute_batch(
-                    cur, insert, out,
+                    cur,
+                    insert,
+                    out,
                 )
         except DatabaseError as e:
             enumeration = enumerate(out)
@@ -312,7 +333,11 @@ class Run(Delegate):
     """Run."""
 
     def __init__(  # pylint: disable=too-many-arguments
-        self, id_: int, microservice_id: str, model_id: str, parent: Any,
+        self,
+        id_: int,
+        microservice_id: str,
+        model_id: str,
+        parent: Any,
     ):
         """__init__."""
         super().__init__(parent)

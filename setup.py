@@ -43,6 +43,7 @@ TEST_REQUIRES = (
     "pytest-cov",
     "types-pkg-resources",
     "types-python-dateutil",
+    "types-pymssql",
     "types-pyyaml",
 )
 

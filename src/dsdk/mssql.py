@@ -17,7 +17,7 @@ logger = getLogger(__name__)
 
 
 try:
-    from pymssql import connect, _mssql, DatabaseError, InterfaceError
+    from pymssql import DatabaseError, InterfaceError, _mssql, connect
 except ImportError as import_error:
     logger.warning(import_error)
 
@@ -57,9 +57,14 @@ class Persistor(Messages, BasePersistor):
     YAML = "!mssql"
 
     @classmethod
-    def mogrify(cls, cur, query: str, parameters: Any,) -> bytes:
+    def mogrify(
+        cls,
+        cur,
+        query: str,
+        parameters: Any,
+    ) -> bytes:
         """Safely mogrify parameters into query or fragment."""
-        return _mssql.substitute_params(query, parameters)  # type: ignore
+        return _mssql.substitute_params(query, parameters)
 
     def check(self, cur, exceptions=(DatabaseError, InterfaceError)):
         """check."""
