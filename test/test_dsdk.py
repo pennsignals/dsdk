@@ -5,7 +5,6 @@ from typing import Any, Callable, Dict, Tuple
 
 from pandas import DataFrame
 from pytest import mark
-from yaml import safe_dump as yaml_dumps
 
 from dsdk import (
     Asset,

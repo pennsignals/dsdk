@@ -11,7 +11,7 @@ begin
     create table epic_notifications (
         id int primary key generated always as identity,
         prediction_id int not null,
-        recorded_on timestamptz default statement_timestamp(),
+        assert_on timestamptz default statement_timestamp(),
         constraint only_one_epic_notification_per_prediction
             unique (prediction_id),
         constraint epic_notifications_require_a_prediction
@@ -27,7 +27,7 @@ begin
     create table epic_notification_errors (
         id int primary key generated always as identity,
         prediction_id int not null,
-        recorded_on timestamptz default statement_timestamp(),
+        assert_on timestamptz default statement_timestamp(),
         acknowledged_on timestamptz default null,
         name varchar,
         description varchar,
@@ -40,7 +40,7 @@ begin
     create table epic_verifications (
         id int primary key generated always as identity,
         notification_id int not null,
-        recorded_on timestamptz default statement_timestamp(),
+        assert_on timestamptz default statement_timestamp(),
         constraint only_one_epic_verification_per_notification
             unique (notification_id),
         constraint epic_verifications_require_a_notification
@@ -56,7 +56,7 @@ begin
     create table epic_verification_errors (
         id int primary key generated always as identity,
         notification_id int not null,
-        recorded_on timestamptz default statement_timestamp(),
+        assert_on timestamptz default statement_timestamp(),
         acknowledged_on timestamptz default null,
         name varchar,
         description varchar,

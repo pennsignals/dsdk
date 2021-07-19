@@ -22,11 +22,27 @@ class Abstract:
         """Listen."""
         while True:
             readers, _, exceptions = select(
-                [listen], [], [], self.poll_timeout
+                [listen], [], [listen], self.poll_timeout
             )
+            if exceptions:
+                break
+            if not readers:
+                continue
             if listen.poll():
                 while listen.notifies:
                     self.on_notify(listen.notifies.pop())
+
+    def on_notify(self, event):  # pylint: disable=no-self-use
+        """On postgres notify handler."""
+        logger.debug(
+            "NOTIFY: %(pid)s.%(channel)s.%(payload)s",
+            {
+                "channel": event.chennel,
+                "payload": event.payload,
+                "pid": event.pid,
+            },
+        )
+        raise NotImplementedError()
 
 
 class Notification(Abstract):
@@ -77,10 +93,6 @@ class Notification(Abstract):
         for each in cur.fetchall():
             self.call_uri(each, cur)
 
-    def on_notify(self, notify):
-        """On notify."""
-        logger.debug(f"NOTIFY: {notify.pid}.{notify.channel}.{notify.payload}")
-
     def call_uri(self, prediction, cur):
         """Call uri."""
         sql = self.postgres.sql
@@ -90,7 +102,7 @@ class Notification(Abstract):
             "score": prediction["score"],
         }
         request = Request(uri, data=None)
-        with urlopen(request, self.timeout) as response:
+        with urlopen(request, self.uri_timeout) as response:
             if response.ok:
                 cur.execute(
                     sql.epic.notification.insert,
@@ -111,11 +123,6 @@ class Verification(Abstract):
     """Verification Service."""
 
     URI = "api/epic/2014/Clinical/Patient/GetFlowsheetRows/FlowsheetRows"
-
-    @classmethod
-    def main(cls):
-        """__main__."""
-        pass
 
     def __init__(
         self, postgres, uri=URI, poll_timeout=60, uri_timeout=5
@@ -139,16 +146,12 @@ class Verification(Abstract):
         for each in cur.fetchall():
             self.call_uri(each, cur)
 
-    def on_notify(self, notify):
-        """On notify."""
-        logger.debug(f"NOTIFY: {notify.pid}.{notify.channel}.{notify.payload}")
-
     def call_uri(self, notification, cur):
         """Call uri."""
         sql = self.postgres.sql
         # TODO add notification flowsheet ids to data?
         request = Request(self.URI, data=None)
-        with urlopen(request, self.timeout) as response:
+        with urlopen(request, self.uri_timeout) as response:
             if response.ok:
                 cur.execute(
                     sql.epic.verification.insert,
