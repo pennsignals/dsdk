@@ -25,19 +25,18 @@ from typing import (
 
 from pandas import DataFrame
 from pkg_resources import DistributionNotFound, get_distribution
-from yaml import safe_load as yaml_loads
 
 from .asset import Asset
 from .env import Env
 from .interval import Interval
-from .utils import configure_logger, get_tzinfo, now_utc_datetime
-
-try:
-    from yaml import CSafeDumper as Dumper  # type: ignore[misc]
-    from yaml import CSafeLoader as Loader  # type: ignore[misc]
-except ImportError:
-    from yaml import SafeDumper as Dumper  # type: ignore[misc]
-    from yaml import SafeLoader as Loader  # type: ignore[misc]
+from .utils import (
+    YamlDumper,
+    YamlLoader,
+    configure_logger,
+    get_tzinfo,
+    now_utc_datetime,
+    yaml_loads,
+)
 
 try:
     __version__ = get_distribution("dsdk").version
@@ -207,15 +206,15 @@ class Service:  # pylint: disable=too-many-instance-attributes
         {"key": "validate.count", "scores": "%s", "test": "%s", "status": "%s"}
     )
     MATCH = dumps({"key": "validate.match", "status": "%s"})
-    YAML = ""
+    YAML = "!baseservice"
 
     VERSION = __version__
 
     @classmethod
     def as_yaml_type(cls) -> None:
         """As yaml type."""
-        Loader.add_constructor(cls.YAML, cls._yaml_init)
-        Dumper.add_representer(cls, cls._yaml_repr)
+        YamlLoader.add_constructor(cls.YAML, cls._yaml_init)
+        YamlDumper.add_representer(cls, cls._yaml_repr)
 
     @classmethod
     @contextmanager
@@ -328,7 +327,6 @@ class Service:  # pylint: disable=too-many-instance-attributes
             env = Env.loads(envs)
 
         Env.as_yaml_type(env=env)
-
         cls.yaml_types()
         return yaml_loads(configs)
 

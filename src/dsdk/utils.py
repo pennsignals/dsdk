@@ -16,9 +16,17 @@ from time import perf_counter_ns
 from time import sleep as default_sleep
 from typing import Any, Callable, Generator, Sequence
 
+from yaml import dump as _yaml_dumps
+from yaml import load as _yaml_loads
+
+try:
+    from yaml import CSafeDumper as YamlDumper  # type: ignore[misc]
+    from yaml import CSafeLoader as YamlLoader  # type: ignore[misc]
+except ImportError:
+    from yaml import SafeDumper as YamlDumper  # type: ignore[misc]
+    from yaml import SafeLoader as YamlLoader  # type: ignore[misc]
+
 from dateutil import parser, tz
-from yaml import safe_dump as yaml_dumps
-from yaml import safe_load as yaml_loads
 
 logger = getLogger(__name__)
 
@@ -75,10 +83,10 @@ def dump_pickle_file(obj: Any, path: str) -> None:
         pickle_dump(obj, fout)
 
 
-def dump_yaml_file(obj: Any, path: str) -> None:
+def dump_yaml_file(data: Any, path: str, **kwargs) -> None:
     """Dump yaml file."""
     with open(path, "w") as fout:
-        yaml_dumps(obj, fout)
+        yaml_dumps(data=data, stream=fout, **kwargs)
 
 
 def epoch_ms_from_utc_datetime(utc: datetime) -> float:
@@ -108,7 +116,7 @@ def load_pickle_file(path: str) -> object:
 def load_yaml_file(path: str):
     """Load yaml file."""
     with open(path) as fin:
-        return yaml_loads(fin.read())
+        return yaml_loads(fin)
 
 
 def now_utc_datetime() -> datetime:
@@ -177,6 +185,16 @@ def retry(
 def utc_datetime_from_epoch_ms(epoch_ms: float) -> datetime:
     """Non-naive UTC datetime from UTC epoch ms."""
     return datetime.fromtimestamp(epoch_ms / 1000, tz=timezone.utc)
+
+
+def yaml_dumps(data, **kwargs):
+    """Yaml dumps."""
+    return _yaml_dumps(data=data, Dumper=YamlDumper, **kwargs)
+
+
+def yaml_loads(stream, **kwargs):
+    """Yaml loads."""
+    return _yaml_loads(stream=stream, Loader=YamlLoader, **kwargs)
 
 
 class StubError(Exception):

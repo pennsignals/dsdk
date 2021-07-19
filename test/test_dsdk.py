@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test dsdk."""
 
+from io import StringIO
 from typing import Any, Callable, Dict, Tuple
 
 from pandas import DataFrame
@@ -19,6 +20,7 @@ from dsdk import (
     Task,
     dump_pickle_file,
     retry,
+    yaml_dumps,
 )
 
 
@@ -103,7 +105,8 @@ def build_from_yaml(cls) -> Tuple[Callable, Dict[str, Any]]:
         Model(name="test", path=pickle_file, version="0.0.1"), pickle_file
     )
 
-    configs = """
+    configs = StringIO(
+        """
 !myservice
 mssql: !mssql
   database: test
@@ -129,11 +132,14 @@ postgres: !postgres
   - baz
   username: postgres
 """
+    )
     env = {"POSTGRES_PASSWORD": "oops!", "MSSQL_PASSWORD": "oops!"}
-    envs = """
+    envs = StringIO(
+        """
 MSSQL_PASSWORD=password
 POSTGRES_PASSWORD=password
 """
+    )
     return (
         cls.loads,
         {"configs": configs, "env": env, "envs": envs},
@@ -144,17 +150,24 @@ POSTGRES_PASSWORD=password
     "cls,kwargs",
     (build_from_yaml(MyService), build_from_parameters(MyService)),
 )
-def test_service(cls, kwargs: Dict[str, Any]):
+def test_service(
+    cls,  # pylint: disable=redefined-outer-name
+    kwargs: Dict[str, Any],
+):
     """Test parameters, config, and env."""
     service = cls(**kwargs)
-    assert service.__class__ is cls
+    assert service.__class__ is MyService
     assert service.model.__class__ is Model
     assert service.postgres.__class__ is Postgres
     assert service.mssql.__class__ is Mssql
     assert service.postgres.password == "password"
     assert service.mssql.password == "password"
-    # yaml = yaml_dumps(service)
-    # print(yaml)
+    buf = StringIO()
+    buf.write(yaml_dumps(service))
+    expected = """
+
+    """
+    assert buf.getvalue() == expected
 
 
 def test_retry_other_exception():
@@ -219,3 +232,8 @@ def test_retry_exhausted():
     except NotImplementedError as exception:
         assert actual == expected
         assert str(exception) == "when?"
+
+
+if __name__ == "__main__":
+    cls, kwargs = build_from_yaml(MyService)
+    test_service(cls, kwargs)

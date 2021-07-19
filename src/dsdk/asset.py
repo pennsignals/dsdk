@@ -11,12 +11,7 @@ from os.path import join as joinpath
 from os.path import splitext
 from typing import Any, Dict
 
-try:
-    from yaml import CSafeDumper as Dumper  # type: ignore[misc]
-    from yaml import CSafeLoader as Loader  # type: ignore[misc]
-except ImportError:
-    from yaml import SafeDumper as Dumper  # type: ignore[misc]
-    from yaml import SafeLoader as Loader  # type: ignore[misc]
+from .utils import YamlDumper, YamlLoader
 
 logger = getLogger(__name__)
 
@@ -29,8 +24,8 @@ class Asset(Namespace):
     @classmethod
     def as_yaml_type(cls):
         """As yaml type."""
-        Loader.add_constructor(cls.YAML, cls._yaml_init)
-        Dumper.add_representer(cls, cls._yaml_repr)
+        YamlLoader.add_constructor(cls.YAML, cls._yaml_init)
+        YamlDumper.add_representer(cls, cls._yaml_repr)
 
     @classmethod
     def build(cls, *, path: str, ext: str):

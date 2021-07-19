@@ -15,6 +15,8 @@ from .postgres import Persistor as Postgres
 from .postgres import PredictionMixin as PostgresPredictionMixin
 from .service import Batch, Delegate, Service, Task
 from .utils import (
+    YamlDumper,
+    YamlLoader,
     chunks,
     configure_logger,
     dump_json_file,
@@ -26,6 +28,8 @@ from .utils import (
     now_utc_datetime,
     profile,
     retry,
+    yaml_dumps,
+    yaml_loads,
 )
 
 __all__ = (
@@ -45,6 +49,8 @@ __all__ = (
     "Postgres",
     "Service",
     "Task",
+    "YamlLoader",
+    "YamlDumper",
     "chunks",
     "configure_logger",
     "dump_json_file",
@@ -56,4 +62,6 @@ __all__ = (
     "profile",
     "now_utc_datetime",
     "retry",
+    "yaml_dumps",
+    "yaml_loads",
 )

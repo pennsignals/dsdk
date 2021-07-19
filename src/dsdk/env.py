@@ -7,17 +7,14 @@ from os import environ as os_env
 from re import compile as re_compile
 from typing import Mapping, Optional
 
-try:
-    from yaml import CSafeLoader as Loader  # type: ignore[misc]
-except ImportError:
-    from yaml import SafeLoader as Loader  # type: ignore[misc]
+from .utils import YamlLoader
 
 
 class Env:
     """Env."""
 
     YAML = "!env"
-    PATTERN = re_compile(r".*?\$\{(\w+)\}.*?")
+    PATTERN = re_compile(r".?\$\{([^\}^\{]+)\}.?")
 
     @classmethod
     def as_yaml_type(cls, *, env: Optional[Mapping[str, str]] = None):
@@ -28,8 +25,8 @@ class Env:
             """This closure passed env."""
             return cls._yaml_init(loader, node, _env)
 
-        Loader.add_implicit_resolver(cls.YAML, cls.PATTERN, None)
-        Loader.add_constructor(cls.YAML, _yaml_init)
+        YamlLoader.add_implicit_resolver(cls.YAML, cls.PATTERN, None)
+        YamlLoader.add_constructor(cls.YAML, _yaml_init)
 
     @classmethod
     def _yaml_init(cls, loader, node, env: Mapping[str, str]):
@@ -49,13 +46,13 @@ class Env:
     def load(cls, path: str) -> Mapping[str, str]:
         """Env load."""
         with open(path) as fin:
-            return cls.loads(fin.read())
+            return cls.loads(fin)
 
     @classmethod
-    def loads(cls, envs: str) -> Mapping[str, str]:
+    def loads(cls, stream) -> Mapping[str, str]:
         """Env loads."""
         result = {}
-        for line in envs.split("\n"):
+        for line in stream:
             line = line.strip()
             if not line:
                 continue

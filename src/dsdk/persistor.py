@@ -13,15 +13,7 @@ from typing import Any, Dict, Generator, Optional, Sequence, Tuple
 from pandas import DataFrame, concat
 
 from .asset import Asset
-from .utils import chunks
-
-try:
-    from yaml import CSafeDumper as Dumper  # type: ignore[misc]
-    from yaml import CSafeLoader as Loader  # type: ignore[misc]
-except ImportError:
-    from yaml import SafeDumper as Dumper  # type: ignore[misc]
-    from yaml import SafeLoader as Loader  # type: ignore[misc]
-
+from .utils import YamlDumper, YamlLoader, chunks
 
 logger = getLogger(__name__)
 
@@ -235,13 +227,13 @@ class AbstractPersistor:
 class Persistor(AbstractPersistor):
     """Persistor."""
 
-    YAML = ""
+    YAML = "!basepersistor"
 
     @classmethod
     def as_yaml_type(cls) -> None:
         """As yaml type."""
-        Loader.add_constructor(cls.YAML, cls._yaml_init)
-        Dumper.add_representer(cls, cls._yaml_repr)
+        YamlLoader.add_constructor(cls.YAML, cls._yaml_init)
+        YamlDumper.add_representer(cls, cls._yaml_repr)
 
     @classmethod
     def _yaml_init(cls, loader, node):
