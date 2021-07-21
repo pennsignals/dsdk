@@ -75,27 +75,103 @@ def build_from_parameters(cls) -> Tuple[Callable, Dict[str, Any]]:
     """Build from parameters."""
     model = Model(name="test", path="./test/model.pkl", version="0.0.1-rc.1")
     mssql = Mssql(
-        username="username",
+        username="mssql",
         password="password",
-        host="host",
+        host="0.0.0.0",
         port=1433,
-        database="database",
+        database="test",
         sql=Asset.build(path="./assets/mssql", ext=".sql"),
-        tables=("foo", "bar", "baz"),
+        tables=("a", "b", "c"),
     )
     postgres = Postgres(
-        username="username",
+        username="postgres",
         password="password",
-        host="host",
+        host="0.0.0.0",
         port=5432,
-        database="database",
+        database="test",
         sql=Asset.build(path="./assets/postgres", ext=".sql"),
-        tables=("foo", "bar", "baz"),
+        tables=("ichi", "ni", "san", "shi", "go"),
     )
     return (
         cls,
         {"model": model, "mssql": mssql, "postgres": postgres},
     )
+
+
+CONFIGS = """
+!myservice
+mssql: !mssql
+  database: test
+  host: 0.0.0.0
+  password: ${MSSQL_PASSWORD}
+  port: 1433
+  sql: !asset
+    ext: .sql
+    path: ./assets/mssql
+  tables:
+  - a
+  - b
+  - c
+  username: mssql
+model: !model ./test/model.pkl
+postgres: !postgres
+  database: test
+  host: 0.0.0.0
+  password: ${POSTGRES_PASSWORD}
+  port: 5432
+  sql: !asset
+    ext: .sql
+    path: ./assets/postgres
+  tables:
+  - ichi
+  - ni
+  - san
+  - shi
+  - go
+  username: postgres
+""".strip()
+
+ENVS = """
+MSSQL_PASSWORD=password
+POSTGRES_PASSWORD=password
+""".strip()
+
+EXPECTED = """
+!myservice
+as_of: null
+duration: null
+gold: null
+model: !model ./test/model.pkl
+mssql: !mssql
+  database: test
+  host: 0.0.0.0
+  password: password
+  port: 1433
+  sql: !asset
+    ext: .sql
+    path: ./assets/mssql
+  tables:
+  - a
+  - b
+  - c
+  username: mssql
+postgres: !postgres
+  database: test
+  host: 0.0.0.0
+  password: password
+  port: 5432
+  sql: !asset
+    ext: .sql
+    path: ./assets/postgres
+  tables:
+  - ichi
+  - ni
+  - san
+  - shi
+  - go
+  username: postgres
+time_zone: null
+""".strip()
 
 
 def build_from_yaml(cls) -> Tuple[Callable, Dict[str, Any]]:
@@ -105,41 +181,9 @@ def build_from_yaml(cls) -> Tuple[Callable, Dict[str, Any]]:
         Model(name="test", path=pickle_file, version="0.0.1"), pickle_file
     )
 
-    configs = StringIO(
-        """
-!myservice
-mssql: !mssql
-  database: test
-  host: 0.0.0.0
-  password: ${MSSQL_PASSWORD}
-  port: 1433
-  sql: ./assets/mssql
-  tables:
-  - foo
-  - bar
-  - baz
-  username: mssql
-model: !model ./test/model.pkl
-postgres: !postgres
-  database: test
-  host: 0.0.0.0
-  password: ${POSTGRES_PASSWORD}
-  port: 5432
-  sql: ./asset/postgres
-  tables:
-  - foo
-  - bar
-  - baz
-  username: postgres
-"""
-    )
+    configs = StringIO(CONFIGS)
     env = {"POSTGRES_PASSWORD": "oops!", "MSSQL_PASSWORD": "oops!"}
-    envs = StringIO(
-        """
-MSSQL_PASSWORD=password
-POSTGRES_PASSWORD=password
-"""
-    )
+    envs = StringIO(ENVS)
     return (
         cls.loads,
         {"configs": configs, "env": env, "envs": envs},
@@ -155,6 +199,7 @@ def test_service(
     kwargs: Dict[str, Any],
 ):
     """Test parameters, config, and env."""
+    expected = EXPECTED
     service = cls(**kwargs)
     assert service.__class__ is MyService
     assert service.model.__class__ is Model
@@ -164,10 +209,8 @@ def test_service(
     assert service.mssql.password == "password"
     buf = StringIO()
     buf.write(yaml_dumps(service))
-    expected = """
-
-    """
-    assert buf.getvalue() == expected
+    actual = buf.getvalue().strip()
+    assert actual == expected
 
 
 def test_retry_other_exception():
@@ -235,5 +278,4 @@ def test_retry_exhausted():
 
 
 if __name__ == "__main__":
-    cls, kwargs = build_from_yaml(MyService)
-    test_service(cls, kwargs)
+    test_service(*build_from_yaml(MyService))

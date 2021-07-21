@@ -6,7 +6,7 @@ from __future__ import annotations
 from abc import ABC
 from contextlib import contextmanager
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Dict, Generator, Optional
+from typing import TYPE_CHECKING, Any, Dict, Generator
 
 from .service import Delegate, Service
 from .utils import YamlDumper, YamlLoader, load_pickle_file
@@ -52,17 +52,17 @@ class Model:  # pylint: disable=too-few-public-methods
         self,
         *,
         name: str,
+        path: str,
         version: str,
-        path: Optional[str] = None,
     ) -> None:
         """__init__."""
         self.name = name
         self.path = path
         self.version = version
 
-    def as_yaml(self) -> Dict[str, Any]:
+    def as_yaml(self) -> str:
         """As yaml."""
-        return {"path": self.path}
+        return self.path
 
 
 class Batch(Delegate):
