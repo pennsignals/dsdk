@@ -272,7 +272,7 @@ class Service:  # pylint: disable=too-many-instance-attributes
             dest="env_file",
             type=str,
             help="env file",
-            default=env.get("env", None),
+            default=env.get("ENV", None),
         )
         args = parser.parse_args(argv)
         if args.config_file is None:

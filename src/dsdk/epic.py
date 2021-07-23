@@ -3,26 +3,121 @@
 
 from logging import getLogger
 from select import select
+from typing import Any, Dict
 from urllib.request import Request, urlopen
+
+from .postgres import Persistor as Postgres
+from .utils import YamlDumper, YamlLoader
 
 logger = getLogger(__name__)
 
 
-class Abstract:
-    """Abstract Service."""
+class Epic:
+    """Epic."""
 
-    def __init__(self, postgres, uri, poll_timeout=60, uri_timeout=5) -> None:
+    YAML = "!epic"
+
+    @classmethod
+    def as_yaml_type(cls):
+        """As yaml type."""
+        YamlLoader.add_constructor(cls.YAML, cls._yaml_init)
+        YamlDumper.add_representer(cls, cls._yaml_repr)
+
+    @classmethod
+    def _yaml_init(cls, loader, node):
+        """Yaml init."""
+        return cls(**loader.construct_mapping(node, deep=True))
+
+    @classmethod
+    def _yaml_repr(cls, dumper, self):
+        """Yaml repr."""
+        return dumper.represent_mapper(cls.YAML, self.as_yaml())
+
+    def __init__(
+        self,
+        *,
+        authorization: str,
+        cookie: str,
+        postgres: Postgres,
+        poll_timeout: int = 60,
+        uri_timeout: int = 5,
+        user_id: str = "pennsignals",
+        user_id_type: str = "external",
+    ) -> None:
         """__init__."""
+        self.authorization = authorization
+        self.cookie = cookie
         self.postgres = postgres
-        self.uri = uri
         self.poll_timeout = poll_timeout
         self.uri_timeout = uri_timeout
+        self.user_id = user_id
+        self.user_id_type = user_id_type
+
+    def as_yaml(self) -> Dict[str, Any]:
+        """As yaml."""
+        return {
+            "authorization": self.authorization,
+            "cookie": self.cookie,
+            "poll_timeout": self.poll_timeout,
+            "postgres": self.postgres,
+            "uri_timeout": self.uri_timeout,
+            "user_id": self.user_id,
+            "user_id_type": self.user_id_type,
+        }
+
+
+class FlowsheetEgress:  # pylint: disable=too-many-instance-attributes
+    """Flowsheet Egress."""
+
+    YAML = "!flowsheetegress"
+
+    @classmethod
+    def as_yaml_type(cls):
+        """As yaml type."""
+        YamlLoader.add_constructor(cls.YAML, cls._yaml_init)
+        YamlDumper.add_representer(cls, cls._yaml_repr)
+
+    @classmethod
+    def _yaml_init(cls, loader, node):
+        """Yaml init."""
+        return cls(**loader.construct_mapping(node, deep=True))
+
+    @classmethod
+    def _yaml_repr(cls, dumper, self):
+        """Yaml repr."""
+        return dumper.represent_mapper(cls.YAML, self.as_yaml())
+
+    def __init__(
+        self,
+        *,
+        epic: Epic,
+        uri: str,
+        flowsheet_id: str = "3040015333",
+        flowsheet_template_id: str = "3040005300",
+        flowsheet_template_id_type: str = "internal",
+    ) -> None:
+        """__init__."""
+        self.epic = epic
+        self.flowsheet_id = flowsheet_id
+        self.flowsheet_template_id = flowsheet_template_id
+        self.flowsheet_template_id_type = flowsheet_template_id_type
+        self.uri = uri
+
+    def as_yaml(self) -> Dict[str, Any]:
+        """As yaml."""
+        return {
+            "epic": self.epic,
+            "flowsheet_id": self.flowsheet_id,
+            "flowsheet_template_id": self.flowsheet_template_id,
+            "flowsheet_template_id_type": self.flowsheet_template_id_type,
+            "uri": self.uri,
+        }
 
     def listen(self, listen):
         """Listen."""
         while True:
             readers, _, exceptions = select(
-                [listen], [], [listen], self.poll_timeout
+                [listen], [], [listen], self.epic.poll_timeout
             )
             if exceptions:
                 break
@@ -45,8 +140,10 @@ class Abstract:
         raise NotImplementedError()
 
 
-class Notification(Abstract):
+class Notification(FlowsheetEgress):
     """Notification Service."""
+
+    YAML = "!notification"
 
     URI = "?".join(
         (
@@ -54,55 +151,80 @@ class Notification(Abstract):
             "&".join(
                 (
                     "PatientID=%(empi)s",
-                    "PatientIDType={patient_id_type}",
+                    "PatientIDType=%(patient_id_type)s",
                     "ContactID=%(csn)s",
-                    "ContactIDType={contact_id_type}",
-                    "UserID=PENNSIGNALS",
-                    "UserIDType=EXTERNAL",
-                    "FlowsheetID={flowsheet_id}",
-                    "FlowsheetIDType={flowsheet_id_type}",
+                    "ContactIDType=%(contact_id_type)s",
+                    "UserID=%(user_id)s",
+                    "UserIDType=%(user_type_id)s",
+                    "FlowsheetID=%(flowsheet_id)s",
+                    "FlowsheetIDType=%(flowsheet_id_type)s",
                     "Value=%(score)s",
-                    "Comment={comment}",
-                    "InstantValueTaken={instant_value_taken}",
-                    "FlowsheetTemplateID={flowsheet_template_id}",
-                    "FlowsheetTemplateIDType={flowsheet_template_id_type}",
+                    "Comment=%(comment)s",
+                    "InstantValueTaken=%(instant_value_taken)s",
+                    "FlowsheetTemplateID=%(flowsheet_template_id)s",
+                    "FlowsheetTemplateIDType=%(flowsheet_template_id_type)s",
                 )
             ),
         )
     )
 
     def __init__(
-        self, postgres, uri=URI, poll_timeout=60, uri_timeout=5
+        self,
+        *,
+        epic: Epic,
+        comment: str = "Not for clinical use.",
+        contact_type_id: str = "csn",
+        patient_id_type: str = "uid",
+        uri=URI,
+        **kwargs,
     ) -> None:
         """__init__."""
-        super().__init__(postgres, uri, poll_timeout, uri_timeout)
+
+        super().__init__(
+            epic=epic,
+            uri=uri,
+            **kwargs,
+        )
+        self.comment = comment
+        self.contact_type_id = contact_type_id
+        self.patient_id_type = patient_id_type
 
     def __call__(self):
         """__call__."""
-        postgres = self.postgres
+        postgres = self.epic.postgres
         sql = postgres.sql
         with postgres.listen(sql.prediction.listen) as listen:
             with postgres.commit() as cur:
                 self.recover(cur)
             self.listen(listen)
 
+    def as_yaml(self) -> Dict[str, Any]:
+        """As yaml."""
+        return {
+            "comment": self.comment,
+            "contact_type_id": self.contact_type_id,
+            "patient_id_type": self.patient_id_type,
+            **super().as_yaml(),
+        }
+
     def recover(self, cur):
         """Recover."""
-        sql = self.postgres.sql
+        sql = self.epic.postgres.sql
         cur.execute(sql.epic.notification.recover)
         for each in cur.fetchall():
             self.call_uri(each, cur)
 
     def call_uri(self, prediction, cur):
         """Call uri."""
-        sql = self.postgres.sql
+        epic = self.epic
+        sql = epic.postgres.sql
         uri = self.uri % {
             "csn": prediction["csn"],
             "empi": prediction["empi"],
             "score": prediction["score"],
         }
         request = Request(uri, data=None)
-        with urlopen(request, self.uri_timeout) as response:
+        with urlopen(request, epic.uri_timeout) as response:
             if response.ok:
                 cur.execute(
                     sql.epic.notification.insert,
@@ -119,20 +241,30 @@ class Notification(Abstract):
                 )
 
 
-class Verification(Abstract):
+class Verification(FlowsheetEgress):
     """Verification Service."""
 
     URI = "api/epic/2014/Clinical/Patient/GetFlowsheetRows/FlowsheetRows"
 
     def __init__(
-        self, postgres, uri=URI, poll_timeout=60, uri_timeout=5
+        self,
+        *,
+        epic: Epic,
+        uri=URI,
+        flowsheet_id: str = "3040015333",
+        **kwargs,
     ) -> None:
         """__init__."""
-        super().__init__(postgres, uri, poll_timeout, uri_timeout)
+        super().__init__(
+            epic=epic,
+            flowsheet_id=flowsheet_id,
+            uri=uri,
+            **kwargs,
+        )
 
     def __call__(self):
         """__call__."""
-        postgres = self.postgres
+        postgres = self.epic.postgres
         sql = postgres.sql
         with postgres.listen(sql.notification.listen) as listen:
             with postgres.commit() as cur:
@@ -141,17 +273,18 @@ class Verification(Abstract):
 
     def recover(self, cur):
         """Recover."""
-        sql = self.postgres.sql
+        sql = self.epic.postgres.sql
         cur.execute(sql.epic.verification.recover)
         for each in cur.fetchall():
             self.call_uri(each, cur)
 
     def call_uri(self, notification, cur):
         """Call uri."""
-        sql = self.postgres.sql
+        epic = self.epic
+        sql = epic.postgres.sql
         # TODO add notification flowsheet ids to data?
         request = Request(self.URI, data=None)
-        with urlopen(request, self.uri_timeout) as response:
+        with urlopen(request, epic.uri_timeout) as response:
             if response.ok:
                 cur.execute(
                     sql.epic.verification.insert,
