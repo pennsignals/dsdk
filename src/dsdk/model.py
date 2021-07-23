@@ -6,10 +6,10 @@ from __future__ import annotations
 from abc import ABC
 from contextlib import contextmanager
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Dict, Generator
+from typing import TYPE_CHECKING, Any, Dict, Generator, Optional
 
 from .service import Delegate, Service
-from .utils import YamlDumper, YamlLoader, load_pickle_file
+from .utils import load_pickle_file, yaml_type
 
 logger = getLogger(__name__)
 
@@ -26,10 +26,14 @@ class Model:  # pylint: disable=too-few-public-methods
     YAML = "!model"
 
     @classmethod
-    def as_yaml_type(cls) -> None:
+    def as_yaml_type(cls, tag: Optional[str] = None) -> None:
         """As yaml type."""
-        YamlLoader.add_constructor(cls.YAML, cls._yaml_init)
-        YamlDumper.add_representer(cls, cls._yaml_repr)
+        yaml_type(
+            cls,
+            tag or cls.YAML,
+            init=cls._yaml_init,
+            repr=cls._yaml_repr,
+        )
 
     @classmethod
     def _yaml_init(cls, loader, node):
@@ -44,9 +48,9 @@ class Model:  # pylint: disable=too-few-public-methods
         return pkl
 
     @classmethod
-    def _yaml_repr(cls, dumper, self):
+    def _yaml_repr(cls, dumper, self, *, tag: str):
         """Yaml_repr."""
-        return dumper.represent_scalar(cls.YAML, self.as_yaml())
+        return dumper.represent_scalar(tag, self.as_yaml())
 
     def __init__(
         self,

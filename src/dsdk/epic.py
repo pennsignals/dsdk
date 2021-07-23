@@ -3,11 +3,11 @@
 
 from logging import getLogger
 from select import select
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from urllib.request import Request, urlopen
 
 from .postgres import Persistor as Postgres
-from .utils import YamlDumper, YamlLoader
+from .utils import yaml_type
 
 logger = getLogger(__name__)
 
@@ -18,10 +18,14 @@ class Epic:
     YAML = "!epic"
 
     @classmethod
-    def as_yaml_type(cls):
+    def as_yaml_type(cls, *, tag: Optional[str] = None):
         """As yaml type."""
-        YamlLoader.add_constructor(cls.YAML, cls._yaml_init)
-        YamlDumper.add_representer(cls, cls._yaml_repr)
+        yaml_type(
+            cls,
+            tag or cls.YAML,
+            init=cls._yaml_init,
+            repr=cls._yaml_repr,
+        )
 
     @classmethod
     def _yaml_init(cls, loader, node):
@@ -29,9 +33,9 @@ class Epic:
         return cls(**loader.construct_mapping(node, deep=True))
 
     @classmethod
-    def _yaml_repr(cls, dumper, self):
+    def _yaml_repr(cls, dumper, self, *, tag: str):
         """Yaml repr."""
-        return dumper.represent_mapper(cls.YAML, self.as_yaml())
+        return dumper.represent_mapping(tag, self.as_yaml())
 
     def __init__(
         self,
@@ -72,10 +76,14 @@ class FlowsheetEgress:  # pylint: disable=too-many-instance-attributes
     YAML = "!flowsheetegress"
 
     @classmethod
-    def as_yaml_type(cls):
+    def as_yaml_type(cls, tag: Optional[str] = None):
         """As yaml type."""
-        YamlLoader.add_constructor(cls.YAML, cls._yaml_init)
-        YamlDumper.add_representer(cls, cls._yaml_repr)
+        yaml_type(
+            cls,
+            tag or cls.YAML,
+            init=cls._yaml_init,
+            repr=cls._yaml_repr,
+        )
 
     @classmethod
     def _yaml_init(cls, loader, node):
@@ -83,9 +91,9 @@ class FlowsheetEgress:  # pylint: disable=too-many-instance-attributes
         return cls(**loader.construct_mapping(node, deep=True))
 
     @classmethod
-    def _yaml_repr(cls, dumper, self):
+    def _yaml_repr(cls, dumper, self, *, tag):
         """Yaml repr."""
-        return dumper.represent_mapper(cls.YAML, self.as_yaml())
+        return dumper.represent_mapper(tag, self.as_yaml())
 
     def __init__(
         self,

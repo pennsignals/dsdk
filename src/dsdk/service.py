@@ -30,12 +30,11 @@ from .asset import Asset
 from .env import Env
 from .interval import Interval
 from .utils import (
-    YamlDumper,
-    YamlLoader,
     configure_logger,
     get_tzinfo,
     now_utc_datetime,
     yaml_loads,
+    yaml_type,
 )
 
 try:
@@ -211,10 +210,14 @@ class Service:  # pylint: disable=too-many-instance-attributes
     VERSION = __version__
 
     @classmethod
-    def as_yaml_type(cls) -> None:
+    def as_yaml_type(cls, tag: Optional[str] = None) -> None:
         """As yaml type."""
-        YamlLoader.add_constructor(cls.YAML, cls._yaml_init)
-        YamlDumper.add_representer(cls, cls._yaml_repr)
+        yaml_type(
+            cls,
+            tag or cls.YAML,
+            init=cls._yaml_init,
+            repr=cls._yaml_repr,
+        )
 
     @classmethod
     @contextmanager
@@ -348,9 +351,9 @@ class Service:  # pylint: disable=too-many-instance-attributes
         return cls(**loader.construct_mapping(node, deep=True))
 
     @classmethod
-    def _yaml_repr(cls, dumper, self):
+    def _yaml_repr(cls, dumper, self, *, tag: str):
         """Yaml repr."""
-        return dumper.represent_mapping(cls.YAML, self.as_yaml())
+        return dumper.represent_mapping(tag, self.as_yaml())
 
     def __init__(
         self,

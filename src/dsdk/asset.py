@@ -9,9 +9,9 @@ from os import listdir
 from os.path import isdir
 from os.path import join as joinpath
 from os.path import splitext
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
-from .utils import YamlDumper, YamlLoader
+from .utils import yaml_type
 
 logger = getLogger(__name__)
 
@@ -22,10 +22,14 @@ class Asset(Namespace):
     YAML = "!asset"
 
     @classmethod
-    def as_yaml_type(cls):
+    def as_yaml_type(cls, tag: Optional[str] = None):
         """As yaml type."""
-        YamlLoader.add_constructor(cls.YAML, cls._yaml_init)
-        YamlDumper.add_representer(cls, cls._yaml_repr)
+        yaml_type(
+            cls,
+            tag or cls.YAML,
+            init=cls._yaml_init,
+            repr=cls._yaml_repr,
+        )
 
     @classmethod
     def build(cls, *, path: str, ext: str):
@@ -51,9 +55,9 @@ class Asset(Namespace):
         return cls.build(**loader.construct_mapping(node, deep=True))
 
     @classmethod
-    def _yaml_repr(cls, dumper, self):
+    def _yaml_repr(cls, dumper, self, *, tag: str):
         """Yaml repr."""
-        return dumper.represent_mapping(cls.YAML, self.as_yaml())
+        return dumper.represent_mapping(tag, self.as_yaml())
 
     def __init__(
         self,

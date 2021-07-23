@@ -4,7 +4,7 @@
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from .utils import YamlDumper, YamlLoader
+from .utils import yaml_type
 
 
 class Interval:
@@ -13,10 +13,14 @@ class Interval:
     YAML = "!interval"
 
     @classmethod
-    def as_yaml_type(cls):
+    def as_yaml_type(cls, tag: Optional[str] = None):
         """As yaml type."""
-        YamlLoader.add_constructor(cls.YAML, cls._yaml_init)
-        YamlDumper.add_representer(cls, cls._yaml_repr)
+        yaml_type(
+            cls,
+            tag or cls.YAML,
+            init=cls._yaml_init,
+            repr=cls._yaml_repr,
+        )
 
     @classmethod
     def _yaml_init(cls, loader, node):
@@ -24,9 +28,9 @@ class Interval:
         return cls(**loader.construct_mapping(node, deep=True))
 
     @classmethod
-    def _yaml_repr(cls, dumper, self):
+    def _yaml_repr(cls, dumper, self, *, tag: str):
         """Yaml repr."""
-        return dumper.represent_mapping(cls.YAML, self.as_yaml())
+        return dumper.represent_mapping(tag, self.as_yaml())
 
     def __init__(self, on: datetime, end: Optional[datetime] = None):
         """__init__."""

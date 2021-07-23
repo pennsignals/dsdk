@@ -5,9 +5,9 @@ from __future__ import annotations
 
 from os import environ as os_env
 from re import compile as re_compile
-from typing import Mapping, Optional
+from typing import Mapping, Optional, Pattern
 
-from .utils import YamlLoader
+from .utils import yaml_implicit_type
 
 
 class Env:
@@ -17,22 +17,34 @@ class Env:
     PATTERN = re_compile(r".?\$\{([^\}^\{]+)\}.?")
 
     @classmethod
-    def as_yaml_type(cls, *, env: Optional[Mapping[str, str]] = None):
+    def as_yaml_type(
+        cls,
+        tag: Optional[str] = None,
+        *,
+        env: Optional[Mapping[str, str]] = None,
+        pattern: Optional[Pattern] = None,
+    ):
         """As yaml type."""
-        _env = env or os_env
-
-        def _yaml_init(loader, node) -> str:
-            """This closure passed env."""
-            return cls._yaml_init(loader, node, _env)
-
-        YamlLoader.add_implicit_resolver(cls.YAML, cls.PATTERN, None)
-        YamlLoader.add_constructor(cls.YAML, _yaml_init)
+        yaml_implicit_type(
+            cls,
+            tag or cls.YAML,
+            pattern=pattern or cls.PATTERN,
+            init=cls._yaml_init,
+            env=env or os_env,
+        )
 
     @classmethod
-    def _yaml_init(cls, loader, node, env: Mapping[str, str]):
+    def _yaml_init(
+        cls,
+        loader,
+        node,
+        *,
+        env: Mapping[str, str],
+        pattern: Pattern,
+    ):
         """From yaml."""
         value = loader.construct_scalar(node)
-        match = cls.PATTERN.findall(value)
+        match = pattern.findall(value)
         if not match:
             return value
         for group in match:
