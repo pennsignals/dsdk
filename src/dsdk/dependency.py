@@ -10,8 +10,8 @@ from typing import Any, Callable, Dict, Optional, Tuple
 from dateutil import parser, tz
 
 
-class StubException(Exception):
-    """StubException."""
+class StubError(Exception):
+    """StubError."""
 
 
 class Interval:  # pylint: disable=too-few-public-methods

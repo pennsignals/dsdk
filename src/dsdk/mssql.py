@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, Generator, Type, cast
 
 from configargparse import ArgParser as ArgumentParser
 
-from .dependency import StubException
+from .dependency import StubError
 from .persistor import Persistor as BasePersistor
 from .service import Service, Task
 
@@ -23,7 +23,7 @@ try:
 except ImportError as import_error:
     logger.warning(import_error)
 
-    DatabaseError = InterfaceError = StubException
+    DatabaseError = InterfaceError = StubError
 
     def connect(*args, **kwargs):
         """Connect stub."""

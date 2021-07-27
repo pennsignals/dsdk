@@ -13,7 +13,7 @@ from configargparse import ArgParser as ArgumentParser
 from numpy import integer
 from pandas import DataFrame, NaT, Series, isna
 
-from .dependency import Interval, StubException
+from .dependency import Interval, StubError
 from .persistor import Persistor as BasePersistor
 from .service import Delegate, Service, Task
 from .utils import retry
@@ -69,7 +69,7 @@ try:
 except ImportError as import_error:
     logger.warning(import_error)
 
-    DatabaseError = InterfaceError = OperationalError = StubException
+    DatabaseError = InterfaceError = OperationalError = StubError
 
     def connect(*args, **kwargs):
         """Connect stub."""
