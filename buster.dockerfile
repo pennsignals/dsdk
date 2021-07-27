@@ -14,7 +14,7 @@ COPY pyproject.toml .
 COPY .pre-commit-config.yaml .
 COPY .git ./.git
 COPY src ./src
-COPY sql ./sql
+COPY assets ./assets
 COPY test ./test
 RUN \
     chmod +x /usr/bin/tini && \
