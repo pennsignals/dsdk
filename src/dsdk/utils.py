@@ -14,17 +14,7 @@ from pickle import load as pickle_load
 from sys import stdout
 from time import perf_counter_ns
 from time import sleep as default_sleep
-from typing import Any, Callable, Generator, Optional, Pattern, Sequence, Type
-
-from yaml import dump as _yaml_dumps
-from yaml import load as _yaml_loads
-
-try:
-    from yaml import CSafeDumper as Dumper  # type: ignore[misc]
-    from yaml import CSafeLoader as Loader  # type: ignore[misc]
-except ImportError:
-    from yaml import SafeDumper as Dumper  # type: ignore[misc]
-    from yaml import SafeLoader as Loader  # type: ignore[misc]
+from typing import Any, Callable, Generator, Sequence
 
 from dateutil import parser, tz
 
@@ -83,12 +73,6 @@ def dump_pickle_file(obj: Any, path: str) -> None:
         pickle_dump(obj, fout)
 
 
-def dump_yaml_file(data: Any, path: str, **kwargs) -> None:
-    """Dump yaml file."""
-    with open(path, "w") as fout:
-        yaml_dumps(data=data, stream=fout, **kwargs)
-
-
 def epoch_ms_from_utc_datetime(utc: datetime) -> float:
     """Epoch ms from non-naive UTC datetime."""
     return utc.timestamp() * 1000
@@ -111,12 +95,6 @@ def load_pickle_file(path: str) -> object:
     """Load pickle from file."""
     with open(path, "rb") as fin:
         return pickle_load(fin)
-
-
-def load_yaml_file(path: str):
-    """Load yaml file."""
-    with open(path) as fin:
-        return yaml_loads(fin)
 
 
 def now_utc_datetime() -> datetime:
@@ -185,73 +163,6 @@ def retry(
 def utc_datetime_from_epoch_ms(epoch_ms: float) -> datetime:
     """Non-naive UTC datetime from UTC epoch ms."""
     return datetime.fromtimestamp(epoch_ms / 1000, tz=timezone.utc)
-
-
-def yaml_dumps(data, **kwargs):
-    """Yaml dumps."""
-    return _yaml_dumps(data=data, Dumper=Dumper, **kwargs)
-
-
-def yaml_loads(stream, **kwargs):
-    """Yaml loads."""
-    return _yaml_loads(stream=stream, Loader=Loader, **kwargs)
-
-
-def yaml_type(
-    cls: type,
-    tag: str,
-    *,
-    init: Optional[Callable] = None,
-    repr: Optional[Callable] = None,  # pylint: disable=redefined-builtin
-    loader: Optional[Type[Loader]] = None,
-    dumper: Optional[Type[Dumper]] = None,
-    **kwargs,
-):
-    """Yaml type."""
-    _loader = loader or Loader
-    _dumper = dumper or Dumper
-    if init is not None:
-
-        def _init_closure(loader, node):
-            return init(loader, node, **kwargs)
-
-        _loader.add_constructor(tag, _init_closure)
-
-    if repr is not None:
-
-        def _repr_closure(dumper, self):
-            return repr(dumper, self, tag=tag, **kwargs)
-
-        _dumper.add_representer(cls, _repr_closure)
-
-
-def yaml_implicit_type(
-    cls: type,
-    tag: str,
-    *,
-    init: Callable,
-    pattern: Pattern,
-    repr: Optional[Callable] = None,  # pylint: disable=redefined-builtin
-    loader: Optional[Type[Loader]] = None,
-    dumper: Optional[Type[Dumper]] = None,
-    **kwargs,
-):
-    """Yaml implicit type."""
-    _loader = loader or Loader
-    _dumper = dumper or Dumper
-
-    def _init_closure(loader, node):
-        return init(loader, node, pattern=pattern, **kwargs)
-
-    _loader.add_constructor(tag, _init_closure)
-    _loader.add_implicit_resolver(tag, pattern, None)
-
-    if repr is not None:
-
-        def _repr_closure(dumper, self):
-            return repr(dumper, self, tag=tag, pattern=pattern, **kwargs)
-
-        _dumper.add_representer(cls, _repr_closure)
 
 
 class StubError(Exception):

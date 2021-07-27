@@ -10,10 +10,11 @@ from re import compile as re_compile
 from tempfile import NamedTemporaryFile
 from typing import Any, Dict, Generator, Optional, Sequence, Tuple
 
+from cfgenvy import yaml_type
 from pandas import DataFrame, concat
 
 from .asset import Asset
-from .utils import chunks, yaml_type
+from .utils import chunks
 
 logger = getLogger(__name__)
 

@@ -4,7 +4,7 @@
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from .utils import yaml_type
+from cfgenvy import yaml_type
 
 
 class Interval:

@@ -4,12 +4,15 @@
 from setuptools import find_packages, setup
 
 INSTALL_REQUIRES = (
-    "configargparse>=1.5.1",
+    (
+        "cfgenvy@"
+        "git+https://github.com/pennsignals/cfgenvy.git"
+        "@1.1.0#egg=cfgenvy"
+    ),
     "numpy>=1.15.4",
     "pandas>=0.23.4",
-    "pip>=20.2.4",
-    "pyyaml>=5.3.1",
-    "setuptools>=50.3.2",
+    "pip>=21.2.1",
+    "setuptools>=57.4.0",
     "wheel>=0.35.1",
 )
 
@@ -34,7 +37,7 @@ TEST_REQUIRES = (
     "flake8-logging-format",
     "flake8-mutable",
     "flake8-sorted-keys",
-    "isort<=4.2.5",
+    "isort",
     "mypy",
     "pep8-naming",
     "pre-commit",

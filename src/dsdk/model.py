@@ -8,8 +8,10 @@ from contextlib import contextmanager
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, Dict, Generator, Optional
 
+from cfgenvy import yaml_type
+
 from .service import Delegate, Service
-from .utils import load_pickle_file, yaml_type
+from .utils import load_pickle_file
 
 logger = getLogger(__name__)
 

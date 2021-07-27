@@ -4,14 +4,11 @@
 from __future__ import annotations
 
 import pickle
-from argparse import ArgumentParser
 from collections import OrderedDict
 from contextlib import contextmanager
 from datetime import date, datetime, tzinfo
 from json import dumps
 from logging import getLogger
-from os import environ as os_env
-from sys import argv as sys_argv
 from typing import (
     Any,
     Callable,
@@ -23,19 +20,13 @@ from typing import (
     Sequence,
 )
 
+from cfgenvy import Parser, yaml_type
 from pandas import DataFrame
 from pkg_resources import DistributionNotFound, get_distribution
 
 from .asset import Asset
-from .env import Env
 from .interval import Interval
-from .utils import (
-    configure_logger,
-    get_tzinfo,
-    now_utc_datetime,
-    yaml_loads,
-    yaml_type,
-)
+from .utils import configure_logger, get_tzinfo, now_utc_datetime
 
 try:
     __version__ = get_distribution("dsdk").version
@@ -190,7 +181,7 @@ class Evidence(OrderedDict):
         super().__setitem__(key, value)
 
 
-class Service:  # pylint: disable=too-many-instance-attributes
+class Service(Parser):  # pylint: disable=too-many-instance-attributes
     """Service."""
 
     ON = dumps({"key": "%s.on"})
@@ -246,94 +237,6 @@ class Service:  # pylint: disable=too-many-instance-attributes
             service()
 
     @classmethod
-    def parse(
-        cls,
-        *,
-        argv: Optional[List[str]] = None,
-        env: Optional[Mapping[str, str]] = None,
-    ) -> Service:
-        """Parse."""
-        if argv is None:
-            argv = sys_argv[1:]
-        assert argv is not None
-        if env is None:
-            env = os_env
-        assert env is not None
-
-        parser = ArgumentParser()
-        parser.add_argument(
-            "-c",
-            "--config",
-            dest="config_file",
-            type=str,
-            help="configuration yaml file",
-            default=env.get("CONFIG", None),
-        )
-        parser.add_argument(
-            "-e",
-            "--env",
-            dest="env_file",
-            type=str,
-            help="env file",
-            default=env.get("ENV", None),
-        )
-        args = parser.parse_args(argv)
-        if args.config_file is None:
-            parser.error(
-                " ".join(
-                    (
-                        "the following arguments are required:",
-                        "-c/--config or CONFIG from env variable",
-                    )
-                )
-            )
-        return cls.load(
-            config_file=args.config_file,
-            env=env,
-            env_file=args.env_file,
-        )
-
-    @classmethod
-    def load(
-        cls,
-        *,
-        config_file: str,
-        env: Optional[Mapping[str, str]] = None,
-        env_file: Optional[str] = None,
-    ):
-        """Load."""
-        if env is None:
-            env = os_env
-        assert env is not None
-
-        if env_file:
-            with open(env_file) as fin:
-                envs = fin.read()
-            logger.debug("Environment variables are only from %s", env_file)
-        else:
-            logger.debug("Environment variables are being used.")
-
-        with open(config_file) as fin:
-            configs = fin.read()
-        return cls.loads(configs=configs, env=env, envs=envs)
-
-    @classmethod
-    def loads(
-        cls,
-        *,
-        configs: str,
-        env: Mapping[str, str],
-        envs: Optional[str] = None,
-    ) -> Service:
-        """Loads from strings."""
-        if envs is not None:
-            env = Env.loads(envs)
-
-        Env.as_yaml_type(env=env)
-        cls.yaml_types()
-        return yaml_loads(configs)
-
-    @classmethod
     def validate_gold(cls):
         """Validate gold."""
         with cls.context("validate_gold") as service:
@@ -344,6 +247,7 @@ class Service:  # pylint: disable=too-many-instance-attributes
         """Yaml types."""
         Asset.as_yaml_type()
         Interval.as_yaml_type()
+        cls.as_yaml_type()
 
     @classmethod
     def _yaml_init(cls, loader, node):

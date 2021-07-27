@@ -2,7 +2,6 @@
 """Data Science Deployment Kit."""
 
 from .asset import Asset
-from .env import Env
 from .interval import Interval
 from .model import Mixin as ModelMixin
 from .model import Model
@@ -19,24 +18,17 @@ from .utils import (
     configure_logger,
     dump_json_file,
     dump_pickle_file,
-    dump_yaml_file,
     load_json_file,
     load_pickle_file,
-    load_yaml_file,
     now_utc_datetime,
     profile,
     retry,
-    yaml_dumps,
-    yaml_implicit_type,
-    yaml_loads,
-    yaml_type,
 )
 
 __all__ = (
     "Asset",
     "Batch",
     "Delegate",
-    "Env",
     "Interval",
     "Model",
     "ModelMixin",
@@ -53,15 +45,9 @@ __all__ = (
     "configure_logger",
     "dump_json_file",
     "dump_pickle_file",
-    "dump_yaml_file",
     "load_json_file",
     "load_pickle_file",
-    "load_yaml_file",
     "profile",
     "now_utc_datetime",
     "retry",
-    "yaml_dumps",
-    "yaml_loads",
-    "yaml_type",
-    "yaml_implicit_type",
 )

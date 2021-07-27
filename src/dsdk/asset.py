@@ -11,7 +11,7 @@ from os.path import join as joinpath
 from os.path import splitext
 from typing import Any, Dict, Optional
 
-from .utils import yaml_type
+from cfgenvy import yaml_type
 
 logger = getLogger(__name__)
 

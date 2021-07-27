@@ -1,6 +1,6 @@
 ARG IFLAGS="--quiet --no-cache-dir --user"
 
-FROM python:3.9.4-slim-buster as build
+FROM python:3.9.6-slim-buster as build
 ARG IFLAGS
 WORKDIR /root
 ENV PATH /root/.local/bin:$PATH

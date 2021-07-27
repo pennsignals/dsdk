@@ -2,8 +2,9 @@
 """Test dsdk."""
 
 from io import StringIO
-from typing import Any, Callable, Dict, Tuple
+from typing import Any, Callable, Dict, Tuple, Type
 
+from cfgenvy import yaml_dumps
 from pandas import DataFrame
 from pytest import mark
 
@@ -20,7 +21,6 @@ from dsdk import (
     Task,
     dump_pickle_file,
     retry,
-    yaml_dumps,
 )
 
 
@@ -57,7 +57,7 @@ def test_batch_evidence():
 class MyService(ModelMixin, MssqlMixin, PostgresMixin, Service):
     """MyService."""
 
-    YAML = "!myservice"
+    YAML = "!test"
 
     @classmethod
     def yaml_types(cls):
@@ -71,35 +71,8 @@ class MyService(ModelMixin, MssqlMixin, PostgresMixin, Service):
         super().__init__(pipeline=pipeline, **kwargs)
 
 
-def build_from_parameters(cls) -> Tuple[Callable, Dict[str, Any]]:
-    """Build from parameters."""
-    model = Model(name="test", path="./test/model.pkl", version="0.0.1-rc.1")
-    mssql = Mssql(
-        username="mssql",
-        password="password",
-        host="0.0.0.0",
-        port=1433,
-        database="test",
-        sql=Asset.build(path="./assets/mssql", ext=".sql"),
-        tables=("a", "b", "c"),
-    )
-    postgres = Postgres(
-        username="postgres",
-        password="password",
-        host="0.0.0.0",
-        port=5432,
-        database="test",
-        sql=Asset.build(path="./assets/postgres", ext=".sql"),
-        tables=("ichi", "ni", "san", "shi", "go"),
-    )
-    return (
-        cls,
-        {"model": model, "mssql": mssql, "postgres": postgres},
-    )
-
-
 CONFIGS = """
-!myservice
+!test
 mssql: !mssql
   database: test
   host: 0.0.0.0
@@ -137,7 +110,7 @@ POSTGRES_PASSWORD=password
 """.strip()
 
 EXPECTED = """
-!myservice
+!test
 as_of: null
 duration: null
 gold: null
@@ -174,32 +147,79 @@ time_zone: null
 """.strip()
 
 
-def build_from_yaml(cls) -> Tuple[Callable, Dict[str, Any]]:
+def build(
+    cls: Type,
+    expected: str = EXPECTED,
+) -> Tuple[Callable, Dict[str, Any], str]:
+    """Build from parameters."""
+    cls.yaml_types()
+    model = Model(name="test", path="./test/model.pkl", version="0.0.1-rc.1")
+    mssql = Mssql(
+        username="mssql",
+        password="password",
+        host="0.0.0.0",
+        port=1433,
+        database="test",
+        sql=Asset.build(path="./assets/mssql", ext=".sql"),
+        tables=("a", "b", "c"),
+    )
+    postgres = Postgres(
+        username="postgres",
+        password="password",
+        host="0.0.0.0",
+        port=5432,
+        database="test",
+        sql=Asset.build(path="./assets/postgres", ext=".sql"),
+        tables=("ichi", "ni", "san", "shi", "go"),
+    )
+    return (
+        cls,
+        {
+            "model": model,
+            "mssql": mssql,
+            "postgres": postgres,
+        },
+        expected,
+    )
+
+
+def deserialize(
+    cls: Type,
+    configs: str = CONFIGS,
+    envs: str = ENVS,
+    expected: str = EXPECTED,
+) -> Tuple[Callable, Dict[str, Any], str]:
     """Build from yaml."""
     pickle_file = "./test/model.pkl"
     dump_pickle_file(
         Model(name="test", path=pickle_file, version="0.0.1"), pickle_file
     )
 
-    configs = StringIO(CONFIGS)
     env = {"POSTGRES_PASSWORD": "oops!", "MSSQL_PASSWORD": "oops!"}
-    envs = StringIO(ENVS)
     return (
         cls.loads,
-        {"configs": configs, "env": env, "envs": envs},
+        {
+            "configs": StringIO(configs),
+            "env": env,
+            "envs": StringIO(envs),
+        },
+        expected,
     )
 
 
 @mark.parametrize(
-    "cls,kwargs",
-    (build_from_yaml(MyService), build_from_parameters(MyService)),
+    "cls,kwargs,expected",
+    (
+        build(MyService),
+        deserialize(MyService),
+    ),
 )
 def test_service(
-    cls,  # pylint: disable=redefined-outer-name
+    cls: Callable,  # pylint: disable=redefined-outer-name
     kwargs: Dict[str, Any],
+    expected: str,
 ):
     """Test parameters, config, and env."""
-    expected = EXPECTED
     service = cls(**kwargs)
     assert service.__class__ is MyService
     assert service.model.__class__ is Model
@@ -207,9 +227,7 @@ def test_service(
     assert service.mssql.__class__ is Mssql
     assert service.postgres.password == "password"
     assert service.mssql.password == "password"
-    buf = StringIO()
-    buf.write(yaml_dumps(service))
-    actual = buf.getvalue().strip()
+    actual = yaml_dumps(service).strip()
     assert actual == expected
 
 
@@ -275,7 +293,3 @@ def test_retry_exhausted():
     except NotImplementedError as exception:
         assert actual == expected
         assert str(exception) == "when?"
-
-
-if __name__ == "__main__":
-    test_service(*build_from_yaml(MyService))

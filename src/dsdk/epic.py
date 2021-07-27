@@ -6,8 +6,9 @@ from select import select
 from typing import Any, Dict, Optional
 from urllib.request import Request, urlopen
 
+from cfgenvy import yaml_type
+
 from .postgres import Persistor as Postgres
-from .utils import yaml_type
 
 logger = getLogger(__name__)
 
