@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Interconnect."""
+"""Epic."""
 
 from logging import getLogger
 from select import select
@@ -13,10 +13,10 @@ from .postgres import Persistor as Postgres
 logger = getLogger(__name__)
 
 
-class Interconnect:
-    """Interconnect."""
+class Epic:
+    """Epic."""
 
-    YAML = "!interconnect"
+    YAML = "!epic"
 
     @classmethod
     def as_yaml_type(cls, *, tag: Optional[str] = None):
@@ -99,14 +99,14 @@ class FlowsheetEgress:  # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
         *,
-        interconnect: Interconnect,
+        epic: Epic,
         uri: str,
         flowsheet_id: str = "3040015333",
         flowsheet_template_id: str = "3040005300",
         flowsheet_template_id_type: str = "internal",
     ) -> None:
         """__init__."""
-        self.interconnect = interconnect
+        self.epic = epic
         self.flowsheet_id = flowsheet_id
         self.flowsheet_template_id = flowsheet_template_id
         self.flowsheet_template_id_type = flowsheet_template_id_type
@@ -181,7 +181,7 @@ class Notification(FlowsheetEgress):
         self,
         *,
         uri: str,
-        interconnect: Interconnect,
+        epic: Epic,
         comment: str = "Not for clinical use.",
         contact_type_id: str = "csn",
         patient_id_type: str = "uid",
@@ -191,7 +191,7 @@ class Notification(FlowsheetEgress):
         """__init__."""
 
         super().__init__(
-            interconnect=interconnect,
+            epic=epic,
             uri=uri + query,
             **kwargs,
         )
@@ -259,14 +259,14 @@ class Verification(FlowsheetEgress):
     def __init__(
         self,
         *,
-        interconnect: Interconnect,
+        epic: Epic,
         uri: str,
         flowsheet_id: str = "3040015333",
         **kwargs,
     ) -> None:
         """__init__."""
         super().__init__(
-            interconnect=interconnect,
+            epic=epic,
             flowsheet_id=flowsheet_id,
             uri=uri,
             **kwargs,
@@ -293,7 +293,7 @@ class Verification(FlowsheetEgress):
         epic = self.epic
         sql = epic.postgres.sql
         # TODO add notification flowsheet ids to data?
-        request = Request(self.URI, data=None)
+        request = Request(self.uri, data=None)
         with urlopen(request, epic.uri_timeout) as response:
             if response.ok:
                 cur.execute(
