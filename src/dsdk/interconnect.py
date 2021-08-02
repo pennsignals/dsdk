@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Epic microservices."""
+"""Interconnect."""
 
 from logging import getLogger
 from select import select
@@ -13,10 +13,10 @@ from .postgres import Persistor as Postgres
 logger = getLogger(__name__)
 
 
-class Epic:
-    """Epic."""
+class Interconnect:
+    """Interconnect."""
 
-    YAML = "!epic"
+    YAML = "!interconnect"
 
     @classmethod
     def as_yaml_type(cls, *, tag: Optional[str] = None):
@@ -99,14 +99,14 @@ class FlowsheetEgress:  # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
         *,
-        epic: Epic,
+        interconnect: Interconnect,
         uri: str,
         flowsheet_id: str = "3040015333",
         flowsheet_template_id: str = "3040005300",
         flowsheet_template_id_type: str = "internal",
     ) -> None:
         """__init__."""
-        self.epic = epic
+        self.interconnect = interconnect
         self.flowsheet_id = flowsheet_id
         self.flowsheet_template_id = flowsheet_template_id
         self.flowsheet_template_id_type = flowsheet_template_id_type
@@ -154,9 +154,9 @@ class Notification(FlowsheetEgress):
 
     YAML = "!notification"
 
-    URI = "?".join(
+    QUERY = "".join(
         (
-            "api/epic/2011/Clinical/Patient/AddFlowsheetValue/FlowsheetValue?",
+            "?",
             "&".join(
                 (
                     "PatientID=%(empi)s",
@@ -180,18 +180,19 @@ class Notification(FlowsheetEgress):
     def __init__(
         self,
         *,
-        epic: Epic,
+        uri: str,
+        interconnect: Interconnect,
         comment: str = "Not for clinical use.",
         contact_type_id: str = "csn",
         patient_id_type: str = "uid",
-        uri=URI,
+        query: str = QUERY,
         **kwargs,
     ) -> None:
         """__init__."""
 
         super().__init__(
-            epic=epic,
-            uri=uri,
+            interconnect=interconnect,
+            uri=uri + query,
             **kwargs,
         )
         self.comment = comment
@@ -253,19 +254,19 @@ class Notification(FlowsheetEgress):
 class Verification(FlowsheetEgress):
     """Verification Service."""
 
-    URI = "api/epic/2014/Clinical/Patient/GetFlowsheetRows/FlowsheetRows"
+    YAML = "!verification"
 
     def __init__(
         self,
         *,
-        epic: Epic,
-        uri=URI,
+        interconnect: Interconnect,
+        uri: str,
         flowsheet_id: str = "3040015333",
         **kwargs,
     ) -> None:
         """__init__."""
         super().__init__(
-            epic=epic,
+            interconnect=interconnect,
             flowsheet_id=flowsheet_id,
             uri=uri,
             **kwargs,

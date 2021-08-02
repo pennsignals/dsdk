@@ -1,0 +1,23 @@
+interconnect: !interconnect
+  authorization: ${INTERCONNECT_AUTHORIZATION}
+  comment: "Not for clinical use."
+  cookie: ${INTERCONNECT_COOKIE}
+  contact_type_id: csn
+  flowsheet_id: ${INTERCONNECT_FLOWSHEET_ID}
+  flowsheet_id_type: internal
+  flowsheet_template_id: 3040005300
+  flowsheet_template_id_type: internal
+  lookback_hours: 72
+  patient_id_type: uid
+  notification: !notification
+    uri: ${INTERCONNECT_HOST}${INTERCONNECT_NOTIFICATION_URI}
+  user_id: pennsignals
+  user_id_type: external
+  verification: !verification
+    uri: ${INTERCONNECT_HOST}${INTERCONNECT_VERIFICATION_URI}
+postgres: !postgres
+  database: ${POSTGRES_DATABASE}
+  host: ${POSTRES_HOST}
+  password: ${POSTGRES_PASSWORD}
+  port: 5432
+  username: ${POSTGRES_USERNAME}
