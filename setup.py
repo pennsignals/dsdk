@@ -16,6 +16,8 @@ INSTALL_REQUIRES = (
     "wheel>=0.35.1",
 )
 
+EPIC_REQUIRES = ("zeep",)
+
 PYMSSQL_REQUIRES = ("cython>=0.29.21", "pymssql>=2.1.4")
 
 PSYCOPG2_REQUIRES = ("psycopg2-binary>=2.8.6",)
@@ -58,7 +60,12 @@ setup(
         ]
     },
     extras_require={
-        "all": PSYCOPG2_REQUIRES + PYMSSQL_REQUIRES + TEST_REQUIRES,
+        "all": (
+            EPIC_REQUIRES
+            + PSYCOPG2_REQUIRES
+            + PYMSSQL_REQUIRES
+            + TEST_REQUIRES
+        ),
         "psycopg2": PSYCOPG2_REQUIRES,
         "pymssql": PYMSSQL_REQUIRES,
         "test": TEST_REQUIRES,
