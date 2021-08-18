@@ -16,7 +16,7 @@ INSTALL_REQUIRES = (
     "wheel>=0.35.1",
 )
 
-EPIC_REQUIRES = ("zeep",)
+EPIC_REQUIRES = ("requests",)
 
 PYMSSQL_REQUIRES = ("cython>=0.29.21", "pymssql>=2.1.4")
 
@@ -50,6 +50,7 @@ TEST_REQUIRES = (
     "types-python-dateutil",
     "types-pymssql",
     "types-pyyaml",
+    "types-requests",
 )
 
 setup(

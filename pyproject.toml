@@ -42,7 +42,7 @@ known_first_party = ["dsdk"]
 default_section = "THIRDPARTY"
 
 [tool.pylint.basic]
-good-names = '''a,b,c,d,df,e,i,id,logger,n,on,tz'''
+good-names = '''a,b,c,d,df,e,i,id,logger,n,on,ok,tz'''
 
 [tool.pylint.message_control]
 disable = '''duplicate-code,C0330'''

@@ -46,7 +46,7 @@ class Epic:  # pylint: disable=too-many-instance-attributes
         """Yaml repr."""
         return dumper.represent_mapper(tag, self.as_yaml())
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments,too-many-locals
         self,
         client_id: str,  # 00000000-0000-0000-0000-000000000000
         cookie: str,
@@ -58,14 +58,18 @@ class Epic:  # pylint: disable=too-many-instance-attributes
         flowsheet_id_type: str = "internal",
         flowsheet_template_id: str = "3040005300",
         flowsheet_template_id_type: str = "internal",
+        lookback_hours: int = 72,
         patient_id_type: str = "UID",
+        poll_timeout: int = 300,
         username: str = "Pennsignals",
         user_id_type: str = "external",
         user_id: str = "PENNSIGNALS",
     ):
         """__init__."""
-        self.authorization = b"Basic " + \
-            b64encode(f"EMP${username}:{password}".encode("utf-8"))
+        self.authorization = b"Basic " + b64encode(
+            f"EMP${username}:{password}".encode("utf-8")
+        )
+        self.postgres = None
         self.client_id = client_id
         self.comment = comment
         self.contact_id_type = contact_id_type
@@ -74,7 +78,9 @@ class Epic:  # pylint: disable=too-many-instance-attributes
         self.flowsheet_id_type = flowsheet_id_type
         self.flowsheet_template_id = flowsheet_template_id
         self.flowsheet_template_id_type = flowsheet_template_id_type
+        self.lookback_hours = lookback_hours
         self.patient_id_type = patient_id_type
+        self.poll_timeout = poll_timeout
         self.url = url
         self.user_id = user_id
         self.user_id_type = user_id_type
@@ -100,7 +106,9 @@ class Epic:  # pylint: disable=too-many-instance-attributes
             "flowsheet_id_type": self.flowsheet_id_type,
             "flowsheet_template_id": self.flowsheet_template_id,
             "flowsheet_template_id_type": self.flowsheet_template_id_type,
+            "lookback_hours": self.lookback_hours,
             "patient_id_type": self.patient_id_type,
+            "poll_timeout": self.poll_timeout,
             "url": self.url,
             "user_id": self.user_id,
             "user_id_type": self.user_id_type,
@@ -125,7 +133,12 @@ class Epic:  # pylint: disable=too-many-instance-attributes
                 while listen.notifies:
                     yield listen.notified.pop()
 
-    def on_notify(self, event, cur, session):
+    def on_notify(  # pylint: disable: unused-argument,no-self-use
+        self,
+        event,
+        cur,
+        session,
+    ):
         """On postgres notify handler."""
         logger.debug(
             "NOTIFY: %(id)s.%(channel)s.%(payload)s",
@@ -136,12 +149,27 @@ class Epic:  # pylint: disable=too-many-instance-attributes
             },
         )
 
-    def on_success(self, entity, cur, message):
+    def on_success(self, entity, cur, response):
         """On success."""
         raise NotImplementedError()
 
-    def on_error(self, entity, cur, message):
+    def on_error(self, entity, cur, response):
         """On error."""
+        raise NotImplementedError()
+
+    def recover(self, cur, session):
+        """Recover."""
+        sql = self.postgres.sql
+        cur.execute(sql.epic.prediction.recover)
+        for each in cur.fetchall():
+            ok, message = self.rest(each, session)
+            if ok:
+                self.on_success(each, cur, message)
+            else:
+                self.on_error(each, cur, message)
+
+    def rest(self, entity, session):
+        """Rest."""
         raise NotImplementedError()
 
     @contextmanager
@@ -149,13 +177,15 @@ class Epic:  # pylint: disable=too-many-instance-attributes
         """Session."""
         session = Session()
         session.verify = False
-        session.headers.update({
-            "Authorization": self.authorization,
-            "Cookie": self.cookie,
-            "Epic-Client-ID": self.client_id,
-            "Epic-User-ID": self.user_id,
-            "Epic-User-IDType": self.user_id_type,
-        })
+        session.headers.update(
+            {
+                "Authorization": self.authorization,
+                "Cookie": self.cookie,
+                "Epic-Client-ID": self.client_id,
+                "Epic-User-ID": self.user_id,
+                "Epic-User-IDType": self.user_id_type,
+            }
+        )
         yield session
 
 
@@ -204,9 +234,27 @@ class Notifier(Epic):
             else:
                 self.on_error(each, cur, message)
 
+    def on_success(self, notification, cur, response):
+        """On success."""
+        cur.execute(
+            self.postgres.sql.epic.notification.insert,
+            {"prediction_id": notification["id"]},
+        )
+
+    def on_error(self, notification, cur, response):
+        """On error."""
+        cur.execute(
+            self.postgres.sql.epic.notification_error.insert,
+            {
+                "description": response.text,
+                "name": response.reason,
+                "prediction_id": notification["id"],
+            },
+        )
+
     def recover(self, cur, session):
         """Recover."""
-        sql = self.epic.postgres.sql
+        sql = self.postgres.sql
         cur.execute(sql.epic.notification.recover)
         for each in cur.fetchall():
             ok, message = self.rest(each, session)
@@ -228,18 +276,25 @@ class Notifier(Epic):
             "user_id": self.user_id,
             "user_id_type": self.user_id_type,
         }
-        query.update({
-            "contact_id": prediction["csn"],
-            "instant_value_taken": prediction["create_on"].strftime(
-                "%Y-%m-%dT%H:%M:%SZ"),
-            "patient_id": prediction["empi"],
-            "value": prediction["score"],
-        })
+        query.update(
+            {
+                "contact_id": prediction["csn"],
+                "instant_value_taken": prediction["create_on"].strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                ),
+                "patient_id": prediction["empi"],
+                "value": prediction["score"],
+            }
+        )
 
-        url = self.url.format(**{
-            key: quote(value.encode('utf-8'))
-            for key, value in query.items()})
-        logger.info(url)
+        url = self.url.format(
+            **{
+                key: quote(value.encode("utf-8"))
+                for key, value in query.items()
+            }
+        )
+
+        print(url)
 
         response = session.post(
             url=url,
@@ -275,7 +330,7 @@ class Verifier(Epic):
                 self.on_error(each, session, response)
 
     def on_success(self, notification, cur, response):
-        """On sucess."""
+        """On success."""
         cur.execute(
             self.postgres.sql.epic.verification.insert,
             {"prediction_id": notification["id"]},
@@ -300,15 +355,23 @@ class Verifier(Epic):
             "PatientIDType": self.patient_id_type,
             "UserID": self.user_id,
             "UserIDType": self.user_id_type,
+        }
+        data.update(
+            **{
+                "ContactID": notification["csn"],
+                "FlowsheetRowIDs": [
+                    {
+                        "ID": self.flowsheet_id,
+                        "Type": self.flowsheet_id_type,
+                    }
+                ],
+                "PatientID": notification["empi"],
+            }
+        )
 
-        data.update({
-            "ContactID": notification["csn"],
-            "FlowsheetRowIDs": [{
-                "ID": self.flowsheet_id,
-                "IDType": self.flowsheet_id_type,
-            }],
-            "PatientID": notification["empi"],
-        })
+        print(self.url)
+        print(data)
+
         response = session.post(
             url=self.url,
             data=data,
@@ -351,11 +414,48 @@ def test_notifier(csn, empi, score):
     with notifier.session() as session:
         ok, response = notifier.rest(prediction, session)
         print(ok)
-        print(response)
+        print(response.text)
+
+
+def test_verifier(csn, empi, score):
+    """Test verifier."""
+    from os import getcwd
+    from os.path import join as pathjoin
+
+    from cfgenvy import Parser
+
+    from .asset import Asset
+
+    Asset.as_yaml_type()
+    Postgres.as_yaml_type()
+    Verifier.as_yaml_type()
+    parser = Parser()
+    cwd = getcwd()
+
+    verifier = parser.parse(
+        argv=(
+            "-c",
+            pathjoin(cwd, "local", "test.verifier.yaml"),
+            "-e",
+            pathjoin(cwd, "secrets", "test.verifier.env"),
+        )
+    )
+
+    notification = {
+        "create_on": datetime.utcnow(),
+        "csn": csn,
+        "empi": empi,
+        "score": score,
+    }
+
+    with verifier.session() as session:
+        ok, response = verifier.rest(notification, session)
+        print(ok)
+        print(response.text)
 
 
 if __name__ == "__main__":
-    test_notifier(
+    test_verifier(
         csn="278820881",
         empi="8330651951",
         score="0.5",
