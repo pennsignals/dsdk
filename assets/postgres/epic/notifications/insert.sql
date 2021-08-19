@@ -2,5 +2,5 @@ insert into epic_notifications (
     prediction_id
 )
 select
-    %s
+    %(prediction_id)s
 returning *

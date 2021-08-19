@@ -55,9 +55,9 @@ class Epic:  # pylint: disable=too-many-instance-attributes
         flowsheet_id: str,
         comment: str = "Not for clinical use.",
         contact_id_type: str = "CSN",
-        flowsheet_id_type: str = "internal",
+        flowsheet_id_type: str = "external",
         flowsheet_template_id: str = "3040005300",
-        flowsheet_template_id_type: str = "internal",
+        flowsheet_template_id_type: str = "external",
         lookback_hours: int = 72,
         patient_id_type: str = "UID",
         poll_timeout: int = 300,
@@ -180,6 +180,7 @@ class Epic:  # pylint: disable=too-many-instance-attributes
         session.headers.update(
             {
                 "Authorization": self.authorization,
+                "Content-Type": "application/json",
                 "Cookie": self.cookie,
                 "Epic-Client-ID": self.client_id,
                 "Epic-User-ID": self.user_id,
@@ -266,26 +267,22 @@ class Notifier(Epic):
     def rest(self, prediction, session) -> Tuple[bool, Any]:
         """Rest."""
         query = {
-            "comment": self.comment,
-            "contact_id_type": self.contact_id_type,
-            "flowsheet_id": self.flowsheet_id,
-            "flowsheet_id_type": self.flowsheet_id_type,
-            "flowsheet_template_id": self.flowsheet_template_id,
-            "flowsheet_template_id_type": self.flowsheet_template_id_type,
-            "patient_id_type": self.patient_id_type,
-            "user_id": self.user_id,
-            "user_id_type": self.user_id_type,
+            "Comment": self.comment,
+            "ContactID": prediction["csn"],
+            "ContactIDType": self.contact_id_type,
+            "FlowsheetID": self.flowsheet_id,
+            "FlowsheetIDType": self.flowsheet_id_type,
+            "FlowsheetTemplateID": self.flowsheet_template_id,
+            "FlowsheetTemplateIDType": self.flowsheet_template_id_type,
+            "InstantValueTaken": prediction["as_of"].strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            ),
+            "PatientID": prediction["empi"],
+            "PatientIDType": self.patient_id_type,
+            "UserID": self.user_id,
+            "UserIDType": self.user_id_type,
+            "Value": prediction["score"],
         }
-        query.update(
-            {
-                "contact_id": prediction["csn"],
-                "instant_value_taken": prediction["create_on"].strftime(
-                    "%Y-%m-%dT%H:%M:%SZ"
-                ),
-                "patient_id": prediction["empi"],
-                "value": prediction["score"],
-            }
-        )
 
         url = self.url.format(
             **{
@@ -332,51 +329,42 @@ class Verifier(Epic):
     def on_success(self, notification, cur, response):
         """On success."""
         cur.execute(
-            self.postgres.sql.epic.verification.insert,
+            self.postgres.sql.epic.verifications.insert,
             {"prediction_id": notification["id"]},
         )
 
     def on_error(self, notification, cur, response):
         """On error."""
         cur.execute(
-            self.postgres.sql.epic.verification_error.insert,
+            self.postgres.sql.epic.verifications.errors.insert,
             {
                 "description": response.text,
                 "name": response.reason,
-                "prediction_id": notification["id"],
+                "notification_id": notification["id"],
             },
         )
 
     def rest(self, notification, session) -> Tuple[bool, Any]:
         """Rest."""
-        data = {
+        json = {
+            "ContactID": notification["csn"],
             "ContactIDType": self.contact_id_type,
+            "FlowsheetRowIDs": [
+                {
+                    "ID": self.flowsheet_id,
+                    "IDType": self.flowsheet_id_type,
+                }
+            ],
             "LookbackHours": self.lookback_hours,
+            "PatientID": notification["empi"],
             "PatientIDType": self.patient_id_type,
             "UserID": self.user_id,
             "UserIDType": self.user_id_type,
         }
-        data.update(
-            **{
-                "ContactID": notification["csn"],
-                "FlowsheetRowIDs": [
-                    {
-                        "ID": self.flowsheet_id,
-                        "Type": self.flowsheet_id_type,
-                    }
-                ],
-                "PatientID": notification["empi"],
-            }
-        )
-
-        print(self.url)
-        print(data)
-
         response = session.post(
             url=self.url,
-            data=data,
+            json=json,
         )
-
         return response.status_code == 200, response
 
 
@@ -405,7 +393,7 @@ def test_notifier(csn, empi, score):
     )
 
     prediction = {
-        "create_on": datetime.utcnow(),
+        "as_of": datetime.utcnow(),
         "csn": csn,
         "empi": empi,
         "score": score,
@@ -414,7 +402,7 @@ def test_notifier(csn, empi, score):
     with notifier.session() as session:
         ok, response = notifier.rest(prediction, session)
         print(ok)
-        print(response.text)
+        print(response.json())
 
 
 def test_verifier(csn, empi, score):
@@ -442,7 +430,7 @@ def test_verifier(csn, empi, score):
     )
 
     notification = {
-        "create_on": datetime.utcnow(),
+        "as_of": datetime.utcnow(),
         "csn": csn,
         "empi": empi,
         "score": score,
@@ -451,11 +439,11 @@ def test_verifier(csn, empi, score):
     with verifier.session() as session:
         ok, response = verifier.rest(notification, session)
         print(ok)
-        print(response.text)
+        print(response.json())
 
 
 if __name__ == "__main__":
-    test_verifier(
+    test_notifier(
         csn="278820881",
         empi="8330651951",
         score="0.5",
