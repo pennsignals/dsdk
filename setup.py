@@ -12,11 +12,10 @@ INSTALL_REQUIRES = (
     "numpy>=1.15.4",
     "pandas>=0.23.4",
     "pip>=21.2.2",
+    "requests>=2.26.0",
     "setuptools>=57.4.0",
     "wheel>=0.35.1",
 )
-
-EPIC_REQUIRES = ("requests",)
 
 PYMSSQL_REQUIRES = ("cython>=0.29.21", "pymssql>=2.1.4")
 
@@ -56,17 +55,14 @@ TEST_REQUIRES = (
 setup(
     entry_points={
         "console_scripts": [
-            "epic-notify = dsdk.epic:Notify.main",
-            "epic-validate = dsdk.epic:Validate.main",
+            "epic-notify = dsdk.epic:Notifier.main",
+            "epic-validate = dsdk.epic:Validator.main",
+            "epic-notify-test = dsdk.epic:Notifier.test",
+            "epic-validate-test = dsdk.epic:Notifier.test",
         ]
     },
     extras_require={
-        "all": (
-            EPIC_REQUIRES
-            + PSYCOPG2_REQUIRES
-            + PYMSSQL_REQUIRES
-            + TEST_REQUIRES
-        ),
+        "all": (PSYCOPG2_REQUIRES + PYMSSQL_REQUIRES + TEST_REQUIRES),
         "psycopg2": PSYCOPG2_REQUIRES,
         "pymssql": PYMSSQL_REQUIRES,
         "test": TEST_REQUIRES,

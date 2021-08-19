@@ -5,18 +5,18 @@ from base64 import b64encode
 from contextlib import contextmanager
 from datetime import datetime
 from logging import getLogger
-from select import select
-from typing import Any, Dict, Optional, Tuple
+from os import getcwd
+from os.path import join as pathjoin
+from select import select  # pylint: disable=no-name-in-module
+from typing import Any, Dict, Generator, Optional, Tuple, Union, cast
 from urllib.parse import quote
 
-from cfgenvy import yaml_type
+from cfgenvy import Parser, yaml_type
+from requests import Session
+from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import HTTPError, Timeout
 
 from .postgres import Persistor as Postgres
-
-try:
-    from requests import Session
-except ImportError:
-    Session = None
 
 logger = getLogger(__name__)
 
@@ -53,6 +53,7 @@ class Epic:  # pylint: disable=too-many-instance-attributes
         password: str,
         url: str,
         flowsheet_id: str,
+        postgres: Postgres,
         comment: str = "Not for clinical use.",
         contact_id_type: str = "CSN",
         flowsheet_id_type: str = "external",
@@ -60,16 +61,17 @@ class Epic:  # pylint: disable=too-many-instance-attributes
         flowsheet_template_id_type: str = "external",
         lookback_hours: int = 72,
         patient_id_type: str = "UID",
-        poll_timeout: int = 300,
+        poll_timeout: int = 60,
+        operation_timeout: int = 5,
         username: str = "Pennsignals",
         user_id_type: str = "external",
         user_id: str = "PENNSIGNALS",
     ):
         """__init__."""
-        self.authorization = b"Basic " + b64encode(
-            f"EMP${username}:{password}".encode("utf-8")
-        )
-        self.postgres = None
+        self.authorization = (
+            b"Basic " + b64encode(f"EMP${username}:{password}".encode("utf-8"))
+        ).decode("utf-8")
+        self.postgres = postgres
         self.client_id = client_id
         self.comment = comment
         self.contact_id_type = contact_id_type
@@ -79,6 +81,7 @@ class Epic:  # pylint: disable=too-many-instance-attributes
         self.flowsheet_template_id = flowsheet_template_id
         self.flowsheet_template_id_type = flowsheet_template_id_type
         self.lookback_hours = lookback_hours
+        self.operation_timeout = operation_timeout
         self.patient_id_type = patient_id_type
         self.poll_timeout = poll_timeout
         self.url = url
@@ -91,7 +94,7 @@ class Epic:  # pylint: disable=too-many-instance-attributes
             with self.listener() as listener:
                 with self.postgres.commit() as cur:
                     self.recover(cur, session)
-                for each in listener:
+                for each in self.listen(listener):
                     self.on_notify(each, cur, session)
 
     def as_yaml(self) -> Dict[str, Any]:
@@ -107,6 +110,7 @@ class Epic:  # pylint: disable=too-many-instance-attributes
             "flowsheet_template_id": self.flowsheet_template_id,
             "flowsheet_template_id_type": self.flowsheet_template_id_type,
             "lookback_hours": self.lookback_hours,
+            "operation_timeut": self.operation_timeout,
             "patient_id_type": self.patient_id_type,
             "poll_timeout": self.poll_timeout,
             "url": self.url,
@@ -115,11 +119,11 @@ class Epic:  # pylint: disable=too-many-instance-attributes
         }
 
     @contextmanager
-    def listener(self):
+    def listener(self) -> Generator[Any, None, None]:
         """Listener."""
         raise NotImplementedError()
 
-    def listen(self, listen, cur, session):
+    def listen(self, listen) -> Generator[Any, None, None]:
         """Listen."""
         while True:
             readers, _, exceptions = select(
@@ -133,11 +137,11 @@ class Epic:  # pylint: disable=too-many-instance-attributes
                 while listen.notifies:
                     yield listen.notified.pop()
 
-    def on_notify(  # pylint: disable: unused-argument,no-self-use
+    def on_notify(  # pylint: disable=unused-argument,no-self-use
         self,
         event,
         cur,
-        session,
+        session: Session,
     ):
         """On postgres notify handler."""
         logger.debug(
@@ -149,42 +153,46 @@ class Epic:  # pylint: disable=too-many-instance-attributes
             },
         )
 
-    def on_success(self, entity, cur, response):
+    def on_success(self, entity, cur, content: Dict[str, Any]):
         """On success."""
         raise NotImplementedError()
 
-    def on_error(self, entity, cur, response):
+    def on_error(self, entity, cur, content: Exception):
         """On error."""
         raise NotImplementedError()
 
-    def recover(self, cur, session):
+    def recover(self, cur, session: Session):
         """Recover."""
         sql = self.postgres.sql
         cur.execute(sql.epic.prediction.recover)
         for each in cur.fetchall():
-            ok, message = self.rest(each, session)
-            if ok:
-                self.on_success(each, cur, message)
-            else:
-                self.on_error(each, cur, message)
+            ok, content = self.rest(each, session)
+            if not ok:
+                self.on_error(each, cur, cast(Exception, content))
+                continue
+            self.on_success(each, cur, cast(Dict[str, Any], content))
 
-    def rest(self, entity, session):
+    def rest(
+        self,
+        entity,
+        session: Session,
+    ) -> Tuple[bool, Union[Exception, Dict[str, Any]]]:
         """Rest."""
         raise NotImplementedError()
 
     @contextmanager
-    def session(self):
+    def session(self) -> Generator[Any, None, None]:
         """Session."""
         session = Session()
         session.verify = False
         session.headers.update(
             {
-                "Authorization": self.authorization,
-                "Content-Type": "application/json",
-                "Cookie": self.cookie,
-                "Epic-Client-ID": self.client_id,
-                "Epic-User-ID": self.user_id,
-                "Epic-User-IDType": self.user_id_type,
+                "authorization": self.authorization,
+                "content-type": "application/json",
+                "cookie": self.cookie,
+                "epic-client-id": self.client_id,
+                "epic-user-id": self.user_id,
+                "epic-user-idtype": self.user_id_type,
             }
         )
         yield session
@@ -194,6 +202,42 @@ class Notifier(Epic):
     """Notifier."""
 
     YAML = "!epicnotifier"
+
+    @classmethod
+    def test(
+        cls,
+        csn="278820881",
+        empi="8330651951",
+        id=0,  # pylint: disable=redefined-builtin
+        score="0.5",
+    ):
+        """Test epic API."""
+        cls.as_yaml_type()
+        Postgres.as_yaml_type()
+        parser = Parser()
+        cwd = getcwd()
+
+        notifier = parser.parse(
+            argv=(
+                "-c",
+                pathjoin(cwd, "local", "test.notifier.yaml"),
+                "-e",
+                pathjoin(cwd, "secrets", "test.notifier.env"),
+            )
+        )
+
+        prediction = {
+            "as_of": datetime.utcnow(),
+            "csn": csn,
+            "empi": empi,
+            "id": id,
+            "score": score,
+        }
+
+        with notifier.session() as session:
+            ok, response = notifier.rest(prediction, session)
+            print(ok)
+            print(response)
 
     @classmethod
     def as_yaml_type(cls, tag: Optional[str] = None):
@@ -216,11 +260,11 @@ class Notifier(Epic):
         return dumper.represent_mapper(tag, self.as_yaml())
 
     @contextmanager
-    def listener(self):
+    def listener(self) -> Generator[Any, None, None]:
         """Listener."""
         postgres = self.postgres
         sql = postgres.sql
-        with postgres.listen(sql.prediction.listen) as listener:
+        with postgres.listen(sql.predictions.listen) as listener:
             yield listener
 
     def on_notify(self, event, cur, session):
@@ -229,76 +273,80 @@ class Notifier(Epic):
         sql = self.postgres.sql
         cur.execute(sql.prediction.recent, event.id)
         for each in cur.fetchall():
-            ok, message = self.rest(each, session)
-            if ok:
-                self.on_success(each, cur, message)
-            else:
-                self.on_error(each, cur, message)
+            ok, content = self.rest(each, session)
+            if not ok:
+                self.on_error(each, cur, cast(Exception, content))
+                continue
+            self.on_success(each, cur, cast(Dict[str, Any], content))
 
-    def on_success(self, notification, cur, response):
+    def on_success(self, entity, cur, content: Dict[str, Any]):
         """On success."""
         cur.execute(
             self.postgres.sql.epic.notification.insert,
-            {"prediction_id": notification["id"]},
+            {"prediction_id": entity["id"]},
         )
 
-    def on_error(self, notification, cur, response):
+    def on_error(self, entity, cur, content: Exception):
         """On error."""
         cur.execute(
-            self.postgres.sql.epic.notification_error.insert,
+            self.postgres.sql.epic.notifications.errors.insert,
             {
-                "description": response.text,
-                "name": response.reason,
-                "prediction_id": notification["id"],
+                "description": str(content),
+                "name": content.__class__.__name__,
+                "prediction_id": entity["id"],
             },
         )
 
-    def recover(self, cur, session):
+    def recover(self, cur, session: Session):
         """Recover."""
         sql = self.postgres.sql
         cur.execute(sql.epic.notification.recover)
         for each in cur.fetchall():
-            ok, message = self.rest(each, session)
-            if ok:
-                self.on_success(each, cur, message)
-            else:
-                self.on_error(each, cur, message)
+            ok, content = self.rest(each, session)
+            if not ok:
+                self.on_error(each, cur, cast(Exception, content))
+                continue
+            self.on_success(each, cur, cast(Dict[str, Any], content))
 
-    def rest(self, prediction, session) -> Tuple[bool, Any]:
+    def rest(
+        self,
+        entity,
+        session: Session,
+    ) -> Tuple[bool, Union[Exception, Dict[str, Any]]]:
         """Rest."""
         query = {
             "Comment": self.comment,
-            "ContactID": prediction["csn"],
+            "ContactID": entity["csn"],
             "ContactIDType": self.contact_id_type,
             "FlowsheetID": self.flowsheet_id,
             "FlowsheetIDType": self.flowsheet_id_type,
             "FlowsheetTemplateID": self.flowsheet_template_id,
             "FlowsheetTemplateIDType": self.flowsheet_template_id_type,
-            "InstantValueTaken": prediction["as_of"].strftime(
+            "InstantValueTaken": entity["as_of"].strftime(
                 "%Y-%m-%dT%H:%M:%SZ"
             ),
-            "PatientID": prediction["empi"],
+            "PatientID": entity["empi"],
             "PatientIDType": self.patient_id_type,
             "UserID": self.user_id,
             "UserIDType": self.user_id_type,
-            "Value": prediction["score"],
+            "Value": entity["score"],
         }
-
         url = self.url.format(
             **{
                 key: quote(value.encode("utf-8"))
                 for key, value in query.items()
             }
         )
-
-        print(url)
-
-        response = session.post(
-            url=url,
-            data={},
-        )
-
-        return response.status_code == 200, response
+        try:
+            response = session.post(
+                url=url,
+                json={},
+                timeout=self.operation_timeout,
+            )
+            response.raise_for_status()
+        except (RequestsConnectionError, HTTPError, Timeout) as e:
+            return False, e
+        return True, response.json()
 
 
 class Verifier(Epic):
@@ -306,48 +354,88 @@ class Verifier(Epic):
 
     YAML = "!epicverifier"
 
+    @classmethod
+    def test(
+        cls,
+        csn="278820881",
+        empi="8330651951",
+        id=0,  # pylint: disable=redefined-builtin
+        score="0.5",
+    ):
+        """Test verifier."""
+        cls.as_yaml_type()
+        Postgres.as_yaml_type()
+        parser = Parser()
+        cwd = getcwd()
+
+        verifier = parser.parse(
+            argv=(
+                "-c",
+                pathjoin(cwd, "local", "test.verifier.yaml"),
+                "-e",
+                pathjoin(cwd, "secrets", "test.verifier.env"),
+            )
+        )
+
+        notification = {
+            "as_of": datetime.utcnow(),
+            "csn": csn,
+            "empi": empi,
+            "id": id,
+            "score": score,
+        }
+
+        with verifier.session() as session:
+            ok, response = verifier.rest(notification, session)
+            print(ok)
+            print(response)
+
     @contextmanager
-    def listener(self):
+    def listener(self) -> Generator[Any, None, None]:
         """Listener."""
         postgres = self.postgres
         sql = postgres.sql
         with postgres.listen(sql.notification.listen) as listener:
             yield listener
 
-    def on_notify(self, event, cur, session):
+    def on_notify(self, event, cur, session: Session):
         """On notify."""
-        super.on_notify(event, cur, session)
+        super().on_notify(event, cur, session)
         sql = self.postgres.sql
         cur.execute(sql.notification.recent, event.id)
         for each in cur.fetchall():
-            ok, response = self.rest(each, session)
-            if ok:
-                self.on_success(each, session, response)
-            else:
-                self.on_error(each, session, response)
+            ok, content = self.rest(each, session)
+            if not ok:
+                self.on_error(each, cur, cast(Exception, content))
+                continue
+            self.on_success(each, cur, cast(Dict[str, Any], content))
 
-    def on_success(self, notification, cur, response):
+    def on_success(self, entity, cur, content: Dict[str, Any]):
         """On success."""
         cur.execute(
             self.postgres.sql.epic.verifications.insert,
-            {"prediction_id": notification["id"]},
+            {"notification_id": entity["id"]},
         )
 
-    def on_error(self, notification, cur, response):
+    def on_error(self, entity, cur, content: Exception):
         """On error."""
         cur.execute(
             self.postgres.sql.epic.verifications.errors.insert,
             {
-                "description": response.text,
-                "name": response.reason,
-                "notification_id": notification["id"],
+                "description": str(content),
+                "name": content.__class__.__name__,
+                "notification_id": entity["id"],
             },
         )
 
-    def rest(self, notification, session) -> Tuple[bool, Any]:
+    def rest(
+        self,
+        entity,
+        session: Session,
+    ) -> Tuple[bool, Union[Exception, Dict[str, Any]]]:
         """Rest."""
         json = {
-            "ContactID": notification["csn"],
+            "ContactID": entity["csn"],
             "ContactIDType": self.contact_id_type,
             "FlowsheetRowIDs": [
                 {
@@ -356,95 +444,18 @@ class Verifier(Epic):
                 }
             ],
             "LookbackHours": self.lookback_hours,
-            "PatientID": notification["empi"],
+            "PatientID": entity["empi"],
             "PatientIDType": self.patient_id_type,
             "UserID": self.user_id,
             "UserIDType": self.user_id_type,
         }
-        response = session.post(
-            url=self.url,
-            json=json,
-        )
-        return response.status_code == 200, response
-
-
-def test_notifier(csn, empi, score):
-    """Rest."""
-    from os import getcwd
-    from os.path import join as pathjoin
-
-    from cfgenvy import Parser
-
-    from .asset import Asset
-
-    Asset.as_yaml_type()
-    Postgres.as_yaml_type()
-    Notifier.as_yaml_type()
-    parser = Parser()
-    cwd = getcwd()
-
-    notifier = parser.parse(
-        argv=(
-            "-c",
-            pathjoin(cwd, "local", "test.notifier.yaml"),
-            "-e",
-            pathjoin(cwd, "secrets", "test.notifier.env"),
-        )
-    )
-
-    prediction = {
-        "as_of": datetime.utcnow(),
-        "csn": csn,
-        "empi": empi,
-        "score": score,
-    }
-
-    with notifier.session() as session:
-        ok, response = notifier.rest(prediction, session)
-        print(ok)
-        print(response.json())
-
-
-def test_verifier(csn, empi, score):
-    """Test verifier."""
-    from os import getcwd
-    from os.path import join as pathjoin
-
-    from cfgenvy import Parser
-
-    from .asset import Asset
-
-    Asset.as_yaml_type()
-    Postgres.as_yaml_type()
-    Verifier.as_yaml_type()
-    parser = Parser()
-    cwd = getcwd()
-
-    verifier = parser.parse(
-        argv=(
-            "-c",
-            pathjoin(cwd, "local", "test.verifier.yaml"),
-            "-e",
-            pathjoin(cwd, "secrets", "test.verifier.env"),
-        )
-    )
-
-    notification = {
-        "as_of": datetime.utcnow(),
-        "csn": csn,
-        "empi": empi,
-        "score": score,
-    }
-
-    with verifier.session() as session:
-        ok, response = verifier.rest(notification, session)
-        print(ok)
-        print(response.json())
-
-
-if __name__ == "__main__":
-    test_notifier(
-        csn="278820881",
-        empi="8330651951",
-        score="0.5",
-    )
+        try:
+            response = session.post(
+                url=self.url,
+                json=json,
+                timeout=self.operation_timeout,
+            )
+            response.raise_for_status()
+        except (RequestsConnectionError, HTTPError, Timeout) as e:
+            return False, e
+        return True, response.json()

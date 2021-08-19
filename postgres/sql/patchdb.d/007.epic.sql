@@ -48,7 +48,7 @@ begin
             on delete cascade
             on update cascade
     );
-    create trigger epci_verifications_inserted after insert on epic_verifications
+    create trigger epic_verifications_inserted after insert on epic_verifications
         referencing new table as inserted
         for each statement
         execute procedure call_notify();

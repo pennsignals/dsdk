@@ -233,6 +233,7 @@ class Persistor(AbstractPersistor):
     @classmethod
     def as_yaml_type(cls, tag: Optional[str] = None) -> None:
         """As yaml type."""
+        Asset.as_yaml_type()
         yaml_type(
             cls,
             tag or cls.YAML,
