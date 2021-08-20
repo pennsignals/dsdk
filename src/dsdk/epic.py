@@ -1,14 +1,29 @@
 # -*- coding: utf-8 -*-
 """Epic."""
 
+from __future__ import annotations
+
 from base64 import b64encode
 from contextlib import contextmanager
 from datetime import datetime
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from json import dumps as json_dumps, loads as json_loads
 from logging import getLogger
 from os import getcwd
 from os.path import join as pathjoin
+from re import compile as re_compile
 from select import select  # pylint: disable=no-name-in-module
-from typing import Any, Dict, Generator, Optional, Tuple, Union, cast
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Tuple,
+    Union,
+    cast,
+)
 from urllib.parse import quote
 
 from cfgenvy import Parser, yaml_type
@@ -19,6 +34,9 @@ from requests.exceptions import HTTPError, Timeout
 from .postgres import Persistor as Postgres
 
 logger = getLogger(__name__)
+
+
+DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 
 class Epic:  # pylint: disable=too-many-instance-attributes
@@ -322,9 +340,7 @@ class Notifier(Epic):
             "FlowsheetIDType": self.flowsheet_id_type,
             "FlowsheetTemplateID": self.flowsheet_template_id,
             "FlowsheetTemplateIDType": self.flowsheet_template_id_type,
-            "InstantValueTaken": entity["as_of"].strftime(
-                "%Y-%m-%dT%H:%M:%SZ"
-            ),
+            "InstantValueTaken": entity["as_of"].strftime(DATETIME_FORMAT),
             "PatientID": entity["empi"],
             "PatientIDType": self.patient_id_type,
             "UserID": self.user_id,
@@ -459,3 +475,168 @@ class Verifier(Epic):
         except (RequestsConnectionError, HTTPError, Timeout) as e:
             return False, e
         return True, response.json()
+
+
+def parse_path(path: str) -> Tuple[str, Dict[str, str]]:
+    """Parse path."""
+    url, *query_list = path.split("?", 1)
+    query = "".join(query_list)
+    param_list = query.split("&")
+    params: Dict[str, str] = {}
+    for each in param_list:
+        key, *values = each.split("=", 1)
+        params[key] = "".join(values)
+    return (url, params)
+
+
+def equals(expected: Any) -> Callable[..., None]:
+    """Equals."""
+
+    def _check(key: str, value: Any):
+        if value != expected:
+            raise ValueError(f"{key} actual: {value}, expected: {expected}")
+
+    return _check
+
+
+def matches(expected: str) -> Callable[..., None]:
+    """Matches."""
+    pattern = re_compile(expected)
+
+    def _check(key: str, value: str):
+        if not pattern.match(value):
+            raise ValueError(f"{key} actual: {value}, pattern: {expected}")
+
+    return _check
+
+
+def is_float(key: str, value: str):
+    """Is float."""
+    actual = str(float(value))
+    if actual != value:
+        raise ValueError(f"{key} actual: {value}, is not float")
+
+
+def is_datetime(key: str, value: str):
+    """Is datetime."""
+    actual = datetime.strptime(value, DATETIME_FORMAT).strftime(
+        DATETIME_FORMAT
+    )
+    if actual != value:
+        raise ValueError(f"{key} actual: {value}, is not datetime")
+
+
+class Server(HTTPServer):
+    """Server.
+
+    The errors returned do not match the API.
+    """
+
+    def __init__(
+        self,
+        server_address,
+        handler_class,
+        add_flowsheet_value_url: str,
+        get_flowsheet_rows_url: str,
+    ):
+        """__init__."""
+        super().__init__(server_address, handler_class)
+        self.by_flowsheet_id: Dict[str, Any] = {}
+        self.dispatch_url = {
+            parse_path(path)[0].lower(): method
+            for path, method in (
+                (add_flowsheet_value_url, self.add_flowsheet_value),
+                (get_flowsheet_rows_url, self.get_flowsheet_rows),
+            )
+        }
+
+    def __call__(self):
+        """__call__."""
+        self.serve_forever()
+
+    def add_flowsheet_value(self, request, url, params, body):
+        """Add flowsheet value."""
+        errors = request.check_headers()
+        try:
+            for key, validate in (
+                ("Comment", None),
+                ("ContactID", None),
+                ("ContactIDType", None),
+                ("FlowsheetID", None),
+                ("FlowsheetIDType", None),
+                ("FlowsheetTemplateID", None),
+                ("FlowsheetTemplateIDType", None),
+                ("PatientID", None),
+                ("PatientIDType", equals("internal")),
+                ("UserID", None),
+                ("UserIDType", equals("internal")),
+                ("Value", is_float),
+                ("InstantValueTaken", is_datetime),
+            ):
+                value = params[key]
+                if validate is not None:
+                    validate(key, value)
+        except (KeyError, ValueError) as e:
+            errors.append(e)
+
+        if errors:
+            request.send_response(400)
+            request.send_headers("content-type", "application/json")
+            request.end_headers()
+            request.wfile.write(
+                json_dumps({"Success": False, "Errors": [
+                    f"{error.__class__.__name__}: {error}"
+                    for error in errors
+                ]}).encode('utf-8'))
+            request.wfile.close()
+            return
+
+        comment = params["Comment"]
+        contact_id = params["ContectID"]
+        contact_id_type = params["ContactIDType"]
+        flowsheet_id = params["FlowsheetID"]
+        flowsheet_id_type = params["FlowsheetIDType"]
+        flowsheet_template_id = params["FlowsheetTemplateID"]
+        flowsheet_template_id_type = params["FlowsheetTemplateIDType"]
+        patient_id = params["PatientID"]
+        patient_id_type = params["PatientIDType"]
+        user_id = params["UserID"]
+        user_id_type = params["UserIDType"]
+        value = params["Value"]
+        instant_value_taken = params["InstantValueTaken"]
+
+    def get_flowsheet_rows(self, request, url, params, body):
+        """Get flowsheet rows."""
+        errors = request.check_headers()
+        json = json_loads(body)
+
+
+class RequestHandler(BaseHTTPRequestHandler):
+    """Request Handler."""
+
+    def do_POST(self):  # noqa: N802
+        """Do post."""
+        url, params = parse_path(self.path)
+        url = url.lower()
+        content_length = int(self.headers.get("content-length", 0))
+        body = self.rfile.read(content_length)
+        self.server.dispatch[url](self, url, params, body)
+
+    def check_headers(self) -> List[Exception]:
+        """Check headers."""
+        errors: List[Exception] = []
+        for key, validate in (
+            ("authorization", None),
+            ("content-type", equals("application/json")),
+            ("cookie", None),
+            ("epic-client-id", matches(r"\d{8}-\d{4}-\d{4}-\d{4}-\d{12}")),
+            ("epic-user-id", equals("PENNSIGNALS")),
+            ("epic-user-idtype", equals("external")),
+        ):
+            try:
+                value = self.headers.get(key, None)
+                if validate:
+                    validate(key, value)
+            except (KeyError, ValueError) as e:
+                errors.append(e)
+        return errors
