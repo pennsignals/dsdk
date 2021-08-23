@@ -34,7 +34,7 @@ from requests.exceptions import ConnectionError as RequestsConnectionError
 from requests.exceptions import HTTPError, Timeout
 
 from .postgres import Persistor as Postgres
-from .util import configure_logger
+from .utils import configure_logger
 
 try:
     __version__ = get_distribution("dsdk").version
@@ -88,6 +88,11 @@ class Egress(Parser):  # pylint: disable=too-many-instance-attributes
         """Main."""
         with cls.context("main") as service:
             service()
+
+    @classmethod
+    def yaml_types(cls):
+        """Yaml types."""
+        cls.as_yaml_type()
 
     @classmethod
     def _yaml_init(cls, loader, node):
@@ -277,26 +282,6 @@ class Notifier(Egress):
                 ok, response = notifier.rest(prediction, session)
                 print(ok)
                 print(response)
-
-    @classmethod
-    def as_yaml_type(cls, tag: Optional[str] = None):
-        """As yaml type."""
-        yaml_type(
-            cls,
-            tag or cls.YAML,
-            init=cls._yaml_init,
-            repr=cls._yaml_repr,
-        )
-
-    @classmethod
-    def _yaml_init(cls, loader, node):
-        """Yaml init."""
-        return cls(**loader.construct_mapping(node, deep=True))
-
-    @classmethod
-    def _yaml_repr(cls, dumper, self, *, tag):
-        """Yaml repr."""
-        return dumper.represent_mapper(tag, self.as_yaml())
 
     @contextmanager
     def listener(self) -> Generator[Any, None, None]:

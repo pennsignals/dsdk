@@ -57,9 +57,13 @@ setup(
         "console_scripts": [
             "epic.server = dsdk.epic:Server.main"
             "epic.notify = dsdk.epic:Notifier.main",
-            "epic.validate = dsdk.epic:Validator.main",
-            "epic.notify.test.api = dsdk.epic:Notifier.test",
-            "epic.validate.test.api = dsdk.epic:Notifier.test",
+            "epic.verify = dsdk.epic:Verifier.main",
+            #  epic.notify.api.test
+            #    -c ./local/notifier.yaml -e ./secrets/staging.notifier.env
+            "epic.notify.api.test = dsdk.epic:Notifier.test",
+            #  epic.verify.api.test
+            #    -c ./local/verifier.yaml -e ./secrets/staging.verifier.env
+            "epic.verify.api.test = dsdk.epic:Verifier.test",
         ]
     },
     extras_require={

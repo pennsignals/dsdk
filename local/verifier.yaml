@@ -2,12 +2,17 @@
 client_id: ${EPIC_CLIENT_ID}
 cookie: ${EPIC_COOKIE}
 flowsheet_id: ${EPIC_FLOWSHEET_ID}
-flowsheet_template_id: ${EPIC_FLOWHSEET_TEMPLATE_ID}
+flowsheet_template_id: ${EPIC_FLOWSHEET_TEMPLATE_ID}
 password: ${EPIC_PASSWORD}
 postgres: !postgres
   database: ${POSTGRES_DATABASE}
-  host: ${POSTRES_HOST}
+  host: ${POSTGRES_HOST}
   password: ${POSTGRES_PASSWORD}
+  port: 5432
+  sql: !asset
+    ext: .sql
+    path: ./assets/postgres
+  tables: []
   username: ${POSTGRES_USERNAME}
 username: ${EPIC_USERNAME}
 user_id: ${EPIC_USER_ID}
