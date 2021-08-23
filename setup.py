@@ -55,10 +55,11 @@ TEST_REQUIRES = (
 setup(
     entry_points={
         "console_scripts": [
-            "epic-notify = dsdk.epic:Notifier.main",
-            "epic-validate = dsdk.epic:Validator.main",
-            "epic-notify-test = dsdk.epic:Notifier.test",
-            "epic-validate-test = dsdk.epic:Notifier.test",
+            "epic.server = dsdk.epic:Server.main"
+            "epic.notify = dsdk.epic:Notifier.main",
+            "epic.validate = dsdk.epic:Validator.main",
+            "epic.notify.test.api = dsdk.epic:Notifier.test",
+            "epic.validate.test.api = dsdk.epic:Notifier.test",
         ]
     },
     extras_require={

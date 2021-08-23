@@ -203,6 +203,8 @@ class Service(Parser):  # pylint: disable=too-many-instance-attributes
     @classmethod
     def as_yaml_type(cls, tag: Optional[str] = None) -> None:
         """As yaml type."""
+        Asset.as_yaml_type()
+        Interval.as_yaml_type()
         yaml_type(
             cls,
             tag or cls.YAML,
@@ -241,13 +243,6 @@ class Service(Parser):  # pylint: disable=too-many-instance-attributes
         """Validate gold."""
         with cls.context("validate_gold") as service:
             service.on_validate_gold()
-
-    @classmethod
-    def yaml_types(cls) -> None:
-        """Yaml types."""
-        Asset.as_yaml_type()
-        Interval.as_yaml_type()
-        cls.as_yaml_type()
 
     @classmethod
     def _yaml_init(cls, loader, node):

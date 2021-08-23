@@ -7,8 +7,7 @@ from base64 import b64encode
 from contextlib import contextmanager
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from json import dumps as json_dumps
-from json import loads as json_loads
+from json import dumps, loads
 from logging import getLogger
 from os import getcwd
 from os.path import join as pathjoin
@@ -20,6 +19,7 @@ from typing import (
     Dict,
     Generator,
     List,
+    Mapping,
     Optional,
     Tuple,
     Union,
@@ -28,11 +28,20 @@ from typing import (
 from urllib.parse import quote
 
 from cfgenvy import Parser, yaml_type
+from pkg_resources import DistributionNotFound, get_distribution
 from requests import Session
 from requests.exceptions import ConnectionError as RequestsConnectionError
 from requests.exceptions import HTTPError, Timeout
 
 from .postgres import Persistor as Postgres
+from .util import configure_logger
+
+try:
+    __version__ = get_distribution("dsdk").version
+except DistributionNotFound:
+    # package is not installed
+    pass
+
 
 logger = getLogger(__name__)
 
@@ -40,20 +49,45 @@ logger = getLogger(__name__)
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 
-class Epic:  # pylint: disable=too-many-instance-attributes
-    """Epic."""
+class Egress(Parser):  # pylint: disable=too-many-instance-attributes
+    """Egress."""
 
-    YAML = "!epic"
+    ON = dumps({"key": "%s.on"})
+    END = dumps({"key": "%s.end"})
+    YAML = "!egress"
+
+    VERSION = __version__
 
     @classmethod
     def as_yaml_type(cls, tag: Optional[str] = None):
         """As yaml type."""
+        Postgres.as_yaml_type()
         yaml_type(
             cls,
             tag or cls.YAML,
             init=cls._yaml_init,
             repr=cls._yaml_repr,
         )
+
+    @classmethod
+    @contextmanager
+    def context(
+        cls,
+        key: str,
+        argv: Optional[List[str]] = None,
+        env: Optional[Mapping[str, str]] = None,
+    ):
+        """Context."""
+        configure_logger("dsdk")
+        logger.info(cls.ON, key)
+        yield cls.parse(argv=argv, env=env)
+        logger.info(cls.END, key)
+
+    @classmethod
+    def main(cls):
+        """Main."""
+        with cls.context("main") as service:
+            service()
 
     @classmethod
     def _yaml_init(cls, loader, node):
@@ -67,7 +101,7 @@ class Epic:  # pylint: disable=too-many-instance-attributes
 
     def __init__(  # pylint: disable=too-many-arguments,too-many-locals
         self,
-        client_id: str,  # 00000000-0000-0000-0000-000000000000
+        client_id: str,
         cookie: str,
         password: str,
         url: str,
@@ -217,7 +251,7 @@ class Epic:  # pylint: disable=too-many-instance-attributes
         yield session
 
 
-class Notifier(Epic):
+class Notifier(Egress):
     """Notifier."""
 
     YAML = "!epicnotifier"
@@ -226,27 +260,11 @@ class Notifier(Epic):
     def test(
         cls,
         csn="278820881",
-        config: Optional[str] = None,
         empi="8330651951",
-        env: Optional[str] = None,
         id=0,  # pylint: disable=redefined-builtin
         score="0.5",
     ):
         """Test epic API."""
-        cls.as_yaml_type()
-        Postgres.as_yaml_type()
-        parser = Parser()
-        cwd = getcwd()
-
-        notifier = parser.parse(
-            argv=(
-                "-c",
-                config or pathjoin(cwd, "local", "notifier.yaml"),
-                "-e",
-                env or pathjoin(cwd, "secrets", "staging.notifier.env"),
-            )
-        )
-
         prediction = {
             "as_of": datetime.utcnow(),
             "csn": csn,
@@ -254,11 +272,11 @@ class Notifier(Epic):
             "id": id,
             "score": score,
         }
-
-        with notifier.session() as session:
-            ok, response = notifier.rest(prediction, session)
-            print(ok)
-            print(response)
+        with cls.context("test.notifier.api") as notifier:
+            with notifier.session() as session:
+                ok, response = notifier.rest(prediction, session)
+                print(ok)
+                print(response)
 
     @classmethod
     def as_yaml_type(cls, tag: Optional[str] = None):
@@ -368,7 +386,7 @@ class Notifier(Epic):
         return True, response.json()
 
 
-class Verifier(Epic):
+class Verifier(Egress):
     """Verifier."""
 
     YAML = "!epicverifier"
@@ -377,27 +395,11 @@ class Verifier(Epic):
     def test(
         cls,
         csn="278820881",
-        config: Optional[str] = None,
         empi="8330651951",
-        env: Optional[str] = None,
         id=0,  # pylint: disable=redefined-builtin
         score="0.5",
     ):
         """Test verifier."""
-        cls.as_yaml_type()
-        Postgres.as_yaml_type()
-        parser = Parser()
-        cwd = getcwd()
-
-        verifier = parser.parse(
-            argv=(
-                "-c",
-                config or pathjoin(cwd, "local", "verifier.yaml"),
-                "-e",
-                env or pathjoin(cwd, "secrets", "staging.verifier.env"),
-            )
-        )
-
         notification = {
             "as_of": datetime.utcnow(),
             "csn": csn,
@@ -405,11 +407,11 @@ class Verifier(Epic):
             "id": id,
             "score": score,
         }
-
-        with verifier.session() as session:
-            ok, response = verifier.rest(notification, session)
-            print(ok)
-            print(response)
+        with cls.context("test.verifier.api") as verifier:
+            with verifier.session() as session:
+                ok, response = verifier.rest(notification, session)
+                print(ok)
+                print(response)
 
     @contextmanager
     def listener(self) -> Generator[Any, None, None]:
@@ -589,7 +591,7 @@ class Server(HTTPServer):
             request.send_headers("content-type", "application/json")
             request.end_headers()
             request.wfile.write(
-                json_dumps(
+                dumps(
                     {
                         "Errors": [
                             f"{error.__class__.__name__}: {error}"
@@ -619,7 +621,7 @@ class Server(HTTPServer):
     def get_flowsheet_rows(self, request, url, params, body):
         """Get flowsheet rows."""
         errors = request.check_headers()
-        json = json_loads(body)
+        json = loads(body)
 
 
 class RequestHandler(BaseHTTPRequestHandler):
