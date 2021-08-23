@@ -3,20 +3,6 @@ version: "3.8"
 volumes:
   postgres_data:
 
-environment: &environment
-- EPIC_CLIENT_ID=00000000-0000-0000-0000-000000000000
-- EPIC_COOKIE=ASP.NET_SessionId=000000000000000000000000
-- EPIC_FLOWSHEET_ID=0000000000
-- EPIC_HOST=https://epic/interconnect-prd-web/
-- EPIC_PASSWORD=epic
-- EPIC_USERNAME=Epicuser
-- EPIC_USER_ID=EPICUSER
-- POSTGRES_DATABASE=test
-- POSTGRES_HOST=postgres
-- POSTGRES_PASSWORD=postgres
-- POSTGRES_PORT=5432
-- POSTGRES_USERNAME=postgres
-
 services:
 
   postgres:
@@ -44,10 +30,10 @@ services:
     depends_on:
     - postgres
     environment:
-    << *environment
     - CONFIG=/local/test.yaml
+    - ENV=/local/docker.env
     volumes:
-    - ./assets/sql:/sql
+    - ./assets:/assets
     - ./local:/local
 
   notifier:
@@ -58,10 +44,11 @@ services:
     - epic
     - postgres
     environment:
-    << *environment
     - CONFIG=/local/notifier.yaml
+    - ENV=/local/docker.env
     volumes:
-    - ./assets/sql:/sql
+    - ./assets:/assets
+    - ./local:/local
 
   verifier:
     build:
@@ -71,14 +58,17 @@ services:
     - epic
     - postgres
     environment:
-    << *environment
     - CONFIG=/local/verifier.yaml
+    - ENV=/local/docker.env
     volumes:
-    - ./assets/sql:/sql
+    - ./assets:/assets
+    - ./local:/local
 
   epic:
     build:
       context: .
       target: epic.server
     environment:
-    - CONFIG=/local/test.server.yaml
+    - CONFIG=/local/server.yaml
+    volumes:
+    - ./local:/local
