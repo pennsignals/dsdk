@@ -7,7 +7,8 @@ from base64 import b64encode
 from contextlib import contextmanager
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from json import dumps as json_dumps, loads as json_loads
+from json import dumps as json_dumps
+from json import loads as json_loads
 from logging import getLogger
 from os import getcwd
 from os.path import join as pathjoin
@@ -71,19 +72,19 @@ class Epic:  # pylint: disable=too-many-instance-attributes
         password: str,
         url: str,
         flowsheet_id: str,
+        flowsheet_template_id: str,
         postgres: Postgres,
+        user_id: str,
+        username: str,
         comment: str = "Not for clinical use.",
         contact_id_type: str = "CSN",
         flowsheet_id_type: str = "external",
-        flowsheet_template_id: str = "3040005300",
         flowsheet_template_id_type: str = "external",
         lookback_hours: int = 72,
         patient_id_type: str = "UID",
         poll_timeout: int = 60,
         operation_timeout: int = 5,
-        username: str = "Pennsignals",
         user_id_type: str = "external",
-        user_id: str = "PENNSIGNALS",
     ):
         """__init__."""
         self.authorization = (
@@ -225,7 +226,9 @@ class Notifier(Epic):
     def test(
         cls,
         csn="278820881",
+        config: Optional[str] = None,
         empi="8330651951",
+        env: Optional[str] = None,
         id=0,  # pylint: disable=redefined-builtin
         score="0.5",
     ):
@@ -238,9 +241,9 @@ class Notifier(Epic):
         notifier = parser.parse(
             argv=(
                 "-c",
-                pathjoin(cwd, "local", "test.notifier.yaml"),
+                config or pathjoin(cwd, "local", "notifier.yaml"),
                 "-e",
-                pathjoin(cwd, "secrets", "test.notifier.env"),
+                env or pathjoin(cwd, "secrets", "staging.notifier.env"),
             )
         )
 
@@ -374,7 +377,9 @@ class Verifier(Epic):
     def test(
         cls,
         csn="278820881",
+        config: Optional[str] = None,
         empi="8330651951",
+        env: Optional[str] = None,
         id=0,  # pylint: disable=redefined-builtin
         score="0.5",
     ):
@@ -387,9 +392,9 @@ class Verifier(Epic):
         verifier = parser.parse(
             argv=(
                 "-c",
-                pathjoin(cwd, "local", "test.verifier.yaml"),
+                config or pathjoin(cwd, "local", "verifier.yaml"),
                 "-e",
-                pathjoin(cwd, "secrets", "test.verifier.env"),
+                env or pathjoin(cwd, "secrets", "staging.verifier.env"),
             )
         )
 
@@ -584,10 +589,16 @@ class Server(HTTPServer):
             request.send_headers("content-type", "application/json")
             request.end_headers()
             request.wfile.write(
-                json_dumps({"Success": False, "Errors": [
-                    f"{error.__class__.__name__}: {error}"
-                    for error in errors
-                ]}).encode('utf-8'))
+                json_dumps(
+                    {
+                        "Errors": [
+                            f"{error.__class__.__name__}: {error}"
+                            for error in errors
+                        ],
+                        "Success": False,
+                    }
+                ).encode("utf-8")
+            )
             request.wfile.close()
             return
 

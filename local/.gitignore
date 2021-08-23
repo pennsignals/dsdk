@@ -1,3 +1,5 @@
 *
 !.gitignore
 !configuration.yaml
+!notifier.yaml
+!verifier.yaml
