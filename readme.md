@@ -37,8 +37,8 @@ Session:
 
 Test epic egress to production with non-production empi, csn, score, flowsheet_id and flowsheet_template_id:
 
-    epic.notify.api.test -c ./local/notifier.yaml -e ./secrets/staging.notifier.env
-    epic.notify.api.test -c ./local/verifier.yaml -e ./secrets/staging.verifier.env
+    epic.notify.api.test -c ./local/notifier.yaml -e ./secrets/staging.env
+    epic.notify.api.test -c ./local/verifier.yaml -e ./secrets/staging.env
 
 Rebuild the postgres container and remove the docker volume if the database schema is changed.
 
