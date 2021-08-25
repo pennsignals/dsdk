@@ -2,7 +2,7 @@ ARG IFLAGS="--quiet --no-cache-dir --user"
 
 FROM python:3.9.6-slim-buster as build
 ARG IFLAGS
-WORKDIR /root
+WORKDIR /tmp
 ENV PATH /root/.local/bin:$PATH
 ENV TINI_VERSION v0.19.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /usr/bin/tini
@@ -30,7 +30,7 @@ LABEL name="epic"
 WORKDIR /tmp
 ENV PATH /root/.local/bin:$PATH
 COPY --from=build /root/.local /root/.local
-COPY --from=build /root/assets /tmp/assets
+COPY --from=build /tmp/assets /tmp/assets
 COPY --from=build /usr/bin/tini /usr/bin
 ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["epic"]
@@ -38,7 +38,7 @@ CMD ["epic"]
 FROM build as test
 ARG IFLAGS
 LABEL name="dsdk.test"
-WORKDIR /root
+WORKDIR /tmp
 RUN \
     pip install ${IFLAGS} ".[all]"
 ENTRYPOINT [ "/usr/bin/tini", "--" ]
