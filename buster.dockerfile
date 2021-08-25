@@ -25,6 +25,16 @@ RUN \
     apt-get -qq autoremove -y --purge && \
     rm -rf /var/lib/apt/lists/*
 
+FROM python:3.9.6-slim-buster as epic
+LABEL name="epic"
+WORKDIR /tmp
+ENV PATH /root/.local/bin:$PATH
+COPY --from=build /root/.local /root/.local
+COPY --from=build /root/assets /tmp/assets
+COPY --from=build /usr/bin/tini /usr/bin
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["epic"]
+
 FROM build as test
 ARG IFLAGS
 LABEL name="dsdk.test"

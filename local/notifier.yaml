@@ -16,4 +16,4 @@ postgres: !postgres
   username: ${POSTGRES_USERNAME}
 username: ${EPIC_USERNAME}
 user_id: ${EPIC_USER_ID}
-url: ${EPIC_HOST}api/epic/2011/clinical/patient/addflowsheetvalue/flowsheetvalue?PatientID={PatientID}&PatientIDType={PatientIDType}&ContactID={ContactID}&ContactIDType={ContactIDType}&UserID={UserID}&UserIDType={UserIDType}&FlowsheetID={FlowsheetID}&FlowsheetIDType={FlowsheetIDType}&Value={Value}&Comment={Comment}&InstantValueTaken={InstantValueTaken}&FlowsheetTemplateID={FlowsheetTemplateID}&FlowsheetTemplateIDType={FlowsheetTemplateIDType}
+url: ${EPIC_URL}${EPIC_ROOT}${EPIC_ADD_FLOWSHEET_VALUE_PATH}

@@ -55,7 +55,7 @@ TEST_REQUIRES = (
 setup(
     entry_points={
         "console_scripts": [
-            "epic.server = dsdk.epic:Server.main"
+            "epic = dsdk.epic:Server.main"
             "epic.notify = dsdk.epic:Notifier.main",
             "epic.verify = dsdk.epic:Verifier.main",
             #  epic.notify.api.test

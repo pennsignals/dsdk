@@ -528,8 +528,8 @@ class Server(HTTPServer):
         self,
         server_address,
         handler_class,
-        add_flowsheet_value_url: str,
-        get_flowsheet_rows_url: str,
+        add_flowsheet_value_path: str,
+        get_flowsheet_rows_path: str,
     ):
         """__init__."""
         super().__init__(server_address, handler_class)
@@ -537,8 +537,8 @@ class Server(HTTPServer):
         self.dispatch_url = {
             parse_path(path)[0].lower(): method
             for path, method in (
-                (add_flowsheet_value_url, self.add_flowsheet_value),
-                (get_flowsheet_rows_url, self.get_flowsheet_rows),
+                (add_flowsheet_value_path, self.add_flowsheet_value),
+                (get_flowsheet_rows_path, self.get_flowsheet_rows),
             )
         }
 
