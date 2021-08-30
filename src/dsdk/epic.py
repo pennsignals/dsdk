@@ -9,8 +9,6 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from json import dumps, loads
 from logging import getLogger
-from os import getcwd
-from os.path import join as pathjoin
 from re import compile as re_compile
 from select import select  # pylint: disable=no-name-in-module
 from typing import (
@@ -518,6 +516,12 @@ def is_datetime(key: str, value: str):
         raise ValueError(f"{key} actual: {value}, is not datetime")
 
 
+def is_lookback(key: str, value: int):
+    """Is lookback."""
+    if not (0 <= value and value <= 72):
+        raise ValueError(f"{key} actual {value}, is not (0 <= value <= 72")
+
+
 class Server(HTTPServer):
     """Server.
 
@@ -533,12 +537,12 @@ class Server(HTTPServer):
     ):
         """__init__."""
         super().__init__(server_address, handler_class)
-        self.by_flowsheet_id: Dict[str, Any] = {}
+        self.by_user: Dict[str, Any] = {}
         self.dispatch_url = {
             parse_path(path)[0].lower(): method
             for path, method in (
-                (add_flowsheet_value_path, self.add_flowsheet_value),
-                (get_flowsheet_rows_path, self.get_flowsheet_rows),
+                (add_flowsheet_value_path, AddFlowsheetValue()),
+                (get_flowsheet_rows_path, GetFlowsheetRows()),
             )
         }
 
@@ -546,8 +550,89 @@ class Server(HTTPServer):
         """__call__."""
         self.serve_forever()
 
-    def add_flowsheet_value(self, request, url, params, body):
-        """Add flowsheet value."""
+
+class AddFlowsheetValue:
+    """AddFlowsheetValue."""
+
+    def __call__(
+        self, request, url, params, body,
+    ):
+        """__call__."""
+        if self.is_invalid(request, url, params, body):
+            return
+
+        comment = params["Comment"]
+        contact_id = params["ContectID"]
+        contact_id_type = params["ContactIDType"].upper()
+        flowsheet_id = params["FlowsheetID"]
+        flowsheet_id_type = params["FlowsheetIDType"].upper()
+        # flowsheet_template_id = params["FlowsheetTemplateID"]
+        # flowsheet_template_id_type = params["FlowsheetTemplateIDType"]
+        patient_id = params["PatientID"]
+        patient_id_type = params["PatientIDType"].upper()
+        user_id = params["UserID"]
+        user_id_type = params["UserIDType"].upper()
+        value = str(params["Value"])
+        instant = params["InstantValueTaken"].isoformat() + 'Z'
+
+        key = (flowsheet_id, flowsheet_id_type)
+        by_patient = self.by_flowsheet.get(key)
+        if by_patient is None:
+            by_patient = self.by_flowsheet[key] = {}
+
+        key = (patient_id, patient_id_type)
+        by_contact = by_patient.get(key)
+        if by_contact is None:
+            by_contact = by_patient[key] = {}
+
+        key = (contact_id, contact_id_type)
+        rows = by_contact.get(key)
+        if rows is None:
+            rows = by_contact[key] = {
+                "FlowsheetRows": [
+                    {
+                        "FlowsheetColumns": [],
+                        "Name": "Test Message",
+                        "Occurrence": 28,  # ???
+                        "Unit": "",
+                    },
+                ],
+            }
+
+        flowsheet_columns = rows["FlowsheetRows"]["FlowsheetColumns"]
+
+        entry = {
+            "Comment": comment,
+            "FlowsheetRowID": [
+                {
+                    "ID": flowsheet_id,
+                    "Type": flowsheet_id_type,
+                }
+            ],
+            "FormattedValue": value,
+            "Instant": instant,
+            "LinesDrainsAirwaysID": None,
+            "OrderIDs": [],
+            "RawValue": value,
+            "UserEnteredBy": [
+                {
+                    "ID": user_id,
+                    "Type": user_id_type,
+                },
+            ],
+        }
+
+        flowsheet_columns.append(entry)
+        response = {
+            "Errors": [],
+            "Success": True,
+        }
+        return request.respond(200, response)
+
+    def is_invalid(
+        self, request, url, params, body,
+    ) -> Optional[List[Exception]]:
+        """Is invalid."""
         errors = request.check_headers()
         try:
             for key, validate in (
@@ -571,42 +656,105 @@ class Server(HTTPServer):
         except (KeyError, ValueError) as e:
             errors.append(e)
 
-        if errors:
-            request.send_response(400)
-            request.send_headers("content-type", "application/json")
-            request.end_headers()
-            request.wfile.write(
-                dumps(
-                    {
-                        "Errors": [
-                            f"{error.__class__.__name__}: {error}"
-                            for error in errors
-                        ],
-                        "Success": False,
-                    }
-                ).encode("utf-8")
-            )
-            request.wfile.close()
+        if not errors:
+            return False
+
+        # TODO:
+        # - errors do not match the spec
+        response = {
+            "Errors": [
+                f"{error.__class__.__name__}: {error}"
+                for error in errors
+            ],
+            "Success": False,
+        }
+        request.respond(400, response)
+        return True
+
+
+class GetFlowsheetRows:
+    """Get flowsheet rows."""
+
+    def __call__(
+        self, request, url, params, body,
+    ):
+        """__call__."""
+        json = loads(body)
+        if self.is_invalid(request, url, params, json):
             return
 
-        comment = params["Comment"]
-        contact_id = params["ContectID"]
-        contact_id_type = params["ContactIDType"]
-        flowsheet_id = params["FlowsheetID"]
-        flowsheet_id_type = params["FlowsheetIDType"]
-        flowsheet_template_id = params["FlowsheetTemplateID"]
-        flowsheet_template_id_type = params["FlowsheetTemplateIDType"]
-        patient_id = params["PatientID"]
-        patient_id_type = params["PatientIDType"]
-        user_id = params["UserID"]
-        user_id_type = params["UserIDType"]
-        value = params["Value"]
-        instant_value_taken = params["InstantValueTaken"]
+        contact_id = json["ContactID"]
+        contact_id_type = json["ContactIDType"]
+        patient_id = json["PatientID"]
+        patient_id_type = json["PatientIDType"]
+        # TODO: lookback_hours = json["LookbackHours"]
+        # user_id = json["UserID"]
+        # user_id_type = json["UserIDType"]
+        flowsheet_row_ids = json["FlowsheetRowIDs"]
 
-    def get_flowsheet_rows(self, request, url, params, body):
-        """Get flowsheet rows."""
+        # TODO FIXME
+
+        default = {'FlowsheetRows': []}
+
+        key = (flowsheet_id, flowsheet_id_type.lower())
+        by_patient = self.by_flowsheet.get(key)
+        if by_patient is None:
+            return request.respond(request, 400, default)
+
+        key = (patient_id, patient_id_type)
+        by_contact = by_patient.get(key)
+        if by_contact is None:
+            return request.respond(request, 400, default)
+
+        key = (contact_id, contact_id_type)
+        body = by_contact.get(key)
+        if body is None:
+            return request.respond(request, 400, default)
+
+        return request.respond(request, 200, body)
+
+    def is_invalid(self, request, url, params, body):
+        """Is invalid."""
         errors = request.check_headers()
-        json = loads(body)
+        try:
+            for key, validate in (
+                ("ContactID", None),
+                ("ContactIDType", None),
+                ("FlowsheetID", None),
+                ("FlowsheetIDType", None),
+                ("LookbackHours", is_lookback),
+                ("PatientID", None),
+                ("PatientIDType", equals("internal")),
+                ("UserID", None),
+                ("UserIDType", equals("internal")),
+            ):
+                value = body[key]
+                if validate is not None:
+                    validate(key, value)
+        except (KeyError, ValueError) as e:
+            errors.append(e)
+
+        try:
+            key = "FlowsheetRowIDs"
+            value = body[key]
+            for each in value:
+                _ = each["ID"]
+                _ = each["IDType"]
+        except (KeyError, ValueError) as e:
+            errors.append(e)
+
+        if not errors:
+            return False
+
+        response = {
+            "Errors": [
+                f"{error.__class__.__name__}: {error}"
+                for error in errors
+            ],
+            "Success": False,
+        }
+        request.respond(400, response)
+        return True
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -638,3 +786,11 @@ class RequestHandler(BaseHTTPRequestHandler):
             except (KeyError, ValueError) as e:
                 errors.append(e)
         return errors
+
+    def respond(self, code, response) -> None:
+        """Respond."""
+        self.send_response(code)
+        self.send_headers("content-type", "application/json")
+        self.end_headers()
+        self.wfile.write(dumps(response).encode("utf-8"))
+        self.wfile.close()
