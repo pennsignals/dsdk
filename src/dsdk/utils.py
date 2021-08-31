@@ -63,7 +63,7 @@ def chunks(sequence: Sequence[Any], n: int):
 
 def dump_json_file(obj: Any, path: str) -> None:
     """Dump json to file."""
-    with open(path, "w") as fout:
+    with open(path, "w", encoding="utf-8") as fout:
         json_dump(obj, fout)
 
 
@@ -87,7 +87,7 @@ def get_tzinfo(key: str) -> tzinfo:
 
 def load_json_file(path: str) -> object:
     """Load json from file."""
-    with open(path, "r") as fin:
+    with open(path, "r", encoding="utf-8") as fin:
         return json_load(fin)
 
 

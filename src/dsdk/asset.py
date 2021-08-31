@@ -45,7 +45,7 @@ class Asset(Namespace):
             s_name, s_ext = splitext(name)
             if s_ext != ext:
                 continue
-            with open(child) as fin:
+            with open(child, encoding="utf-8") as fin:
                 kwargs[s_name] = fin.read()
         return cls(path=path, ext=ext, **kwargs)
 
