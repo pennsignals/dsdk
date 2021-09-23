@@ -1,1 +1,1 @@
-example.epic_notifications
+listen example.epic_notifications
