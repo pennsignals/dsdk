@@ -62,7 +62,7 @@ def namespace_directory(root: str = "./", ext: str = ".sql") -> Namespace:
         s_name, s_ext = splitext(name)
         if s_ext != ext:
             continue
-        with open(path) as fin:
+        with open(path, encoding="utf-8") as fin:
             setattr(result, s_name, fin.read())
     return result
 
