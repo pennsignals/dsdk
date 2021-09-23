@@ -6,11 +6,10 @@ from __future__ import annotations
 from abc import ABC
 from contextlib import contextmanager
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Dict, Generator, Type, cast
+from typing import TYPE_CHECKING, Any, Dict, Generator, Optional
 
-from configargparse import ArgParser as ArgumentParser
+from cfgenvy import yaml_type
 
-from .dependency import inject_str
 from .service import Delegate, Service
 from .utils import load_pickle_file
 
@@ -26,41 +25,50 @@ else:
 class Model:  # pylint: disable=too-few-public-methods
     """Model."""
 
-    KEY = "model"
+    YAML = "!model"
 
     @classmethod
-    def load(cls, path: str) -> Model:
-        """Load."""
+    def as_yaml_type(cls, tag: Optional[str] = None) -> None:
+        """As yaml type."""
+        yaml_type(
+            cls,
+            tag or cls.YAML,
+            init=cls._yaml_init,
+            repr=cls._yaml_repr,
+        )
+
+    @classmethod
+    def _yaml_init(cls, loader, node):
+        """Yaml init."""
+        path = loader.construct_scalar(node)
         pkl = load_pickle_file(path)
         if pkl.__class__ is dict:
-            assert pkl.__class__ is dict
-            return cls(**pkl)  # type: ignore
+            pkl = cls(path=path, **pkl)
+        else:
+            pkl.path = path
         assert isinstance(pkl, Model)
         return pkl
 
     @classmethod
-    @contextmanager
-    def configure(
-        cls, service: Service, parser
-    ) -> Generator[None, None, None]:
-        """Dependencies."""
-        kwargs: Dict[str, Any] = {}
+    def _yaml_repr(cls, dumper, self, *, tag: str):
+        """Yaml_repr."""
+        return dumper.represent_scalar(tag, self.as_yaml())
 
-        parser.add(
-            f"--{cls.KEY}",
-            env_var=f"{cls.KEY.upper()}",
-            help="Path to pickled model.",
-            required=True,
-            type=inject_str("path", kwargs),
-        )
-        yield
-
-        service.dependency(cls.KEY, cls.load, kwargs)
-
-    def __init__(self, name: str, version: str) -> None:
+    def __init__(
+        self,
+        *,
+        name: str,
+        path: str,
+        version: str,
+    ) -> None:
         """__init__."""
         self.name = name
+        self.path = path
         self.version = version
+
+    def as_yaml(self) -> str:
+        """As yaml."""
+        return self.path
 
 
 class Batch(Delegate):
@@ -70,13 +78,6 @@ class Batch(Delegate):
         """__init__."""
         super().__init__(parent)
         self.model_version = model_version
-
-    def as_insert_doc(self) -> Dict[str, Any]:
-        """As insert doc."""
-        return {
-            "model_version": self.model_version,
-            **self.parent.as_insert_doc(),
-        }
 
     def as_insert_sql(self) -> Dict[str, Any]:
         """As insert sql."""
@@ -89,20 +90,23 @@ class Batch(Delegate):
 class Mixin(BaseMixin):
     """Mixin."""
 
-    def __init__(self, *, model=None, model_cls: Type = Model, **kwargs):
+    @classmethod
+    def yaml_types(cls) -> None:
+        """As yaml types."""
+        Model.as_yaml_type()
+        super().yaml_types()
+
+    def __init__(self, *, model: Model, **kwargs):
         """__init__."""
-        self.model = cast(Model, model)
-        self.model_cls = model_cls
+        self.model = model
         super().__init__(**kwargs)
 
-    @contextmanager
-    def inject_arguments(
-        self, parser: ArgumentParser
-    ) -> Generator[None, None, None]:
-        """Inject arguments."""
-        with self.model_cls.configure(self, parser):
-            with super().inject_arguments(parser):
-                yield
+    def as_yaml(self) -> Dict[str, Any]:
+        """As yaml."""
+        return {
+            "model": self.model,
+            **super().as_yaml(),
+        }
 
     @contextmanager
     def open_batch(self) -> Generator[Any, None, None]:

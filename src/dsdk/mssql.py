@@ -7,19 +7,17 @@ from abc import ABC
 from contextlib import contextmanager
 from json import dumps
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Generator, Type, cast
+from typing import TYPE_CHECKING, Any, Dict, Generator
 
-from configargparse import ArgParser as ArgumentParser
-
-from .dependency import StubError
 from .persistor import Persistor as BasePersistor
 from .service import Service, Task
+from .utils import StubError
 
 logger = getLogger(__name__)
 
 
 try:
-    from pymssql import connect, _mssql, DatabaseError, InterfaceError
+    from pymssql import DatabaseError, InterfaceError, _mssql, connect
 except ImportError as import_error:
     logger.warning(import_error)
 
@@ -56,10 +54,17 @@ class Messages:  # pylint: disable=too-few-public-methods
 class Persistor(Messages, BasePersistor):
     """Persistor."""
 
+    YAML = "!mssql"
+
     @classmethod
-    def mogrify(cls, cur, query: str, parameters: Any,) -> bytes:
+    def mogrify(
+        cls,
+        cur,
+        query: str,
+        parameters: Any,
+    ) -> bytes:
         """Safely mogrify parameters into query or fragment."""
-        return _mssql.substitute_params(query, parameters)  # type: ignore
+        return _mssql.substitute_params(query, parameters)
 
     def check(self, cur, exceptions=(DatabaseError, InterfaceError)):
         """check."""
@@ -111,21 +116,23 @@ class Persistor(Messages, BasePersistor):
 class Mixin(BaseMixin):
     """Mixin."""
 
-    def __init__(self, *, mssql=None, mssql_cls: Type = Persistor, **kwargs):
+    @classmethod
+    def yaml_types(cls) -> None:
+        """Yaml types."""
+        Persistor.as_yaml_type()
+        super().yaml_types()
+
+    def __init__(self, *, mssql: Persistor = None, **kwargs):
         """__init__."""
-        self.mssql = cast(Persistor, mssql)
-        self.mssql_cls = mssql_cls
+        self.mssql = mssql
         super().__init__(**kwargs)
 
-    @contextmanager
-    def inject_arguments(
-        self, parser: ArgumentParser
-    ) -> Generator[None, None, None]:
-        """Inject arguments."""
-        # Replace return type with ContextManager[Any] when mypy is fixed.
-        with self.mssql_cls.configure(self, parser):
-            with super().inject_arguments(parser):
-                yield
+    def as_yaml(self) -> Dict[str, Any]:
+        """As yaml."""
+        return {
+            "mssql": self.mssql,
+            **super().as_yaml(),
+        }
 
 
 class CheckTablePrivileges(Task):  # pylint: disable=too-few-public-methods

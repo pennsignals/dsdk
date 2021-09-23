@@ -29,11 +29,57 @@ services:
       target: test
     depends_on:
     - postgres
+    - notifier
+    - verifier
+    - epic
     environment:
-    - POSTGRES_HOST=postgres
-    - POSTGRES_USERNAME=postgres
-    - POSTGRES_PASSWORD=postgres
-    - POSTGRES_DATABASE=test
-    - POSTGRES_PORT=5432
+    - CONFIG=/local/test.yaml
+    - ENV=/local/docker.env
     volumes:
-    - ./sql:/sql
+    - ./assets:/assets
+    - ./local:/local
+
+  notifier:
+    build:
+      context: .
+      target: epic
+    command: epic.notify
+    depends_on:
+    - epic
+    - postgres
+    environment:
+    - CONFIG=/local/notifier.yaml
+    - ENV=/local/docker.env
+    volumes:
+    - ./assets:/assets
+    - ./local:/local
+
+  verifier:
+    build:
+      context: .
+      target: epic
+    command: epic.verify
+    depends_on:
+    - epic
+    - postgres
+    environment:
+    - CONFIG=/local/verifier.yaml
+    - ENV=/local/docker.env
+    volumes:
+    - ./assets:/assets
+    - ./local:/local
+
+  epic:
+    build:
+      context: .
+      target: epic
+    environment:
+    - CONFIG=/local/epic.yaml
+    - ENV=/local/docker.env
+    expose:
+    - "80"
+    ports:
+    - "80:80"
+    restart: always
+    volumes:
+    - ./local:/local

@@ -1,15 +1,15 @@
 [build-system]
 requires = [
-    "setuptools>=50.3.0",
+    "setuptools>=57.4.0",
     "setuptools_scm[toml]>=4.1.2",
     "wheel>=0.35.1",
 ]
 
 [project]
 authors = [
+    "Jason Lubken",
     "Michael Becker",
     "Corey Chivers",
-    "Jason Lubken"
 ]
 license = "MIT"
 name = "dsdk"
@@ -42,10 +42,13 @@ known_first_party = ["dsdk"]
 default_section = "THIRDPARTY"
 
 [tool.pylint.basic]
-good-names = '''a,b,c,d,df,e,i,id,logger,n,on,tz'''
+good-names = '''a,b,c,d,df,do_POST,e,i,id,logger,n,on,ok,tz'''
 
 [tool.pylint.message_control]
 disable = '''duplicate-code,C0330'''
+extension-pkg-allow-list = [
+  "pymssql._mssql",
+]
 
 [tool.pylint.miscellaneous]
 notes = '''FIXME,XXX'''
@@ -57,9 +60,9 @@ ignore-docstrings = "yes"
 ignore-imports = "yes"
 
 [tool.pytest.ini_options]
-addopts = "-ra --cov=dsdk --cov-report=term-missing --strict --ignore=.eggs --tb=short"
+addopts = "-ra --cov=dsdk --cov-report=term-missing --strict-markers --ignore=.eggs --tb=short"
 testpaths = ["test"]
-norecursedirs = ".env .git build dist"
+norecursedirs = ".env .git .venv build dist"
 python_files = "test.py tests.py test_*.py *_test.py"
 
 [tool.setuptools_scm]

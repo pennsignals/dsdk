@@ -2,27 +2,28 @@
 """Test postgres."""
 
 from contextlib import contextmanager
-from os import environ
+from os import environ as os_env
 from typing import Any, Generator
 
 from pandas import DataFrame, read_sql_query
 
-from dsdk import Batch, PostgresPersistor, configure_logger
-from dsdk.dependency import namespace_directory
+from dsdk import Asset, Batch, Postgres, configure_logger
 from dsdk.model import Batch as ModelBatch
 
 logger = configure_logger(__name__)
 
 
-class Persistor(PostgresPersistor):
+class Persistor(Postgres):
     """Persistor."""
 
     def __init__(
-        self, env=None, **kwargs,
+        self,
+        env=None,
+        **kwargs,
     ):
         """__init__."""
         if env is None:
-            env = environ
+            env = os_env
         self.attempts = 0
         super().__init__(
             username=kwargs.get(
@@ -36,8 +37,11 @@ class Persistor(PostgresPersistor):
             database=kwargs.get(
                 "database", env.get("POSTGRES_DATABASE", "test")
             ),
-            sql=namespace_directory(
-                kwargs.get("sql", env.get("POSTGRES_SQL", "./sql/postgres"))
+            sql=Asset.build(
+                path=kwargs.get(
+                    "sql", env.get("POSTGRES_SQL", "./assets/postgres")
+                ),
+                ext=".sql",
             ),
             tables=kwargs.get(
                 "tables",
@@ -45,10 +49,10 @@ class Persistor(PostgresPersistor):
                     "POSTGRES_TABLES",
                     ",".join(
                         (
-                            "dsdk.models",
-                            "dsdk.microservices",
-                            "dsdk.runs",
-                            "dsdk.predictions",
+                            "example.models",
+                            "example.microservices",
+                            "example.runs",
+                            "example.predictions",
                         )
                     ),
                 ).split(","),

@@ -4,19 +4,19 @@
 from __future__ import annotations
 
 from abc import ABC
+from collections import deque
 from contextlib import contextmanager
 from json import dumps
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Dict, Generator, Type, cast
+from typing import TYPE_CHECKING, Any, Dict, Generator
 
-from configargparse import ArgParser as ArgumentParser
 from numpy import integer
 from pandas import DataFrame, NaT, Series, isna
 
-from .dependency import Interval, StubError
+from .interval import Interval
 from .persistor import Persistor as BasePersistor
 from .service import Delegate, Service, Task
-from .utils import retry
+from .utils import StubError, retry
 
 logger = getLogger(__name__)
 
@@ -29,14 +29,15 @@ try:
         OperationalError,
         connect,
     )
-    from psycopg2.extras import execute_batch
     from psycopg2.extensions import (
-        register_adapter,
-        ISQLQuote,
-        Float,
+        ISOLATION_LEVEL_AUTOCOMMIT,
         AsIs,
+        Float,
         Int,
+        ISQLQuote,
+        register_adapter,
     )
+    from psycopg2.extras import execute_batch
 
     def na_adapter(as_type):
         """Na adapter."""
@@ -93,6 +94,7 @@ class Messages:  # pylint: disable=too-few-public-methods
     ERROR = dumps({"key": f"{KEY}.table.error", "table": "%s"})
     ERRORS = dumps({"key": f"{KEY}.tables.error", "tables": "%s"})
     EXTANT = dumps({"key": f"{KEY}.sql.extant", "value": "%s"})
+    LISTEN = dumps({"key": f"{KEY}.listen", "value": "%s"})
     ON = dumps({"key": f"{KEY}.on"})
     OPEN = dumps({"key": f"{KEY}.open"})
     ROLLBACK = dumps({"key": f"{KEY}.rollback"})
@@ -117,14 +119,40 @@ class Messages:  # pylint: disable=too-few-public-methods
 class Persistor(Messages, BasePersistor):
     """Persistor."""
 
+    YAML = "!postgres"
+
     @classmethod
-    def mogrify(cls, cur, query: str, parameters: Any,) -> bytes:
+    def mogrify(
+        cls,
+        cur,
+        query: str,
+        parameters: Any,
+    ) -> bytes:
         """Safely mogrify parameters into query or fragment."""
         return cur.mogrify(query, parameters)
 
     def check(self, cur, exceptions=(DatabaseError, InterfaceError)):
         """Check."""
         super().check(cur, exceptions)
+
+    @contextmanager
+    def listen(self, *listens: str) -> Generator[Any, None, None]:
+        """Listen."""
+        con = self.retry_connect()
+        con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        logger.info(self.OPEN)
+        try:
+            # replace list with a deque to allow
+            # users to pop the last notify
+            con.notifies = deque(con.notifies)
+            with con.cursor() as cur:
+                for each in listens:
+                    logger.debug(self.LISTEN, each)
+                    cur.execute(each)
+            yield con
+        finally:
+            con.close()
+            logger.info(self.CLOSE)
 
     @contextmanager
     def connect(self) -> Generator[Any, None, None]:
@@ -159,7 +187,12 @@ class Persistor(Messages, BasePersistor):
                     time_zone,
                     *_,
                 ) = row
-                run = Run(id_, microservice_id, model_id, parent,)
+                run = Run(
+                    id_,
+                    microservice_id,
+                    model_id,
+                    parent,
+                )
                 parent.as_of = as_of
                 parent.duration = Interval(
                     on=duration.lower, end=duration.upper
@@ -203,7 +236,9 @@ class Persistor(Messages, BasePersistor):
         with self.rollback() as cur:
             cur.execute(sql.schema)
             return self.df_from_query(
-                cur, sql.predictions.gold, {"run_id": run_id},
+                cur,
+                sql.predictions.gold,
+                {"run_id": run_id},
             ).score.values  # pylint: disable=no-member
 
     def store_evidence(self, run: Any, *args, **kwargs) -> None:
@@ -214,7 +249,7 @@ class Persistor(Messages, BasePersistor):
         evidence = run.evidence
         exclude = set(kwargs.get("exclude", ()))
         while args:
-            key, df, *args = args  # type: ignore
+            key, df, *args = args  # type: ignore[assignment]
             evidence[key] = df
             # setattr(batch.evidence, name, data)
             if df.empty:
@@ -226,11 +261,18 @@ class Persistor(Messages, BasePersistor):
                     f"Missing sql/postgres/{key}/insert.sql"
                 ) from e
             self._store_df(
-                schema, insert, run_id, df[list(set(df.columns) - exclude)],
+                schema,
+                insert,
+                run_id,
+                df[list(set(df.columns) - exclude)],
             )
 
     def _store_df(
-        self, schema: str, insert: str, run_id: int, df: DataFrame,
+        self,
+        schema: str,
+        insert: str,
+        run_id: int,
+        df: DataFrame,
     ):
         df["run_id"] = run_id
         out = df.to_dict("records")
@@ -238,7 +280,9 @@ class Persistor(Messages, BasePersistor):
             with self.commit() as cur:
                 cur.execute(schema)
                 execute_batch(
-                    cur, insert, out,
+                    cur,
+                    insert,
+                    out,
                 )
         except DatabaseError as e:
             enumeration = enumerate(out)
@@ -262,23 +306,23 @@ class Persistor(Messages, BasePersistor):
 class Mixin(BaseMixin):
     """Mixin."""
 
-    def __init__(
-        self, *, postgres=None, postgres_cls: Type = Persistor, **kwargs,
-    ):
+    @classmethod
+    def yaml_types(cls) -> None:
+        """Yaml types."""
+        Persistor.as_yaml_type()
+        super().yaml_types()
+
+    def __init__(self, *, postgres: Persistor, **kwargs):
         """__init__."""
-        self.postgres = cast(Persistor, postgres)
-        self.postgres_cls = postgres_cls
+        self.postgres = postgres
         super().__init__(**kwargs)
 
-    @contextmanager
-    def inject_arguments(
-        self, parser: ArgumentParser
-    ) -> Generator[None, None, None]:
-        """Inject arguments."""
-        # Replace return type with ContextManager[None] when mypy is fixed.
-        with self.postgres_cls.configure(self, parser):
-            with super().inject_arguments(parser):
-                yield
+    def as_yaml(self) -> Dict[str, Any]:
+        """As yaml."""
+        return {
+            "postgres": self.postgres,
+            **super().as_yaml(),
+        }
 
     def scores(self, run_id) -> Series:
         """Get scores."""
@@ -289,22 +333,17 @@ class Run(Delegate):
     """Run."""
 
     def __init__(  # pylint: disable=too-many-arguments
-        self, id_: int, microservice_id: str, model_id: str, parent: Any,
+        self,
+        id_: int,
+        microservice_id: str,
+        model_id: str,
+        parent: Any,
     ):
         """__init__."""
         super().__init__(parent)
         self.id = id_
         self.microservice_id = microservice_id
         self.model_id = model_id
-
-    def as_insert_doc(self) -> Dict[str, Any]:
-        """As insert doc."""
-        return {
-            "run_id": self.id,
-            "microservice_id": self.microservice_id,
-            "model_id": self.model_id,
-            **self.parent.as_insert_doc(),
-        }
 
 
 class PredictionMixin(Mixin):  # pylint: disable=too-few-public-methods.

@@ -1,25 +1,25 @@
 # -*- coding: utf-8 -*-
 """Test dsdk."""
 
-from argparse import Namespace
-from typing import Any, Dict
+from io import StringIO
+from typing import Any, Callable, Dict, Tuple, Type
 
-from configargparse import ArgParser as ArgumentParser
+from cfgenvy import yaml_dumps
 from pandas import DataFrame
 from pytest import mark
 
 from dsdk import (
+    Asset,
     Batch,
     Model,
     ModelMixin,
+    Mssql,
     MssqlMixin,
-    MssqlPersistor,
+    Postgres,
     PostgresMixin,
-    PostgresPersistor,
     Service,
     Task,
     dump_pickle_file,
-    namespace_directory,
     retry,
 )
 
@@ -54,109 +54,181 @@ def test_batch_evidence():
     assert batch.evidence["test"] is df
 
 
-def mixin_kwargs():
-    """Return mixin kwargs."""
+class MyService(ModelMixin, MssqlMixin, PostgresMixin, Service):
+    """MyService."""
 
-    # TODO
-    # do not use filesystem for init of sql namespaces
-    model = Model("test", "0.0.1-rc.1")
-    mssql = MssqlPersistor(
-        username="username",
+    YAML = "!test"
+
+    @classmethod
+    def yaml_types(cls):
+        """Yaml types."""
+        cls.as_yaml_type()
+        super().yaml_types()
+
+    def __init__(self, **kwargs):
+        """__init__."""
+        pipeline = (_Extract, _Transform, _Predict)
+        super().__init__(pipeline=pipeline, **kwargs)
+
+
+CONFIGS = """
+!test
+mssql: !mssql
+  database: test
+  host: 0.0.0.0
+  password: ${MSSQL_PASSWORD}
+  port: 1433
+  sql: !asset
+    ext: .sql
+    path: ./assets/mssql
+  tables:
+  - a
+  - b
+  - c
+  username: mssql
+model: !model ./test/model.pkl
+postgres: !postgres
+  database: test
+  host: 0.0.0.0
+  password: ${POSTGRES_PASSWORD}
+  port: 5432
+  sql: !asset
+    ext: .sql
+    path: ./assets/postgres
+  tables:
+  - ichi
+  - ni
+  - san
+  - shi
+  - go
+  username: postgres
+""".strip()
+
+ENVS = """
+MSSQL_PASSWORD=password
+POSTGRES_PASSWORD=password
+""".strip()
+
+EXPECTED = """
+!test
+as_of: null
+duration: null
+gold: null
+model: !model ./test/model.pkl
+mssql: !mssql
+  database: test
+  host: 0.0.0.0
+  password: password
+  port: 1433
+  sql: !asset
+    ext: .sql
+    path: ./assets/mssql
+  tables:
+  - a
+  - b
+  - c
+  username: mssql
+postgres: !postgres
+  database: test
+  host: 0.0.0.0
+  password: password
+  port: 5432
+  sql: !asset
+    ext: .sql
+    path: ./assets/postgres
+  tables:
+  - ichi
+  - ni
+  - san
+  - shi
+  - go
+  username: postgres
+time_zone: null
+""".strip()
+
+
+def build(
+    cls: Type,
+    expected: str = EXPECTED,
+) -> Tuple[Callable, Dict[str, Any], str]:
+    """Build from parameters."""
+    cls.yaml_types()
+    model = Model(name="test", path="./test/model.pkl", version="0.0.1-rc.1")
+    mssql = Mssql(
+        username="mssql",
         password="password",
-        host="host",
+        host="0.0.0.0",
         port=1433,
-        database="database",
-        sql=namespace_directory("./sql/mssql"),
-        tables=("foo", "bar", "baz"),
+        database="test",
+        sql=Asset.build(path="./assets/mssql", ext=".sql"),
+        tables=("a", "b", "c"),
     )
-    postgres = PostgresPersistor(
-        username="username",
+    postgres = Postgres(
+        username="postgres",
         password="password",
-        host="host",
+        host="0.0.0.0",
         port=5432,
-        database="database",
-        sql=namespace_directory("./sql/postgres"),
-        tables=("foo", "bar", "baz"),
+        database="test",
+        sql=Asset.build(path="./assets/postgres", ext=".sql"),
+        tables=("ichi", "ni", "san", "shi", "go"),
     )
-    return {
-        "model": model,
-        "mssql": mssql,
-        "postgres": postgres,
-    }
+    return (
+        cls,
+        {
+            "model": model,
+            "mssql": mssql,
+            "postgres": postgres,
+        },
+        expected,
+    )
 
 
-def mixin_parser_kwargs():
-    """Return mixin parser kwargs."""
-    model = "./model.pkl"
-    dump_pickle_file(Model(name="test", version="0.0.1"), model)
+def deserialize(
+    cls: Type,
+    configs: str = CONFIGS,
+    envs: str = ENVS,
+    expected: str = EXPECTED,
+) -> Tuple[Callable, Dict[str, Any], str]:
+    """Build from yaml."""
+    pickle_file = "./test/model.pkl"
+    dump_pickle_file(
+        Model(name="test", path=pickle_file, version="0.0.1"), pickle_file
+    )
 
-    mssql = Namespace()
-    mssql.database = "test"
-    mssql.host = "host"
-    mssql.password = "password"
-    mssql.port = 1433
-    mssql.sql = "./sql/mssql"
-    mssql.tables = ("foo", "bar", "baz")
-    mssql.username = "username"
-
-    postgres = Namespace()
-    postgres.database = "test"
-    postgres.host = "host"
-    postgres.password = "password"
-    postgres.port = 5432
-    postgres.sql = "./sql/postgres"
-    postgres.tables = ("foo", "bar", "baz")
-    postgres.username = "username"
-
-    argv = [
-        "--model",
-        model,
-        "--mssql-database",
-        mssql.database,
-        "--mssql-host",
-        mssql.host,
-        "--mssql-password",
-        mssql.password,
-        "--mssql-port",
-        str(mssql.port),
-        "--mssql-sql",
-        mssql.sql,
-        "--mssql-tables",
-        ",".join(mssql.tables),
-        "--mssql-username",
-        mssql.username,
-        "--postgres-database",
-        postgres.database,
-        "--postgres-host",
-        postgres.host,
-        "--postgres-password",
-        postgres.password,
-        "--postgres-port",
-        str(postgres.port),
-        "--postgres-sql",
-        postgres.sql,
-        "--postgres-tables",
-        ",".join(postgres.tables),
-        "--postgres-username",
-        postgres.username,
-    ]
-    parser = ArgumentParser(argv)
-    return {"argv": argv, "parser": parser}
+    env = {"POSTGRES_PASSWORD": "oops!", "MSSQL_PASSWORD": "oops!"}
+    return (
+        cls.loads,
+        {
+            "configs": StringIO(configs),
+            "env": env,
+            "envs": StringIO(envs),
+        },
+        expected,
+    )
 
 
-@mark.parametrize("kwargs", (mixin_kwargs(), mixin_parser_kwargs()))
-def test_mixin_service(kwargs: Dict[str, Any]):
-    """Test postgres, mssql mixin."""
-
-    class _Service(MssqlMixin, PostgresMixin, ModelMixin, Service):
-        def __init__(self, **kwargs):
-            pipeline = (_Extract, _Transform, _Predict)
-            super().__init__(pipeline=pipeline, **kwargs)
-
-    service = _Service(**kwargs)
-    assert service.postgres.__class__ is PostgresPersistor
-    assert service.mssql.__class__ is MssqlPersistor
+@mark.parametrize(
+    "cls,kwargs,expected",
+    (
+        build(MyService),
+        deserialize(MyService),
+    ),
+)
+def test_service(
+    cls: Callable,  # pylint: disable=redefined-outer-name
+    kwargs: Dict[str, Any],
+    expected: str,
+):
+    """Test parameters, config, and env."""
+    service = cls(**kwargs)
+    assert service.__class__ is MyService
     assert service.model.__class__ is Model
+    assert service.postgres.__class__ is Postgres
+    assert service.mssql.__class__ is Mssql
+    assert service.postgres.password == "password"
+    assert service.mssql.password == "password"
+    actual = yaml_dumps(service).strip()
+    assert actual == expected
 
 
 def test_retry_other_exception():

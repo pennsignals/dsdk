@@ -4,16 +4,18 @@
 from setuptools import find_packages, setup
 
 INSTALL_REQUIRES = (
-    "configargparse>=1.2.3",
+    (
+        "cfgenvy@"
+        "git+https://github.com/pennsignals/cfgenvy.git"
+        "@1.2.1#egg=cfgenvy"
+    ),
     "numpy>=1.15.4",
     "pandas>=0.23.4",
-    "pip>=20.2.4",
-    "pyyaml>=5.3.1",
-    "setuptools>=50.3.2",
+    "pip>=21.2.2",
+    "requests>=2.26.0",
+    "setuptools>=57.4.0",
     "wheel>=0.35.1",
 )
-
-PYMONGO_REQUIRES = ("pymongo>=3.11.0",)
 
 PYMSSQL_REQUIRES = ("cython>=0.29.21", "pymssql>=2.1.4")
 
@@ -36,7 +38,7 @@ TEST_REQUIRES = (
     "flake8-logging-format",
     "flake8-mutable",
     "flake8-sorted-keys",
-    "isort<=4.2.5",
+    "isort",
     "mypy",
     "pep8-naming",
     "pre-commit",
@@ -46,17 +48,24 @@ TEST_REQUIRES = (
     "types-pkg-resources",
     "types-pymssql",
     "types-python-dateutil",
+    "types-pymssql",
     "types-pyyaml",
+    "types-requests",
 )
 
 setup(
+    entry_points={
+        "console_scripts": [
+            "epic = dsdk.epic:Server.main"
+            "epic.notify = dsdk.epic:Notifier.main",
+            "epic.verify = dsdk.epic:Verifier.main",
+            "epic.notify.api.test = dsdk.epic:Notifier.test",
+            "epic.verify.api.test = dsdk.epic:Verifier.test",
+        ]
+    },
     extras_require={
-        "all": PSYCOPG2_REQUIRES
-        + PYMONGO_REQUIRES
-        + PYMSSQL_REQUIRES
-        + TEST_REQUIRES,
+        "all": (PSYCOPG2_REQUIRES + PYMSSQL_REQUIRES + TEST_REQUIRES),
         "psycopg2": PSYCOPG2_REQUIRES,
-        "pymongo": PYMONGO_REQUIRES,
         "pymssql": PYMSSQL_REQUIRES,
         "test": TEST_REQUIRES,
     },

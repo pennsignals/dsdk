@@ -1,0 +1,6 @@
+postgres: !postgres
+  database: ${POSTGRES_DATABASE}
+  host: ${POSTRES_HOST}
+  password: ${POSTGRES_PASSWORD}
+  port: 5432
+  username: ${POSTGRES_USERNAME}

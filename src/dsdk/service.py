@@ -9,31 +9,24 @@ from contextlib import contextmanager
 from datetime import date, datetime, tzinfo
 from json import dumps
 from logging import getLogger
-from sys import argv as sys_argv
 from typing import (
     Any,
     Callable,
     Dict,
     Generator,
+    List,
+    Mapping,
     Optional,
     Sequence,
-    Tuple,
-    cast,
 )
 
-from configargparse import ArgParser as ArgumentParser
-from configargparse import Namespace
+from cfgenvy import Parser, yaml_type
 from pandas import DataFrame
 from pkg_resources import DistributionNotFound, get_distribution
 
-from .dependency import (
-    Interval,
-    get_tzinfo,
-    inject_str,
-    inject_utc_non_naive_datetime,
-    now_utc_datetime,
-)
-from .utils import configure_logger
+from .asset import Asset
+from .interval import Interval
+from .utils import configure_logger, get_tzinfo, now_utc_datetime
 
 try:
     __version__ = get_distribution("dsdk").version
@@ -121,17 +114,9 @@ class Delegate:
         """Return tzinfo."""
         return self.parent.tz_info
 
-    def as_insert_doc(self) -> Dict[str, Any]:
-        """As insert doc."""
-        return self.parent.as_insert_doc()
-
     def as_insert_sql(self) -> Dict[str, Any]:
         """As insert sql."""
         return self.parent.as_insert_sql()
-
-    def as_update_doc(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-        """As update doc."""
-        return self.parent.as_update_doc()
 
 
 class Batch:
@@ -176,14 +161,6 @@ class Batch:
         """Return parent."""
         raise ValueError()
 
-    def as_insert_doc(self) -> Dict[str, Any]:
-        """As insert doc."""
-        return {
-            "as_of": self.as_of,
-            "microservice_version": self.microservice_version,
-            "time_zone": self.time_zone,
-        }
-
     def as_insert_sql(self) -> Dict[str, Any]:
         """As insert sql."""
         # duration comes from the database clock.
@@ -192,11 +169,6 @@ class Batch:
             "microservice_version": self.microservice_version,
             "time_zone": self.time_zone,
         }
-
-    def as_update_doc(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-        """As update doc."""
-        assert self.duration is not None
-        return {}, {"duration": self.duration.as_doc()}
 
 
 class Evidence(OrderedDict):
@@ -209,7 +181,7 @@ class Evidence(OrderedDict):
         super().__setitem__(key, value)
 
 
-class Service:  # pylint: disable=too-many-instance-attributes
+class Service(Parser):  # pylint: disable=too-many-instance-attributes
     """Service."""
 
     ON = dumps({"key": "%s.on"})
@@ -224,23 +196,35 @@ class Service:  # pylint: disable=too-many-instance-attributes
         {"key": "validate.count", "scores": "%s", "test": "%s", "status": "%s"}
     )
     MATCH = dumps({"key": "validate.match", "status": "%s"})
+    YAML = "!baseservice"
 
     VERSION = __version__
 
     @classmethod
+    def as_yaml_type(cls, tag: Optional[str] = None) -> None:
+        """As yaml type."""
+        Asset.as_yaml_type()
+        Interval.as_yaml_type()
+        yaml_type(
+            cls,
+            tag or cls.YAML,
+            init=cls._yaml_init,
+            repr=cls._yaml_repr,
+        )
+
+    @classmethod
     @contextmanager
-    def context(cls, key: str):
+    def context(
+        cls,
+        key: str,
+        argv: Optional[List[str]] = None,
+        env: Optional[Mapping[str, str]] = None,
+    ):
         """Context."""
         configure_logger("dsdk")
         logger.info(cls.ON, key)
-        yield cls(parser=ArgumentParser())
+        yield cls.parse(argv=argv, env=env)
         logger.info(cls.END, key)
-
-    @classmethod
-    def main(cls):
-        """Main."""
-        with cls.context("main") as service:
-            service()
 
     @classmethod
     def create_gold(cls):
@@ -249,40 +233,43 @@ class Service:  # pylint: disable=too-many-instance-attributes
             service.on_create_gold()
 
     @classmethod
+    def main(cls):
+        """Main."""
+        with cls.context("main") as service:
+            service()
+
+    @classmethod
     def validate_gold(cls):
         """Validate gold."""
         with cls.context("validate_gold") as service:
             service.on_validate_gold()
 
-    def __init__(  # pylint: disable=too-many-arguments
+    @classmethod
+    def _yaml_init(cls, loader, node):
+        """Yaml init."""
+        return cls(**loader.construct_mapping(node, deep=True))
+
+    @classmethod
+    def _yaml_repr(cls, dumper, self, *, tag: str):
+        """Yaml repr."""
+        return dumper.represent_mapping(tag, self.as_yaml())
+
+    def __init__(
         self,
-        argv: Optional[Sequence[str]] = None,
-        parser: Optional[ArgumentParser] = None,
-        pipeline: Optional[Sequence[Task]] = None,
+        *,
+        pipeline: Sequence[Task],
         as_of: Optional[datetime] = None,
         gold: Optional[str] = None,
         time_zone: Optional[str] = None,
         batch_cls: Callable = Batch,
     ) -> None:
         """__init__."""
-        self.args: Optional[Namespace] = None
-        self.parser = parser
         self.gold = gold
-
-        # inferred type of self.pipeline must not be optional...
-        self.pipeline = cast(Sequence[Task], pipeline)
+        self.pipeline = pipeline
         self.duration: Optional[Interval] = None
         self.as_of = as_of
         self.time_zone = time_zone
         self.batch_cls = batch_cls
-        if parser:
-            with self.inject_arguments(parser):
-                if not argv:
-                    argv = sys_argv[1:]
-                self.args = parser.parse_args(argv)
-
-        # ... because self.pipeline is not optional
-        assert self.pipeline is not None
 
     def __call__(self) -> Batch:
         """Run."""
@@ -294,7 +281,10 @@ class Service:  # pylint: disable=too-many-instance-attributes
             if batch.time_zone is None:
                 batch.time_zone = "America/New_York"
             if batch.duration is None:
-                batch.duration = Interval(on=batch.as_of, end=None,)
+                batch.duration = Interval(
+                    on=batch.as_of,
+                    end=None,
+                )
 
             logger.info(self.PIPELINE_ON, self.__class__.__name__)
             for task in self.pipeline:
@@ -315,56 +305,6 @@ class Service:  # pylint: disable=too-many-instance-attributes
         assert self.time_zone is not None
         return get_tzinfo(self.time_zone)
 
-    @contextmanager
-    def inject_arguments(  # pylint: disable=no-self-use,protected-access
-        self, parser: ArgumentParser
-    ) -> Generator[None, None, None]:
-        """Inject arguments."""
-        kwargs: Dict[str, Any] = {}
-        parser._default_config_files = [
-            "/local/config.yaml",
-            "/local/config.yml",
-            "/local/.yml",
-            "/secrets/config.yaml",
-            "/secrets/config.yml",
-            "/secrets/.yml",
-        ]
-        parser._ignore_unknown_config_file_keys = True
-        parser.add(
-            "-c",
-            "--config",
-            is_config_file=True,
-            help="config file path",
-            env_var="CONFIG",  # make ENV match default metavar
-        )
-        parser.add(
-            "-d",
-            "--as-of",
-            help="as of utc non-naive datetime",
-            env_var="AS_OF",
-            type=inject_utc_non_naive_datetime("as_of", kwargs),
-        )
-        parser.add(
-            "-g",
-            "--gold",
-            help="gold validation file",
-            env_var="GOLD",
-            type=inject_str("gold", kwargs),
-        )
-        parser.add(
-            "-t",
-            "--time-zone",
-            help="time_zone",
-            env_var="TIME_ZONE",
-            type=inject_str("time_zone", kwargs),
-        )
-
-        yield
-
-        self.gold = kwargs.get("gold")
-        self.as_of = kwargs.get("as_of")
-        self.time_zone = kwargs.get("time_zone")
-
     def dependency(self, key, cls, kwargs):
         """Dependency."""
         dependency = getattr(self, key)
@@ -379,6 +319,15 @@ class Service:  # pylint: disable=too-many-instance-attributes
         dependency = cls(**kwargs)
         setattr(self, key, dependency)
 
+    def as_yaml(self) -> Dict[str, Any]:
+        """As yaml."""
+        return {
+            "as_of": self.as_of,
+            "duration": self.duration,
+            "gold": self.gold,
+            "time_zone": self.time_zone,
+        }
+
     def on_create_gold(self) -> Batch:
         """On create gold."""
         path = self.gold
@@ -389,13 +338,14 @@ class Service:  # pylint: disable=too-many-instance-attributes
         scores = self.scores(run.id)
         n_scores = scores.shape[0]
         logger.info("Write %s scores to %s", n_scores, path)
+        # pylint: disable=no-member
+        model_version = self.model.version  # type: ignore[attr-defined]
         with open(path, "wb") as fout:
             pickle.dump(
                 {
                     "as_of": run.as_of,
                     "microservice_version": self.VERSION,
-                    # pylint: disable=no-member
-                    "model_version": self.model.version,  # type: ignore
+                    "model_version": model_version,
                     "scores": scores,
                     "time_zone": run.time_zone,
                 },
@@ -449,7 +399,9 @@ class Service:  # pylint: disable=too-many-instance-attributes
     def open_batch(self) -> Generator[Any, None, None]:
         """Open batch."""
         logger.info(
-            self.BATCH_OPEN, self.as_of, self.time_zone,
+            self.BATCH_OPEN,
+            self.as_of,
+            self.time_zone,
         )
         yield self.batch_cls(
             as_of=self.as_of,

@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-from argparse import Namespace
 from contextlib import contextmanager
 from json import dumps
 from logging import getLogger
@@ -11,15 +10,10 @@ from re import compile as re_compile
 from tempfile import NamedTemporaryFile
 from typing import Any, Dict, Generator, Optional, Sequence, Tuple
 
+from cfgenvy import yaml_type
 from pandas import DataFrame, concat
 
-from .dependency import (
-    inject_int,
-    inject_namespace,
-    inject_str,
-    inject_str_tuple,
-)
-from .service import Service
+from .asset import Asset
 from .utils import chunks
 
 logger = getLogger(__name__)
@@ -44,14 +38,11 @@ class AbstractPersistor:
     ROLLBACK = dumps({"key": f"{KEY}.rollback"})
 
     @classmethod
-    @contextmanager
-    def configure(cls, service: Service, parser):
-        """Configure."""
-        raise NotImplementedError()
-
-    @classmethod
     def df_from_query(
-        cls, cur, query: str, parameters: Optional[Dict[str, Any]],
+        cls,
+        cur,
+        query: str,
+        parameters: Optional[Dict[str, Any]],
     ) -> DataFrame:
         """Return DataFrame from query."""
         if parameters is None:
@@ -82,10 +73,11 @@ class AbstractPersistor:
         columns = None
         chunk = None
         # The sql 'in (<item, ...>)' used for ids is problematic
-        # - limit on the number of items
-        # - hard query plan
-        # - renders as multiple 'or' after query planning
-        # - poor performance
+        # - different implementation than set-based join
+        #   - arbitrary limit on the number of items
+        # - terrible performance
+        #   - renders as multiple 'or' after query planning
+        #   - cpu branch prediction failure?
         for chunk in chunks(ids, size):
             cur.execute(query, {"ids": chunk, **parameters})
             rows = cur.fetchall()
@@ -111,13 +103,13 @@ class AbstractPersistor:
         Query is expected to use {name} for key sequences and %(name)s
         for parameters.
         The mogrified fragments produced by union_all are mogrified again.
-        There is a chance that python placeholders could be injected py the
+        There is a chance that python placeholders could be injected by the
         first pass from sequence data.
         However, it seems that percent in `'...%s...'` or `'...'%(name)s...'`
         inside string literals produced from the first mogrification pass are
         not interpreted as parameter placeholders in the second pass by
         the pymssql driver.
-        Actual placeholders to by interpolacted by the driver are not
+        Actual placeholders to by interpolated by the driver are not
         inside quotes.
         """
         if keys is None:
@@ -139,19 +131,28 @@ class AbstractPersistor:
         return df
 
     @classmethod
-    def mogrify(cls, cur, query: str, parameters: Any,) -> bytes:
+    def mogrify(
+        cls,
+        cur,
+        query: str,
+        parameters: Any,
+    ) -> bytes:
         """Safely mogrify parameters into query or fragment."""
         raise NotImplementedError()
 
     @classmethod
-    def union_all(cls, cur, keys: Sequence[Any],) -> str:
+    def union_all(
+        cls,
+        cur,
+        keys: Sequence[Any],
+    ) -> str:
         """Return 'union all select %s...' clause."""
         parameters = tuple(keys)
         union = "\n    ".join("union all select %s" for _ in parameters)
         union = cls.mogrify(cur, union, parameters).decode("utf-8")
         return union
 
-    def __init__(self, sql: Namespace, tables: Tuple[str, ...]):
+    def __init__(self, sql: Asset, tables: Tuple[str, ...]):
         """__init__."""
         self.sql = sql
         self.tables = tables
@@ -227,57 +228,59 @@ class AbstractPersistor:
 class Persistor(AbstractPersistor):
     """Persistor."""
 
+    YAML = "!basepersistor"
+
     @classmethod
-    @contextmanager
-    def configure(
-        cls, service: Service, parser
-    ) -> Generator[None, None, None]:
-        """Configure."""
-        # Replace return type with ContextManager[None] when mypy is fixed.
-        kwargs: Dict[str, Any] = {}
+    def as_yaml_type(cls, tag: Optional[str] = None) -> None:
+        """As yaml type."""
+        Asset.as_yaml_type()
+        yaml_type(
+            cls,
+            tag or cls.YAML,
+            init=cls._yaml_init,
+            repr=cls._yaml_repr,
+        )
 
-        for key, help_, inject in (
-            ("database", "The database name", inject_str),
-            ("host", "The database host name or ip address", inject_str),
-            ("password", "The database password", inject_str),
-            ("port", "The database port", inject_int),
-            ("sql", "A nested directory of sql fragments.", inject_namespace),
-            (
-                "tables",
-                "A comma delimited list of tables to check",
-                inject_str_tuple,
-            ),
-            ("username", "The database username", inject_str),
-        ):
-            parser.add(
-                f"--{cls.KEY}-{key}",
-                env_var=f"{cls.KEY.upper()}_{key.upper()}",
-                help=help_,
-                required=True,
-                type=inject(key, kwargs),
-            )
+    @classmethod
+    def _yaml_init(cls, loader, node):
+        """Yaml init."""
+        return cls(**loader.construct_mapping(node, deep=True))
 
-        yield
-
-        service.dependency(cls.KEY, cls, kwargs)
+    @classmethod
+    def _yaml_repr(cls, dumper, self, *, tag: str):
+        """Yaml repr."""
+        return dumper.represent_mapping(tag, self.as_yaml())
 
     def __init__(  # pylint: disable=too-many-arguments
         self,
-        username: str,
-        password: str,
-        host: str,
-        port: int,
+        *,
         database: str,
-        sql: Namespace,
+        host: str,
+        password: str,
+        port: int,
+        sql: Asset,
         tables: Tuple[str, ...],
+        username: str,
     ):
         """__init__."""
-        self.username = username
-        self.password = password
-        self.host = host
-        self.port = port
         self.database = database
+        self.host = host
+        self.password = password
+        self.port = port
+        self.username = username
         super().__init__(sql, tables)
+
+    def as_yaml(self) -> Dict[str, Any]:
+        """As yaml."""
+        return {
+            "database": self.database,
+            "host": self.host,
+            "password": self.password,
+            "port": self.port,
+            "sql": self.sql,
+            "tables": self.tables,
+            "username": self.username,
+        }
 
     @contextmanager
     def connect(self) -> Generator[Any, None, None]:
