@@ -263,7 +263,8 @@ class Notifier(Egress):
     @classmethod
     def test(
         cls,
-        csn="278820881",
+        # csn="278820881",
+        csn="218202909",  # inpatient admission date is 2019-02-06 at PAH
         empi="8330651951",
         id=0,  # pylint: disable=redefined-builtin
         score="0.5",
@@ -378,7 +379,8 @@ class Verifier(Egress):
     @classmethod
     def test(
         cls,
-        csn="278820881",
+        # csn="278820881",
+        csn="218202909",  # inpatient admission date is 2019-02-06 at PAH
         empi="8330651951",
         id=0,  # pylint: disable=redefined-builtin
         score="0.5",
