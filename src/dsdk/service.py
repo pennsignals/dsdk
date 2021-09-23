@@ -177,7 +177,7 @@ class Evidence(OrderedDict):
     def __setitem__(self, key, value):
         """__setitem__."""
         if key in self:
-            raise KeyError("{} has already been set".format(key))
+            raise KeyError(f"{key} has already been set")
         super().__setitem__(key, value)
 
 

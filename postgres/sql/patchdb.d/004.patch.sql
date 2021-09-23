@@ -1,8 +1,5 @@
 set search_path = example;
 
-\dn
-
-
 create or replace function up_patch()
 returns void as $$
 begin
