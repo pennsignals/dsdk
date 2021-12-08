@@ -1,4 +1,4 @@
-FROM timescale/timescaledb-postgis:latest-pg13 as postgres
+FROM timescale/timescaledb:2.5.0-pg14-oss as postgres
 LABEL name=postgres
 COPY ./docker-entrypoint.sh /usr/local/bin/
 COPY ./sql/initdb.d/*.sql /docker-entrypoint-initdb.d/
