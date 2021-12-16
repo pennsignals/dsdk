@@ -43,20 +43,6 @@ class Persistor(Postgres):
                 ),
                 ext=".sql",
             ),
-            tables=kwargs.get(
-                "tables",
-                env.get(
-                    "POSTGRES_TABLES",
-                    ",".join(
-                        (
-                            "example.models",
-                            "example.microservices",
-                            "example.runs",
-                            "example.predictions",
-                        )
-                    ),
-                ).split(","),
-            ),
         )
 
     @contextmanager
@@ -72,24 +58,6 @@ def test_connect():
     persistor = Persistor()
     with persistor.connect() as con:
         logger.info(con.info)
-
-
-def test_check_ok():
-    """Test check OK."""
-    persistor = Persistor()
-    with persistor.rollback() as cur:
-        persistor.check(cur)
-
-
-def test_check_not_ok():
-    """Test check not OK."""
-    persistor = Persistor(tables=("test.dne",))
-    try:
-        with persistor.rollback() as cur:
-            persistor.check(cur)
-    except RuntimeError:
-        return
-    raise AssertionError("Schema check passed even though table dne.")
 
 
 def test_cursor():

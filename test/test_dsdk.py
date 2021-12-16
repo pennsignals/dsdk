@@ -81,10 +81,6 @@ mssql: !mssql
   sql: !asset
     ext: .sql
     path: ./assets/mssql
-  tables:
-  - a
-  - b
-  - c
   username: mssql
 model: !model ./test/model.pkl
 postgres: !postgres
@@ -95,12 +91,6 @@ postgres: !postgres
   sql: !asset
     ext: .sql
     path: ./assets/postgres
-  tables:
-  - ichi
-  - ni
-  - san
-  - shi
-  - go
   username: postgres
 """.strip()
 
@@ -123,10 +113,6 @@ mssql: !mssql
   sql: !asset
     ext: .sql
     path: ./assets/mssql
-  tables:
-  - a
-  - b
-  - c
   username: mssql
 postgres: !postgres
   database: test
@@ -136,12 +122,6 @@ postgres: !postgres
   sql: !asset
     ext: .sql
     path: ./assets/postgres
-  tables:
-  - ichi
-  - ni
-  - san
-  - shi
-  - go
   username: postgres
 time_zone: null
 """.strip()
@@ -161,7 +141,6 @@ def build(
         port=1433,
         database="test",
         sql=Asset.build(path="./assets/mssql", ext=".sql"),
-        tables=("a", "b", "c"),
     )
     postgres = Postgres(
         username="postgres",
@@ -170,7 +149,6 @@ def build(
         port=5432,
         database="test",
         sql=Asset.build(path="./assets/postgres", ext=".sql"),
-        tables=("ichi", "ni", "san", "shi", "go"),
     )
     return (
         cls,
