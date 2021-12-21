@@ -21,6 +21,7 @@ from typing import (
 )
 
 from cfgenvy import Parser, yaml_type
+from numpy import allclose
 from pandas import DataFrame
 from pkg_resources import DistributionNotFound, get_distribution
 
@@ -386,7 +387,7 @@ class Service(Parser):  # pylint: disable=too-many-instance-attributes
 
         n_tests += 1
         try:
-            assert (scores == test).all()
+            assert allclose(scores, test)
             logger.info(self.MATCH, "pass")
             n_passes += 1
         except AssertionError:

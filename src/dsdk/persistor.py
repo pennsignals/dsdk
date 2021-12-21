@@ -207,7 +207,8 @@ class AbstractPersistor:
     ):
         """Execute sql found in asse with dry_run parameter set to 1."""
         logger.info(self.ON)
-        query_parameters = {**query_parameters}.update({"dry_run": 1})
+        query_parameters = query_parameters.copy()
+        query_parameters["dry_run"] = 1
         errors = self.on_dry_run(self.sql, query_parameters, skip, exceptions)
         if bool(errors):
             raise RuntimeError(self.ERRORS, errors)
