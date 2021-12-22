@@ -136,7 +136,7 @@ class AbstractPersistor:
         if parameters is None:
             parameters = {}
         formatter = Formatter()
-        query = "".join((each[0] for each, in formatter.parse(query)))
+        query = "".join((each[0] for each in formatter.parse(query)))
         return cls.mogrify(cur, query, parameters).decode("utf-8")
 
     @classmethod
