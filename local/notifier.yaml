@@ -12,7 +12,6 @@ postgres: !postgres
   sql: !asset
     ext: .sql
     path: ./assets/postgres
-  tables: []
   username: ${POSTGRES_USERNAME}
 username: ${EPIC_USERNAME}
 user_id: ${EPIC_USER_ID}

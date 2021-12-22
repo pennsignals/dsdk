@@ -5,10 +5,8 @@ from .asset import Asset
 from .interval import Interval
 from .model import Mixin as ModelMixin
 from .model import Model
-from .mssql import CheckTablePrivileges as CheckMssqlTablePrivileges
 from .mssql import Mixin as MssqlMixin
 from .mssql import Persistor as Mssql
-from .postgres import CheckTablePrivileges as CheckPostgresTablePrivileges
 from .postgres import Mixin as PostgresMixin
 from .postgres import Persistor as Postgres
 from .postgres import PredictionMixin as PostgresPredictionMixin
@@ -34,8 +32,6 @@ __all__ = (
     "ModelMixin",
     "MssqlMixin",
     "Mssql",
-    "CheckMssqlTablePrivileges",
-    "CheckPostgresTablePrivileges",
     "PostgresPredictionMixin",
     "PostgresMixin",
     "Postgres",

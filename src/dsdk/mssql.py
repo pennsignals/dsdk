@@ -10,7 +10,7 @@ from logging import getLogger
 from typing import TYPE_CHECKING, Any, Dict, Generator
 
 from .persistor import Persistor as BasePersistor
-from .service import Service, Task
+from .service import Service
 from .utils import StubError
 
 logger = getLogger(__name__)
@@ -43,8 +43,6 @@ class Messages:  # pylint: disable=too-few-public-methods
     COLUMN_PRIVILEGE = dumps({"key": f"{KEY}.warn", "value": "%s"})
     COMMIT = dumps({"key": f"{KEY}.commit"})
     END = dumps({"key": f"{KEY}.end"})
-    ERROR = dumps({"key": f"{KEY}.table.error", "table": "%s"})
-    ERRORS = dumps({"key": f"{KEY}.tables.error", "tables": "%s"})
     EXTANT = dumps({"key": f"{KEY}.sql.extant", "value": "%s"})
     ON = dumps({"key": f"{KEY}.on"})
     OPEN = dumps({"key": f"{KEY}.open"})
@@ -66,33 +64,6 @@ class Persistor(Messages, BasePersistor):
         """Safely mogrify parameters into query or fragment."""
         return _mssql.substitute_params(query, parameters)
 
-    def check(self, cur, exceptions=(DatabaseError, InterfaceError)):
-        """check."""
-        logger.info(self.ON)
-        errors = []
-        for table in self.tables:
-            try:
-                statement = self.extant(table)
-                logger.info(self.EXTANT, table)
-                logger.debug(self.EXTANT, statement)
-                cur.execute(statement)
-                for row in cur:
-                    n, *_ = row
-                    assert n == 1
-                    continue
-            # pylint: disable=catching-non-exception
-            except exceptions as error:
-                number, *_ = error.args  # args are not wrapped
-                # column privileges are a standards-breaking mssql mis-feature
-                if number == 230:
-                    logger.info(self.COLUMN_PRIVILEGE, table)
-                    continue
-                logger.warning(self.ERROR, table)
-                errors.append(table)
-        if bool(errors):
-            raise RuntimeError(self.ERRORS, errors)
-        logger.info(self.END)
-
     @contextmanager
     def connect(self) -> Generator[Any, None, None]:
         """Connect."""
@@ -111,6 +82,15 @@ class Persistor(Messages, BasePersistor):
         finally:
             con.close()
             logger.info(self.CLOSE)
+
+    def dry_run(
+        self,
+        query_parameters,
+        skip=(),
+        exceptions=(DatabaseError, InterfaceError),
+    ):
+        """Dry run."""
+        super().dry_run(query_parameters, skip, exceptions)
 
 
 class Mixin(BaseMixin):
@@ -133,13 +113,3 @@ class Mixin(BaseMixin):
             "mssql": self.mssql,
             **super().as_yaml(),
         }
-
-
-class CheckTablePrivileges(Task):  # pylint: disable=too-few-public-methods
-    """CheckTablePrivileges."""
-
-    def __call__(self, batch, service):
-        """__call__."""
-        mssql = service.mssql
-        with mssql.rollback() as cur:
-            mssql.check(cur)

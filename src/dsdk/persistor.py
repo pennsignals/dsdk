@@ -7,8 +7,9 @@ from contextlib import contextmanager
 from json import dumps
 from logging import getLogger
 from re import compile as re_compile
+from string import Formatter
 from tempfile import NamedTemporaryFile
-from typing import Any, Dict, Generator, Optional, Sequence, Tuple
+from typing import Any, Dict, Generator, List, Optional, Sequence, Tuple
 
 from cfgenvy import yaml_type
 from pandas import DataFrame, concat
@@ -30,9 +31,8 @@ class AbstractPersistor:
     CLOSE = dumps({"key": f"{KEY}.close"})
     COMMIT = dumps({"key": f"{KEY}.commit"})
     END = dumps({"key": f"{KEY}.end"})
-    ERROR = dumps({"key": f"{KEY}.table.error", "table": "%s"})
-    ERRORS = dumps({"key": f"{KEY}.tables.error", "tables": "%s"})
-    EXTANT = dumps({"key": f"{KEY}.sql.extant", "value": "%s"})
+    ERROR = dumps({"key": f"{KEY}.table.error", "query": "%s"})
+    ERRORS = dumps({"key": f"{KEY}.dry_run.error", "query": "%s"})
     ON = dumps({"key": f"{KEY}.on"})
     OPEN = dumps({"key": f"{KEY}.open"})
     ROLLBACK = dumps({"key": f"{KEY}.rollback"})
@@ -131,6 +131,15 @@ class AbstractPersistor:
         return df
 
     @classmethod
+    def render_without_keys(cls, cur, query, parameters):
+        """Render query without keys."""
+        if parameters is None:
+            parameters = {}
+        formatter = Formatter()
+        query = "".join((each[0] for each, in formatter.parse(query)))
+        return cls.mogrify(cur, query, parameters).decode("utf-8")
+
+    @classmethod
     def mogrify(
         cls,
         cur,
@@ -152,28 +161,55 @@ class AbstractPersistor:
         union = cls.mogrify(cur, union, parameters).decode("utf-8")
         return union
 
-    def __init__(self, sql: Asset, tables: Tuple[str, ...]):
+    def __init__(self, sql: Asset):
         """__init__."""
         self.sql = sql
-        self.tables = tables
 
-    def check(self, cur, exceptions):
-        """Check."""
+    def on_dry_run(
+        self,
+        sql: Asset,
+        query_parameters: Dict[str, Any],
+        skip: Tuple,
+        exceptions: Tuple,
+    ):
+        """On dry run."""
+        errors: List[Exception] = []
+        for key, value in vars(sql).items():
+            if value.__class__ == Asset:
+                errors += self.on_dry_run(
+                    value, query_parameters, skip, exceptions
+                )
+                continue
+            if key in skip:
+                continue
+            with self.rollback() as cur:
+                rendered = self.render_without_keys(
+                    cur,
+                    value,
+                    query_parameters,
+                )
+                with NamedTemporaryFile(
+                    "w", delete=False, suffix=".sql"
+                ) as fout:
+                    fout.write(rendered)
+                try:
+                    cur.execute(rendered)
+                except exceptions as e:
+                    logger.warning(self.ERROR, key)
+                    errors.append(e)
+        return errors
+
+    def dry_run(
+        self,
+        query_parameters: Dict[str, Any],
+        skip: Tuple = (),
+        exceptions: Tuple = (),
+    ):
+        """Execute sql found in asse with dry_run parameter set to 1."""
         logger.info(self.ON)
-        errors = []
-        for table in self.tables:
-            try:
-                statement = self.extant(table)
-                logger.info(self.EXTANT, table)
-                logger.debug(self.EXTANT, statement)
-                cur.execute(statement)
-                for row in cur:
-                    n, *_ = row
-                    assert n == 1
-                    continue
-            except exceptions:
-                logger.warning(self.ERROR, table)
-                errors.append(table)
+        query_parameters = query_parameters.copy()
+        query_parameters["dry_run"] = 1
+        errors = self.on_dry_run(self.sql, query_parameters, skip, exceptions)
         if bool(errors):
             raise RuntimeError(self.ERRORS, errors)
         logger.info(self.END)
@@ -259,7 +295,6 @@ class Persistor(AbstractPersistor):
         password: str,
         port: int,
         sql: Asset,
-        tables: Tuple[str, ...],
         username: str,
     ):
         """__init__."""
@@ -268,7 +303,7 @@ class Persistor(AbstractPersistor):
         self.password = password
         self.port = port
         self.username = username
-        super().__init__(sql, tables)
+        super().__init__(sql)
 
     def as_yaml(self) -> Dict[str, Any]:
         """As yaml."""
@@ -278,7 +313,6 @@ class Persistor(AbstractPersistor):
             "password": self.password,
             "port": self.port,
             "sql": self.sql,
-            "tables": self.tables,
             "username": self.username,
         }
 

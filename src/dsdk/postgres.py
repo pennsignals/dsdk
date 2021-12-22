@@ -15,7 +15,7 @@ from pandas import DataFrame, NaT, Series, isna
 
 from .interval import Interval
 from .persistor import Persistor as BasePersistor
-from .service import Delegate, Service, Task
+from .service import Delegate, Service
 from .utils import StubError, retry
 
 logger = getLogger(__name__)
@@ -131,9 +131,14 @@ class Persistor(Messages, BasePersistor):
         """Safely mogrify parameters into query or fragment."""
         return cur.mogrify(query, parameters)
 
-    def check(self, cur, exceptions=(DatabaseError, InterfaceError)):
-        """Check."""
-        super().check(cur, exceptions)
+    def dry_run(
+        self,
+        query_parameters,
+        skip=("schema",),
+        exceptions=(DatabaseError, InterfaceError),
+    ):
+        """Dry run."""
+        super().dry_run(query_parameters, skip, exceptions)
 
     @contextmanager
     def listen(self, *listens: str) -> Generator[Any, None, None]:
@@ -356,13 +361,3 @@ class PredictionMixin(Mixin):  # pylint: disable=too-few-public-methods.
         with super().open_batch() as parent:
             with self.postgres.open_run(parent) as run:
                 yield run
-
-
-class CheckTablePrivileges(Task):  # pylint: disable=too-few-public-methods
-    """CheckTablePrivileges."""
-
-    def __call__(self, batch, service):
-        """__call__."""
-        postgres = service.postgres
-        with postgres.rollback() as cur:
-            postgres.check(cur)
