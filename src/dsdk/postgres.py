@@ -131,14 +131,23 @@ class Persistor(Messages, BasePersistor):
         """Safely mogrify parameters into query or fragment."""
         return cur.mogrify(query, parameters)
 
+    def __init__(
+        self,
+        *,
+        port: int = 5432,
+        schema: str = "public",
+        **kwargs,
+    ):
+        """__init__."""
+        super().__init__(port=port, schema=schema, **kwargs)
+
     def dry_run(
         self,
         query_parameters,
-        skip=("schema",),
         exceptions=(DatabaseError, InterfaceError),
     ):
         """Dry run."""
-        super().dry_run(query_parameters, skip, exceptions)
+        super().dry_run(query_parameters, exceptions)
 
     @contextmanager
     def listen(self, *listens: str) -> Generator[Any, None, None]:
@@ -180,7 +189,7 @@ class Persistor(Messages, BasePersistor):
         sql = self.sql
         columns = parent.as_insert_sql()
         with self.commit() as cur:
-            cur.execute(sql.schema)
+            cur.execute(f"set search_path={self.schema}")
             cur.execute(sql.runs.open, columns)
             for row in cur:
                 (
@@ -208,7 +217,7 @@ class Persistor(Messages, BasePersistor):
         yield run
 
         with self.commit() as cur:
-            cur.execute(sql.schema)
+            cur.execute(f"set search_path={self.schema}")
             predictions = run.predictions
             if predictions is not None:
                 # pylint: disable=unsupported-assignment-operation
@@ -239,7 +248,7 @@ class Persistor(Messages, BasePersistor):
         """Return scores series."""
         sql = self.sql
         with self.rollback() as cur:
-            cur.execute(sql.schema)
+            cur.execute(f"set search_path={self.schema}")
             return self.df_from_query(
                 cur,
                 sql.predictions.gold,
@@ -249,7 +258,6 @@ class Persistor(Messages, BasePersistor):
     def store_evidence(self, run: Any, *args, **kwargs) -> None:
         """Store evidence."""
         sql = self.sql
-        schema = sql.schema
         run_id = run.id
         evidence = run.evidence
         exclude = set(kwargs.get("exclude", ()))
@@ -266,7 +274,6 @@ class Persistor(Messages, BasePersistor):
                     f"Missing sql/postgres/{key}/insert.sql"
                 ) from e
             self._store_df(
-                schema,
                 insert,
                 run_id,
                 df[list(set(df.columns) - exclude)],
@@ -274,7 +281,6 @@ class Persistor(Messages, BasePersistor):
 
     def _store_df(
         self,
-        schema: str,
         insert: str,
         run_id: int,
         df: DataFrame,
@@ -283,7 +289,7 @@ class Persistor(Messages, BasePersistor):
         out = df.to_dict("records")
         try:
             with self.commit() as cur:
-                cur.execute(schema)
+                cur.execute(f"set search_path={self.schema}")
                 execute_batch(
                     cur,
                     insert,

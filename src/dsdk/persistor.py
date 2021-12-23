@@ -9,7 +9,7 @@ from logging import getLogger
 from re import compile as re_compile
 from string import Formatter
 from tempfile import NamedTemporaryFile
-from typing import Any, Dict, Generator, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Generator, Optional, Sequence, Tuple
 
 from cfgenvy import yaml_type
 from pandas import DataFrame, concat
@@ -31,8 +31,9 @@ class AbstractPersistor:
     CLOSE = dumps({"key": f"{KEY}.close"})
     COMMIT = dumps({"key": f"{KEY}.commit"})
     END = dumps({"key": f"{KEY}.end"})
-    ERROR = dumps({"key": f"{KEY}.table.error", "query": "%s"})
-    ERRORS = dumps({"key": f"{KEY}.dry_run.error", "query": "%s"})
+    DRY_RUN = dumps({"key": f"{KEY}.dry_run.try", "path": "%s"})
+    ERROR = dumps({"key": f"{KEY}.dry_run.error", "path": "%s"})
+    ERRORS = dumps({"key": f"{KEY}.dry_run.errors", "path": "%s"})
     ON = dumps({"key": f"{KEY}.on"})
     OPEN = dumps({"key": f"{KEY}.open"})
     ROLLBACK = dumps({"key": f"{KEY}.rollback"})
@@ -165,23 +166,18 @@ class AbstractPersistor:
         """__init__."""
         self.sql = sql
 
-    def on_dry_run(
+    def dry_run(
         self,
-        sql: Asset,
         query_parameters: Dict[str, Any],
-        skip: Tuple,
-        exceptions: Tuple,
+        exceptions: Tuple = (),
     ):
-        """On dry run."""
-        errors: List[Exception] = []
-        for key, value in vars(sql).items():
-            if value.__class__ == Asset:
-                errors += self.on_dry_run(
-                    value, query_parameters, skip, exceptions
-                )
-                continue
-            if key in skip:
-                continue
+        """Execute sql found in asse with dry_run parameter set to 1."""
+        logger.info(self.ON)
+        query_parameters = query_parameters.copy()
+        query_parameters["dry_run"] = 1
+        errors = []
+        for path, value in self.sql():
+            logger.info(self.DRY_RUN, path)
             with self.rollback() as cur:
                 rendered = self.render_without_keys(
                     cur,
@@ -195,21 +191,8 @@ class AbstractPersistor:
                 try:
                     cur.execute(rendered)
                 except exceptions as e:
-                    logger.warning(self.ERROR, key)
+                    logger.warning(self.ERROR, path)
                     errors.append(e)
-        return errors
-
-    def dry_run(
-        self,
-        query_parameters: Dict[str, Any],
-        skip: Tuple = (),
-        exceptions: Tuple = (),
-    ):
-        """Execute sql found in asse with dry_run parameter set to 1."""
-        logger.info(self.ON)
-        query_parameters = query_parameters.copy()
-        query_parameters["dry_run"] = 1
-        errors = self.on_dry_run(self.sql, query_parameters, skip, exceptions)
         if bool(errors):
             raise RuntimeError(self.ERRORS, errors)
         logger.info(self.END)
@@ -294,6 +277,7 @@ class Persistor(AbstractPersistor):
         host: str,
         password: str,
         port: int,
+        schema: str,
         sql: Asset,
         username: str,
     ):
@@ -302,6 +286,7 @@ class Persistor(AbstractPersistor):
         self.host = host
         self.password = password
         self.port = port
+        self.schema = schema
         self.username = username
         super().__init__(sql)
 
@@ -312,6 +297,7 @@ class Persistor(AbstractPersistor):
             "host": self.host,
             "password": self.password,
             "port": self.port,
+            "schema": self.schema,
             "sql": self.sql,
             "username": self.username,
         }

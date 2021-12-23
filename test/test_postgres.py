@@ -37,6 +37,7 @@ class Persistor(Postgres):
             database=kwargs.get(
                 "database", env.get("POSTGRES_DATABASE", "test")
             ),
+            schema=kwargs.get("schema", env.get("POSTGRES_SCHEMA", "example")),
             sql=Asset.build(
                 path=kwargs.get(
                     "sql", env.get("POSTGRES_SQL", "./assets/postgres")
@@ -120,7 +121,7 @@ where
         run.predictions = df
 
     with persistor.rollback() as cur:
-        cur.execute(persistor.sql.schema)
+        cur.execute(f"set search_path={persistor.schema}")
         df = read_sql_query(
             sql=check, con=cur.connection, params={"run_id": run.id}
         )

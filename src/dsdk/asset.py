@@ -67,13 +67,26 @@ class Asset(Namespace):
         **kwargs: Asset,
     ):
         """__init__."""
-        self.path = path
-        self.ext = ext
+        self._path = path
+        self._ext = ext
         super().__init__(**kwargs)
 
     def as_yaml(self) -> Dict[str, Any]:
         """As yaml."""
         return {
-            "ext": self.ext,
-            "path": self.path,
+            "ext": self._ext,
+            "path": self._path,
         }
+
+    def __call__(self, *args):
+        """__call__.
+
+        Yield (path, values).
+        """
+        for key, value in vars(self).items():
+            if key.startswith("_"):
+                continue
+            if value.__class__ == Asset:
+                yield from value(*args, key)
+                continue
+            yield ".".join((*args, key)), value

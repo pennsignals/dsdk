@@ -77,7 +77,6 @@ mssql: !mssql
   database: test
   host: 0.0.0.0
   password: ${MSSQL_PASSWORD}
-  port: 1433
   sql: !asset
     ext: .sql
     path: ./assets/mssql
@@ -87,7 +86,7 @@ postgres: !postgres
   database: test
   host: 0.0.0.0
   password: ${POSTGRES_PASSWORD}
-  port: 5432
+  schema: example
   sql: !asset
     ext: .sql
     path: ./assets/postgres
@@ -110,6 +109,7 @@ mssql: !mssql
   host: 0.0.0.0
   password: password
   port: 1433
+  schema: dbo
   sql: !asset
     ext: .sql
     path: ./assets/mssql
@@ -119,6 +119,7 @@ postgres: !postgres
   host: 0.0.0.0
   password: password
   port: 5432
+  schema: example
   sql: !asset
     ext: .sql
     path: ./assets/postgres
@@ -135,20 +136,19 @@ def build(
     cls.yaml_types()
     model = Model(name="test", path="./test/model.pkl", version="0.0.1-rc.1")
     mssql = Mssql(
-        username="mssql",
-        password="password",
-        host="0.0.0.0",
-        port=1433,
         database="test",
+        host="0.0.0.0",
+        password="password",
         sql=Asset.build(path="./assets/mssql", ext=".sql"),
+        username="mssql",
     )
     postgres = Postgres(
-        username="postgres",
-        password="password",
-        host="0.0.0.0",
-        port=5432,
         database="test",
+        host="0.0.0.0",
+        password="password",
+        schema="example",
         sql=Asset.build(path="./assets/postgres", ext=".sql"),
+        username="postgres",
     )
     return (
         cls,
@@ -271,3 +271,23 @@ def test_retry_exhausted():
     except NotImplementedError as exception:
         assert actual == expected
         assert str(exception) == "when?"
+
+
+def test_asset():
+    """Test asset traversal."""
+    asset = Asset(
+        ext=".sql",
+        path="./predict/sql/mssql",
+        run=Asset(
+            ext=".sql",
+            path="./predict/sql/mssql/run",
+            select="select * from runs",
+        ),
+        cohort="select * from patients",
+    )
+    actual = tuple(each for each in asset())
+    expected = (
+        ("run.select", "select * from runs"),
+        ("cohort", "select * from patients"),
+    )
+    assert actual == expected

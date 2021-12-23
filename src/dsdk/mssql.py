@@ -64,6 +64,16 @@ class Persistor(Messages, BasePersistor):
         """Safely mogrify parameters into query or fragment."""
         return _mssql.substitute_params(query, parameters)
 
+    def __init__(
+        self,
+        *,
+        port: int = 1433,
+        schema: str = "dbo",
+        **kwargs,
+    ):
+        """__init__."""
+        super().__init__(port=port, schema=schema, **kwargs)
+
     @contextmanager
     def connect(self) -> Generator[Any, None, None]:
         """Connect."""
@@ -86,11 +96,10 @@ class Persistor(Messages, BasePersistor):
     def dry_run(
         self,
         query_parameters,
-        skip=(),
         exceptions=(DatabaseError, InterfaceError),
     ):
         """Dry run."""
-        super().dry_run(query_parameters, skip, exceptions)
+        super().dry_run(query_parameters, exceptions)
 
 
 class Mixin(BaseMixin):
