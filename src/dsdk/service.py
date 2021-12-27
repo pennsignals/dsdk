@@ -224,7 +224,11 @@ class Service(Parser):  # pylint: disable=too-many-instance-attributes
         """Context."""
         configure_logger("dsdk")
         logger.info(cls.ON, key)
-        yield cls.parse(argv=argv, env=env)
+        try:
+            yield cls.parse(argv=argv, env=env)
+        except BaseException as e:
+            logger.error(e)
+            raise
         logger.info(cls.END, key)
 
     @classmethod
