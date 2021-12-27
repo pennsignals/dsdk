@@ -8,10 +8,10 @@ from datetime import datetime, timezone, tzinfo
 from functools import wraps
 from json import dump as json_dump
 from json import load as json_load
-from logging import INFO, Formatter, StreamHandler, getLogger
+from logging import ERROR, INFO, Formatter, StreamHandler, getLogger
 from pickle import dump as pickle_dump
 from pickle import load as pickle_load
-from sys import stdout
+from sys import stderr, stdout
 from time import perf_counter_ns
 from time import sleep as default_sleep
 from typing import Any, Callable, Generator, Sequence
@@ -49,7 +49,12 @@ def configure_logger(name, level=INFO):
         )
     )
     handler = StreamHandler(stdout)
-    handler.setLevel(level)
+    handler.setLevel(INFO)
+    handler.setFormatter(Formatter(formatter_string))
+    result.addHandler(handler)
+
+    handler = StreamHandler(stderr)
+    handler.setLevel(ERROR)
     handler.setFormatter(Formatter(formatter_string))
     result.addHandler(handler)
     return result
