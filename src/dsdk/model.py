@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from abc import ABC
 from contextlib import contextmanager
+from json import dumps
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, Dict, Generator, Optional
 
@@ -22,10 +23,18 @@ else:
     BaseMixin = ABC
 
 
-class Model:  # pylint: disable=too-few-public-methods
+class Model:
     """Model."""
 
     YAML = "!model"
+    INIT = dumps(
+        {
+            "key": "Model.__init__",
+            "name": "%s",
+            "path": "%s",
+            "version": "%s",
+        }
+    )
 
     @classmethod
     def as_yaml_type(cls, tag: Optional[str] = None) -> None:
@@ -41,12 +50,11 @@ class Model:  # pylint: disable=too-few-public-methods
     def _yaml_init(cls, loader, node):
         """Yaml init."""
         path = loader.construct_scalar(node)
-        pkl = load_pickle_file(path)
-        if pkl.__class__ is dict:
-            pkl = cls(path=path, **pkl)
-        else:
-            pkl.path = path
+        d = load_pickle_file(path)
+        assert d.__class__ is dict
+        pkl = cls(path=path, **d)
         assert isinstance(pkl, Model)
+        logger.info(cls.INIT, pkl.name, pkl.path, pkl.version)
         return pkl
 
     @classmethod

@@ -81,7 +81,7 @@ mssql: !mssql
     ext: .sql
     path: ./assets/mssql
   username: mssql
-model: !model ./test/model.pkl
+model: !model ./test/0.0.1.pkl
 postgres: !postgres
   database: test
   host: 0.0.0.0
@@ -103,7 +103,7 @@ EXPECTED = """
 as_of: null
 duration: null
 gold: null
-model: !model ./test/model.pkl
+model: !model ./test/0.0.1.pkl
 mssql: !mssql
   database: test
   host: 0.0.0.0
@@ -134,7 +134,7 @@ def build(
 ) -> Tuple[Callable, Dict[str, Any], str]:
     """Build from parameters."""
     cls.yaml_types()
-    model = Model(name="test", path="./test/model.pkl", version="0.0.1-rc.1")
+    model = Model(name="test", path="./test/0.0.1.pkl", version="0.0.1")
     mssql = Mssql(
         database="test",
         host="0.0.0.0",
@@ -168,10 +168,8 @@ def deserialize(
     expected: str = EXPECTED,
 ) -> Tuple[Callable, Dict[str, Any], str]:
     """Build from yaml."""
-    pickle_file = "./test/model.pkl"
-    dump_pickle_file(
-        Model(name="test", path=pickle_file, version="0.0.1"), pickle_file
-    )
+    pickle_file = "./test/0.0.1.pkl"
+    dump_pickle_file({"name": "test", "version": "0.0.1"}, pickle_file)
 
     env = {"POSTGRES_PASSWORD": "oops!", "MSSQL_PASSWORD": "oops!"}
     return (
