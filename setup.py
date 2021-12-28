@@ -11,7 +11,7 @@ INSTALL_REQUIRES = (
     ),
     "numpy>=1.15.4",
     "pandas>=0.23.4",
-    "pip>=21.2.2",
+    "pip>=21.3.1",
     "requests>=2.26.0",
     "setuptools>=57.4.0",
     "wheel>=0.35.1",
