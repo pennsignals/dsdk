@@ -1,4 +1,4 @@
-ARG IFLAGS="--quiet --no-cache-dir --user"
+ARG IFLAGS="--quiet --no-cache-dir --user --use-feature=in-tree-build"
 
 FROM python:3.9.9-slim-bullseye as build
 ARG IFLAGS
