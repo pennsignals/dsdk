@@ -29,7 +29,7 @@ class Model:
     YAML = "!model"
     INIT = dumps(
         {
-            "key": "Model.__init__",
+            "key": "model",
             "name": "%s",
             "path": "%s",
             "version": "%s",
