@@ -7,7 +7,7 @@ INSTALL_REQUIRES = (
     (
         "cfgenvy@"
         "git+https://github.com/pennsignals/cfgenvy.git"
-        "@1.2.1#egg=cfgenvy"
+        "@1.2.2#egg=cfgenvy"
     ),
     "numpy>=1.15.4",
     "pandas>=0.23.4",
