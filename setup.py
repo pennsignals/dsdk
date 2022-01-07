@@ -13,11 +13,11 @@ INSTALL_REQUIRES = (
     "pandas>=0.23.4",
     "pip>=21.3.1",
     "requests>=2.26.0",
-    "setuptools>=57.4.0",
-    "wheel>=0.35.1",
+    "setuptools>=60.3.1",
+    "wheel>=0.37.1",
 )
 
-PYMSSQL_REQUIRES = ("cython>=0.29.21", "pymssql>=2.1.4")
+PYMSSQL_REQUIRES = ("cython>=0.29.21", "pymssql>=2.2.3")
 
 PSYCOPG2_REQUIRES = ("psycopg2-binary>=2.8.6",)
 
