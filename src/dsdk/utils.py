@@ -18,6 +18,9 @@ from typing import Any, Callable, Generator, Sequence
 
 from dateutil import parser, tz
 
+from .profile import Profile
+
+
 logger = getLogger(__name__)
 
 
@@ -108,16 +111,21 @@ def now_utc_datetime() -> datetime:
 
 
 @contextmanager
-def profile(key: str) -> Generator[Any, None, None]:
+def profile(key: str) -> Generator[Profile, None, None]:
     """Profile."""
-    # Replace return type with ContextManager[Any] when mypy is fixed.
-    begin = perf_counter_ns()
-    logger.info('{"key": "%s.begin", "ns": "%s"}', key, begin)
-    yield
-    end = perf_counter_ns()
-    logger.info(
-        '{"key": "%s.end", "ns": "%s", "elapsed": "%s"}', key, end, end - begin
-    )
+    # Replace return type with ContextManager[Profile] when mypy is fixed.
+    i = Profile(perf_counter_ns())
+    logger.info('{"key": "%s.on", "ns": "%s"}', key, i.on)
+    try:
+        yield i
+    finally:
+        i.end = perf_counter_ns()
+        logger.info(
+            '{"key": "%s.end", "ns": "%s", "elapsed": "%s"}',
+            key,
+            i.end,
+            i.end - i.on,
+        )
 
 
 def retry(

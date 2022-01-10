@@ -150,23 +150,11 @@ class Persistor(Messages, BasePersistor):
         super().dry_run(query_parameters, exceptions)
 
     @contextmanager
-    def listen(self, *listens: str) -> Generator[Any, None, None]:
-        """Listen."""
-        con = self.retry_connect()
-        con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-        logger.info(self.OPEN)
-        try:
-            # replace list with a deque to allow
-            # users to pop the last notify
-            con.notifies = deque(con.notifies)
-            with con.cursor() as cur:
-                for each in listens:
-                    logger.debug(self.LISTEN, each)
-                    cur.execute(each)
-            yield con
-        finally:
-            con.close()
-            logger.info(self.CLOSE)
+    def commit(self) -> Generator[Any, None, None]:
+        """Commit."""
+        with super().commit() as cur:
+            cur.execute(f"set search_path={self.schema};")
+            yield cur
 
     @contextmanager
     def connect(self) -> Generator[Any, None, None]:
@@ -183,13 +171,32 @@ class Persistor(Messages, BasePersistor):
             logger.info(self.CLOSE)
 
     @contextmanager
+    def listen(self, *listens: str) -> Generator[Any, None, None]:
+        """Listen."""
+        con = self.retry_connect()
+        con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        logger.info(self.OPEN)
+        try:
+            # replace list with a deque to allow
+            # users to pop the last notify
+            con.notifies = deque(con.notifies)
+            with con.cursor() as cur:
+                cur.execute(f"set search_path={self.schema};")
+                for each in listens:
+                    logger.debug(self.LISTEN, each)
+                    cur.execute(each)
+            yield con
+        finally:
+            con.close()
+            logger.info(self.CLOSE)
+
+    @contextmanager
     def open_run(self, parent: Any) -> Generator[Run, None, None]:
         """Open batch."""
         # Replace return type with ContextManager[Run] when mypy is fixed.
         sql = self.sql
         columns = parent.as_insert_sql()
         with self.commit() as cur:
-            cur.execute(f"set search_path={self.schema}")
             cur.execute(sql.runs.open, columns)
             for row in cur:
                 (
@@ -217,7 +224,6 @@ class Persistor(Messages, BasePersistor):
         yield run
 
         with self.commit() as cur:
-            cur.execute(f"set search_path={self.schema}")
             predictions = run.predictions
             if predictions is not None:
                 # pylint: disable=unsupported-assignment-operation
@@ -244,11 +250,17 @@ class Persistor(Messages, BasePersistor):
             dbname=self.database,
         )
 
+    @contextmanager
+    def rollback(self) -> Generator[Any, None, None]:
+        """Rollback."""
+        with super().rollback() as cur:
+            cur.execute(f"set search_path={self.schema};")
+            yield cur
+
     def scores(self, run_id) -> Series:
         """Return scores series."""
         sql = self.sql
         with self.rollback() as cur:
-            cur.execute(f"set search_path={self.schema}")
             return self.df_from_query(
                 cur,
                 sql.predictions.gold,
@@ -289,18 +301,18 @@ class Persistor(Messages, BasePersistor):
         out = df.to_dict("records")
         try:
             with self.commit() as cur:
-                cur.execute(f"set search_path={self.schema}")
                 execute_batch(
                     cur,
                     insert,
                     out,
                 )
         except DatabaseError as e:
+            # figure out all rows which failed,
+            #   rolling back any successful insertions
+            # enumeration is a generator
             enumeration = enumerate(out)
             while True:
                 with self.rollback() as cur:
-                    # enumeration is a generator
-                    # it will pick up where it left off
                     for i, row in enumeration:
                         try:
                             cur.execute(insert, row)
@@ -308,9 +320,13 @@ class Persistor(Messages, BasePersistor):
                             # assumes the client encoding is the default utf-8!
                             value = dumps(cur.mogrify(insert, row).decode())
                             logger.error(self.DATA_TYPE_ERROR, i, value)
-                            break
+                            break  # DatabaseError: break for loop
                     else:
+                        # GeneratorExit: enumeration is exhausted
+                        #   break while loop
                         break
+                    # DatabaseError: rollback and continue while loop
+                    #   enumeration will pick up where it left off
             raise e
 
 
