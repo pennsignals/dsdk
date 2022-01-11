@@ -168,34 +168,44 @@ class AbstractPersistor:
 
     def dry_run(
         self,
-        query_parameters: Dict[str, Any],
+        parameters: Dict[str, Any],
         exceptions: Tuple = (),
     ):
         """Execute sql found in asse with dry_run parameter set to 1."""
         logger.info(self.ON)
-        query_parameters = query_parameters.copy()
-        query_parameters["dry_run"] = 1
+        parameters = parameters.copy()
+        parameters["dry_run"] = 1
         errors = []
-        for path, value in self.sql():
+        for path, query in self.sql():
             logger.info(self.DRY_RUN, path)
-            with self.rollback() as cur:
-                rendered = self.render_without_keys(
-                    cur,
-                    value,
-                    query_parameters,
-                )
-                with NamedTemporaryFile(
-                    "w", delete=False, suffix=".sql"
-                ) as fout:
-                    fout.write(rendered)
-                try:
-                    cur.execute(rendered)
-                except exceptions as e:
-                    logger.warning(self.ERROR, path)
-                    errors.append(e)
+            error = self.dry_run_query(query, parameters, exceptions)
+            if error is not None:
+                errors.append(error)
+                logger.warning(self.ERROR, path)
         if bool(errors):
             raise RuntimeError(self.ERRORS, errors)
         logger.info(self.END)
+
+    def dry_run_query(
+        self,
+        query,
+        parameters,
+        exceptions: Tuple = (),
+    ) -> Optional[Exception]:
+        """Dry run query."""
+        with self.rollback() as cur:
+            rendered = self.render_without_keys(
+                cur,
+                query,
+                parameters,
+            )
+            with NamedTemporaryFile("w", delete=False, suffix=".sql") as fout:
+                fout.write(rendered)
+            try:
+                cur.execute(rendered)
+            except exceptions as error:
+                return error
+        return None
 
     @contextmanager
     def commit(self) -> Generator[Any, None, None]:

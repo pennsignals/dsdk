@@ -95,11 +95,20 @@ class Persistor(Messages, BasePersistor):
 
     def dry_run(
         self,
-        query_parameters,
+        parameters: Dict[str, Any],
         exceptions=(DatabaseError, InterfaceError),
     ):
         """Dry run."""
-        super().dry_run(query_parameters, exceptions)
+        super().dry_run(parameters, exceptions)
+
+    def dry_run_query(
+        self,
+        query: str,
+        parameters: Dict[str, Any],
+        exceptions=(DatabaseError, InterfaceError),
+    ):
+        """Dry run."""
+        super().dry_run_query(query, parameters, exceptions)
 
 
 class Mixin(BaseMixin):
