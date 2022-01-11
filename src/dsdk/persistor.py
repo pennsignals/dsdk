@@ -176,8 +176,9 @@ class AbstractPersistor:
         errors = []
         for path, query in self.sql():
             logger.info(self.DRY_RUN, path)
-            error = self.dry_run_query(query, parameters, exceptions)
-            if error is not None:
+            try:
+                self.dry_run_query(query, parameters)
+            except exceptions as error:
                 errors.append(error)
                 logger.warning(self.ERROR, path)
         if bool(errors):
@@ -188,8 +189,7 @@ class AbstractPersistor:
         self,
         query,
         parameters,
-        exceptions: Tuple = (),
-    ) -> Optional[Exception]:
+    ) -> None:
         """Dry run query with dry_run parameter set to 1."""
         with self.rollback() as cur:
             rendered = self.render_without_keys(
@@ -199,11 +199,7 @@ class AbstractPersistor:
             )
             with NamedTemporaryFile("w", delete=False, suffix=".sql") as fout:
                 fout.write(rendered)
-            try:
                 cur.execute(rendered)
-            except exceptions as error:
-                return error
-        return None
 
     @contextmanager
     def commit(self) -> Generator[Any, None, None]:
