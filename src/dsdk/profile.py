@@ -1,9 +1,15 @@
 # -*- coding: utf-8 -*-
 """Profile."""
 
-from typing import Any, Dict, Optional
+from contextlib import contextmanager
+from logging import getLogger
+from time import perf_counter_ns
+from typing import Any, Dict, Generator, Optional
 
 from cfgenvy import yaml_type
+
+
+logger = getLogger(__name__)
 
 
 class Profile:
@@ -33,9 +39,40 @@ class Profile:
 
     def __init__(self, on: int, end: Optional[int] = None):
         """__init__."""
-        self.on = on
         self.end = end
+        self.on = on
 
     def as_yaml(self) -> Dict[str, Any]:
         """As yaml."""
         return {"end": self.end, "on": self.on}
+
+    def __repr__(self):
+        """__repr__."""
+        return f"Profile(end={self.end}, on={self.on})"
+
+    def __str__(self):
+        """__str__."""
+        return str(
+            {
+                "end": self.end,
+                "on": self.on,
+            }
+        )
+
+
+@contextmanager
+def profile(key: str) -> Generator[Profile, None, None]:
+    """Profile."""
+    # Replace return type with ContextManager[Profile] when mypy is fixed.
+    i = Profile(perf_counter_ns())
+    logger.info('{"key": "%s.on", "ns": "%s"}', key, i.on)
+    try:
+        yield i
+    finally:
+        i.end = perf_counter_ns()
+        logger.info(
+            '{"key": "%s.end", "ns": "%s", "elapsed": "%s"}',
+            key,
+            i.end,
+            i.end - i.on,
+        )

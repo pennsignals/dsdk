@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-from contextlib import contextmanager
 from datetime import datetime, timezone, tzinfo
 from functools import wraps
 from json import dump as json_dump
@@ -12,13 +11,10 @@ from logging import ERROR, INFO, Formatter, StreamHandler, getLogger
 from pickle import dump as pickle_dump
 from pickle import load as pickle_load
 from sys import stderr, stdout
-from time import perf_counter_ns
 from time import sleep as default_sleep
-from typing import Any, Callable, Generator, Sequence
+from typing import Any, Callable, Sequence
 
 from dateutil import parser, tz
-
-from .profile import Profile
 
 
 logger = getLogger(__name__)
@@ -108,24 +104,6 @@ def load_pickle_file(path: str) -> object:
 def now_utc_datetime() -> datetime:
     """Non-naive now UTC datetime."""
     return datetime.now(tz=timezone.utc)
-
-
-@contextmanager
-def profile(key: str) -> Generator[Profile, None, None]:
-    """Profile."""
-    # Replace return type with ContextManager[Profile] when mypy is fixed.
-    i = Profile(perf_counter_ns())
-    logger.info('{"key": "%s.on", "ns": "%s"}', key, i.on)
-    try:
-        yield i
-    finally:
-        i.end = perf_counter_ns()
-        logger.info(
-            '{"key": "%s.end", "ns": "%s", "elapsed": "%s"}',
-            key,
-            i.end,
-            i.end - i.on,
-        )
 
 
 def retry(

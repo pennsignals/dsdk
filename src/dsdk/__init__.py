@@ -10,6 +10,7 @@ from .mssql import Persistor as Mssql
 from .postgres import Mixin as PostgresMixin
 from .postgres import Persistor as Postgres
 from .postgres import PredictionMixin as PostgresPredictionMixin
+from .profile import Profile, profile
 from .service import Batch, Delegate, Service, Task
 from .utils import (
     chunks,
@@ -19,7 +20,6 @@ from .utils import (
     load_json_file,
     load_pickle_file,
     now_utc_datetime,
-    profile,
     retry,
 )
 
@@ -35,6 +35,7 @@ __all__ = (
     "PostgresPredictionMixin",
     "PostgresMixin",
     "Postgres",
+    "Profile",
     "Service",
     "Task",
     "chunks",
