@@ -20,7 +20,7 @@ from typing import (
     Sequence,
 )
 
-from cfgenvy import Parser, yaml_type
+from cfgenvy import Parser, YamlMapping
 from numpy import allclose
 from pandas import DataFrame
 from pkg_resources import DistributionNotFound, get_distribution
@@ -182,7 +182,10 @@ class Evidence(OrderedDict):
         super().__setitem__(key, value)
 
 
-class Service(Parser):  # pylint: disable=too-many-instance-attributes
+class Service(  # pylint: disable=too-many-instance-attributes
+    Parser,
+    YamlMapping,
+):
     """Service."""
 
     ON = dumps({"key": "%s.on"})
@@ -206,12 +209,7 @@ class Service(Parser):  # pylint: disable=too-many-instance-attributes
         """As yaml type."""
         Asset.as_yaml_type()
         Interval.as_yaml_type()
-        yaml_type(
-            cls,
-            tag or cls.YAML,
-            init=cls._yaml_init,
-            repr=cls._yaml_repr,
-        )
+        super().as_yaml_type(tag)
 
     @classmethod
     @contextmanager
@@ -248,16 +246,6 @@ class Service(Parser):  # pylint: disable=too-many-instance-attributes
         """Validate gold."""
         with cls.context("validate_gold") as service:
             service.on_validate_gold()
-
-    @classmethod
-    def _yaml_init(cls, loader, node):
-        """Yaml init."""
-        return cls(**loader.construct_mapping(node, deep=True))
-
-    @classmethod
-    def _yaml_repr(cls, dumper, self, *, tag: str):
-        """Yaml repr."""
-        return dumper.represent_mapping(tag, self.as_yaml())
 
     def __init__(
         self,
