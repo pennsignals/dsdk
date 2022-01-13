@@ -12,10 +12,9 @@ from tempfile import NamedTemporaryFile
 from typing import Any, Dict, Generator, Optional, Sequence, Tuple
 
 from cfgenvy import yaml_type
-from pandas import DataFrame, concat
+from pandas import DataFrame
 
 from .asset import Asset
-from .utils import chunks
 
 logger = getLogger(__name__)
 
@@ -39,6 +38,18 @@ class AbstractPersistor:
     ROLLBACK = dumps({"key": f"{KEY}.rollback"})
 
     @classmethod
+    def query(
+        cls,
+        cur,
+        query: str,
+        parameters: Optional[Dict[str, Any]],
+    ) -> None:
+        """Query by parameters."""
+        if parameters is None:
+            parameters = {}
+        cur.execute(query, parameters)
+
+    @classmethod
     def df_from_query(
         cls,
         cur,
@@ -59,37 +70,39 @@ class AbstractPersistor:
         return df
 
     @classmethod
-    def df_from_query_by_ids(  # pylint: disable=too-many-arguments
+    def query_by_keys(
         cls,
         cur,
         query: str,
-        ids: Sequence[Any],
+        keys: Dict[str, Sequence[Any]] = None,
         parameters: Optional[Dict[str, Any]] = None,
-        size: int = 10000,
-    ) -> DataFrame:
-        """Return DataFrame from query by ids."""
+    ) -> None:
+        """Query by key sequences and parameters.
+
+        Query is expected to use {name} for key sequences and %(name)s
+        for parameters.
+        The mogrified fragments produced by union_all are mogrified again.
+        There is a chance that python placeholders could be injected by the
+        first pass from sequence data.
+        However, it seems that percent in `'...%s...'` or `'...'%(name)s...'`
+        inside string literals produced from the first mogrification pass are
+        not interpreted as parameter placeholders in the second pass by
+        the pymssql driver.
+        Actual placeholders to by interpolated by the driver are not
+        inside quotes.
+        """
+        if keys is None:
+            keys = {}
         if parameters is None:
             parameters = {}
-        dfs = []
-        columns = None
-        chunk = None
-        # The sql 'in (<item, ...>)' used for ids is problematic
-        # - different implementation than set-based join
-        #   - arbitrary limit on the number of items
-        # - terrible performance
-        #   - renders as multiple 'or' after query planning
-        #   - cpu branch prediction failure?
-        for chunk in chunks(ids, size):
-            cur.execute(query, {"ids": chunk, **parameters})
-            rows = cur.fetchall()
-            if rows:
-                dfs.append(DataFrame(rows))
-        if chunk is None:
-            raise ValueError("Parameter ids must not be empty")
-        columns = (each[0] for each in cur.description)
-        df = concat(dfs, ignore_index=True)
-        df.columns = columns
-        return df
+        keys = {
+            key: cls.union_all(cur, sequence) for key, sequence in keys.items()
+        }
+        query = query.format(**keys)
+        rendered = cls.mogrify(cur, query, parameters).decode("utf-8")
+        with NamedTemporaryFile("w", delete=False, suffix=".sql") as fout:
+            fout.write(rendered)
+        cur.execute(rendered)
 
     @classmethod
     def df_from_query_by_keys(
