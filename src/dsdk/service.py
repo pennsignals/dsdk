@@ -205,11 +205,12 @@ class Service(  # pylint: disable=too-many-instance-attributes
     VERSION = __version__
 
     @classmethod
-    def as_yaml_type(cls, tag: Optional[str] = None) -> None:
-        """As yaml type."""
+    def yaml_types(cls):
+        """Yaml types."""
         Asset.as_yaml_type()
+        Flowsheet.as_yaml_type()
         Interval.as_yaml_type()
-        super().as_yaml_type(tag)
+        cls.as_yaml_type()
 
     @classmethod
     @contextmanager

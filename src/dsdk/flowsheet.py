@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """Epic."""
 
+from abc import ABC
 from base64 import b64encode
 from contextlib import contextmanager
 from datetime import datetime
 from json import dumps, JSONDecodeError
-from time import sleep
-from typing import Any, Dict, Generator, Optional
+from time import sleep as default_sleep
+from typing import TYPE_CHECKING, Any, Dict, Generator, Optional
 from urllib.parse import urlencode
 
 from cfgenvy import YamlMapping
@@ -19,6 +20,7 @@ from requests.exceptions import (
 
 from .profile import Profile, profile
 from .persistor import Persistor
+from .service import Service
 from .utils import configure_logger, retry
 
 logger = configure_logger(__name__)
@@ -292,14 +294,20 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
         print(result)
 
 
-class Mixin:
+if TYPE_CHECKING:
+    BaseMixin = Service
+else:
+    BaseMixin = ABC
+
+
+class Mixin(BaseMixin):
     """Mixin."""
 
     @classmethod
-    def as_yaml_type(cls, tag: Optional[str] = None) -> None:
-        """As yaml type."""
+    def yaml_types(cls) -> None:
+        """Yaml types."""
+        super().yaml_types()
         Flowsheet.as_yaml_type()
-        super().as_yaml_type()
 
     @classmethod
     def publish_flowsheets(cls):
@@ -337,7 +345,7 @@ class Mixin:
         """On publish flowsheet."""
         self.flowsheets.test()
 
-    def on_publish_flowsheets(self):
+    def on_publish_flowsheets(self, sleep=default_sleep):
         """On flowsheets."""
         while True:
             for _ in self.publish():

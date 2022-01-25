@@ -32,9 +32,6 @@ services:
       target: test
     depends_on:
     - postgres
-    - notifier
-    - verifier
-    - epic
     environment:
     - CONFIG=/local/test.yaml
     - ENV=/local/docker.env
@@ -42,47 +39,13 @@ services:
     - ./assets:/assets
     - ./local:/local
 
-  notifier:
+  flowsheets:
     build:
       context: .
-      target: epic
-    command: epic.notify
-    depends_on:
-    - epic
-    - postgres
+      target: flowsheets
     environment:
-    - CONFIG=/local/notifier.yaml
+    - CONFIG=/local/configuration.yaml
     - ENV=/local/docker.env
-    volumes:
-    - ./assets:/assets
-    - ./local:/local
-
-  verifier:
-    build:
-      context: .
-      target: epic
-    command: epic.verify
-    depends_on:
-    - epic
-    - postgres
-    environment:
-    - CONFIG=/local/verifier.yaml
-    - ENV=/local/docker.env
-    volumes:
-    - ./assets:/assets
-    - ./local:/local
-
-  epic:
-    build:
-      context: .
-      target: epic
-    environment:
-    - CONFIG=/local/epic.yaml
-    - ENV=/local/docker.env
-    expose:
-    - "80"
-    ports:
-    - "80:80"
     restart: always
     volumes:
     - ./local:/local

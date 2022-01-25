@@ -1,11 +1,11 @@
+# -*- coding: utf-8 -*-
 """Conftest."""
 
 from contextlib import contextmanager
-from pytest import fixture
 from typing import Any, Generator
-
 from unittest.mock import Mock
 
+from pytest import fixture
 from dsdk import Service, FlowsheetMixin, PostgresMixin
 
 
@@ -16,7 +16,9 @@ def rollback():
 
 
 class _MockFlowsheetsService(  # pylint: disable=too-many-ancestors
-    PostgresMixin, FlowsheetMixin, Service,
+    PostgresMixin,
+    FlowsheetMixin,
+    Service,
 ):
     """Mock Flowsheet Service."""
 
@@ -27,7 +29,7 @@ class _MockFlowsheetsService(  # pylint: disable=too-many-ancestors
         postgres = Mock()
         postgres.rollback = rollback
         postgres.commit = rollback
-        super().__init__(postgres=postgres, **kwargs)
+        super().__init__(pipeline=None, postgres=postgres, **kwargs)
 
     def publish(self) -> Generator[Any, None, None]:
         """Publish."""

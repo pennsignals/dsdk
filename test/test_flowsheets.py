@@ -32,7 +32,7 @@ def test_valid(mock_flowsheets_service):
             }
         ]
     )
-    for result in service.missing_flowsheets():
+    for result in service.publish():
         assert result.status is True
         assert result.status_code == 200
 
@@ -60,7 +60,7 @@ def test_invalid_csn(mock_flowsheets_service):
         "EPT_DAT_RETRIEVAL_ERROR."
     )
 
-    for result in service.missing_flowsheets():
+    for result in service.publish():
         assert result.description == expected
         assert result.status is False
         assert result.status_code == 400
@@ -91,7 +91,7 @@ def test_invalid_empi(mock_flowsheets_service):
         "2:InvalidRecord:RecordNotFound:9999999999;UID."
     )
 
-    for result in service.missing_flowsheets():
+    for result in service.publish():
         assert result.description == expected
         assert result.status is False
         assert result.status_code == 400
