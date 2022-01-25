@@ -25,7 +25,6 @@ from pandas import DataFrame
 from pkg_resources import DistributionNotFound, get_distribution
 
 from .asset import Asset
-from .flowsheet import Flowsheet
 from .interval import Interval
 from .utils import configure_logger, get_tzinfo, now_utc_datetime
 
@@ -208,7 +207,6 @@ class Service(  # pylint: disable=too-many-instance-attributes
     def yaml_types(cls):
         """Yaml types."""
         Asset.as_yaml_type()
-        Flowsheet.as_yaml_type()
         Interval.as_yaml_type()
         cls.as_yaml_type()
 
@@ -346,17 +344,6 @@ class Service(  # pylint: disable=too-many-instance-attributes
                 fout,
             )
         return run
-
-    def on_flowsheets_test(self):
-        """On flowsheets test."""
-        self._flowsheets.test()
-
-    def on_flowsheets(self):
-        """On flowsheets."""
-        while True:
-            for _ in self.missing_flowsheets():
-                pass
-            sleep(self.poll_interval)
 
     def on_validate_gold(self) -> Batch:
         """On validate gold."""
