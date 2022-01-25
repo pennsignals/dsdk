@@ -1,6 +1,17 @@
+!example
+flowsheets: !flowsheets
+  client_id: ${EPIC_CLIENT_ID}
+  cookie: ${EPIC_COOKIE}
+  flowsheet_id: ${EPIC_FLOWSHEET_ID}
+  flowsheet_template_id: ${EPIC_FLOWSHEET_TEMPLATE_ID}
+  password: ${EPIC_PASSWORD}
+  url: ${EPIC_URL}api/epic/2011/clinical/patient/addflowsheetvalue/flowsheetvalue
+  username: ${EPIC_USERNAME}
 postgres: !postgres
   database: ${POSTGRES_DATABASE}
   host: ${POSTRES_HOST}
   password: ${POSTGRES_PASSWORD}
-  port: 5432
+  port: ${POSTGRES_PORT}
+  schema: example
   username: ${POSTGRES_USERNAME}
+time_zone: America/New_York

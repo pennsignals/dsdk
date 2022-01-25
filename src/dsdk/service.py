@@ -14,7 +14,6 @@ from typing import (
     Callable,
     Dict,
     Generator,
-    List,
     Mapping,
     Optional,
     Sequence,
@@ -26,6 +25,7 @@ from pandas import DataFrame
 from pkg_resources import DistributionNotFound, get_distribution
 
 from .asset import Asset
+from .flowsheet import Flowsheet
 from .interval import Interval
 from .utils import configure_logger, get_tzinfo, now_utc_datetime
 
@@ -216,7 +216,7 @@ class Service(  # pylint: disable=too-many-instance-attributes
     def context(
         cls,
         key: str,
-        argv: Optional[List[str]] = None,
+        argv: Optional[Sequence[str]] = None,
         env: Optional[Mapping[str, str]] = None,
     ):
         """Context."""
@@ -345,6 +345,17 @@ class Service(  # pylint: disable=too-many-instance-attributes
                 fout,
             )
         return run
+
+    def on_flowsheets_test(self):
+        """On flowsheets test."""
+        self._flowsheets.test()
+
+    def on_flowsheets(self):
+        """On flowsheets."""
+        while True:
+            for _ in self.missing_flowsheets():
+                pass
+            sleep(self.poll_interval)
 
     def on_validate_gold(self) -> Batch:
         """On validate gold."""
