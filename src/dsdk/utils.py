@@ -12,7 +12,7 @@ from pickle import dump as pickle_dump
 from pickle import load as pickle_load
 from sys import stderr, stdout
 from time import sleep as default_sleep
-from typing import Any, Callable, Sequence
+from typing import Any, Callable, Type, Sequence
 
 from dateutil import parser, tz
 
@@ -107,7 +107,7 @@ def now_utc_datetime() -> datetime:
 
 
 def retry(
-    exceptions: Sequence[Exception],
+    exceptions: Sequence[Type[Exception]],
     retries: int = 60,
     delay: float = 1.0,
     backoff: float = 1.05,
