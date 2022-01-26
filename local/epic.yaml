@@ -1,4 +1,0 @@
-!epic
-address: 0.0.0.0:80
-add_flowsheet_value_path: ${EPIC_ROOT}${EPIC_ADD_FLOWSHEET_VALUE_PATH}
-get_flowsheet_rows_path: ${EPIC_ROOT}${EPIC_GET_FLOWSHEET_ROWS_PATH}

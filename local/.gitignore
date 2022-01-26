@@ -1,6 +1,5 @@
 *
 !.gitignore
 !configuration.yaml
-!notifier.yaml
-!verifier.yaml
-!epic.yaml
+!docker.yaml
+!test.yaml

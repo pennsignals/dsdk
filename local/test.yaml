@@ -1,4 +1,6 @@
 !example
+as_of: 2019-09-18 17:19:23.873398+00
+gold: ./predict/gold/gold.pkl
 flowsheets: !flowsheets
   client_id: ${EPIC_CLIENT_ID}
   cookie: ${EPIC_COOKIE}

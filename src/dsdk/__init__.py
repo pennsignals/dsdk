@@ -2,6 +2,8 @@
 """Data Science Deployment Kit."""
 
 from .asset import Asset
+from .flowsheet import Mixin as FlowsheetMixin
+from .flowsheet import Flowsheet
 from .interval import Interval
 from .model import Mixin as ModelMixin
 from .model import Model
@@ -28,6 +30,8 @@ __all__ = (
     "Batch",
     "Delegate",
     "Interval",
+    "Flowsheet",
+    "FlowsheetMixin",
     "Model",
     "ModelMixin",
     "MssqlMixin",

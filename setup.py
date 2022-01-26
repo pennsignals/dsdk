@@ -51,18 +51,10 @@ TEST_REQUIRES = (
     "types-pymssql",
     "types-pyyaml",
     "types-requests",
+    "vcrpy",
 )
 
 setup(
-    entry_points={
-        "console_scripts": [
-            "epic = dsdk.epic:Server.main"
-            "epic.notify = dsdk.epic:Notifier.main",
-            "epic.verify = dsdk.epic:Verifier.main",
-            "epic.notify.api.test = dsdk.epic:Notifier.test",
-            "epic.verify.api.test = dsdk.epic:Verifier.test",
-        ]
-    },
     extras_require={
         "all": (PSYCOPG2_REQUIRES + PYMSSQL_REQUIRES + TEST_REQUIRES),
         "psycopg2": PSYCOPG2_REQUIRES,

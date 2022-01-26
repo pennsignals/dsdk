@@ -1,0 +1,109 @@
+interactions:
+- request:
+    body: '{}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2'
+      User-Agent:
+      - python-requests/2.27.1
+      authorization:
+      - EPIC_AUTHORIZATION
+      content-type:
+      - application/json
+      cookie:
+      - EPIC_COOKIE
+      epic-client-id:
+      - EPIC_CLIENT_ID
+      epic-user-id:
+      - PENNSIGNALS
+      epic-user-idtype:
+      - external
+    method: POST
+    uri: https://interconnectbgprod.uphs.upenn.edu/interconnect-prd-web/api/epic/2011/clinical/patient/addflowsheetvalue/flowsheetvalue?Comment=0&ContactID=218202909&ContactIDType=CSN&FlowsheetID=0000000000&FlowsheetIDType=external&FlowsheetTemplateID=0000000000&FlowsheetTemplateIDType=external&InstantValueTaken=2019-09-18T17%3A19%3A23Z&PatientID=9999999999&PatientIDType=UID&UserID=PENNSIGNALS&UserIDType=external&Value=0.5
+  response:
+    body:
+      string: '{"Message":"An error has occurred.","ExceptionMessage":"An error occurred
+        while executing the command: EPT_ID_RETRIEVAL_ERROR details: 2:InvalidRecord:RecordNotFound:9999999999;UID.","ExceptionType":"Epic.ServiceModel.Internal.ServiceCommandException","StackTrace":"   at
+        Epic.Clinical.Generated.Services.Epic_Clinical_PatientController.v2011_ADDFLOWSHEETVALUE(String
+        PatientID, String PatientIDType, String ContactID, String ContactIDType, String
+        UserID, String UserIDType, String FlowsheetID, String FlowsheetIDType, String
+        Value, String Comment, Nullable`1 InstantValueTaken, String FlowsheetTemplateID,
+        String FlowsheetTemplateIDType)\r\n   at lambda_method(Closure , Object ,
+        Object[] )\r\n   at System.Web.Http.Controllers.ReflectedHttpActionDescriptor.ActionExecutor.<>c__DisplayClass10.<GetExecutor>b__9(Object
+        instance, Object[] methodParameters)\r\n   at System.Web.Http.Controllers.ReflectedHttpActionDescriptor.ExecuteAsync(HttpControllerContext
+        controllerContext, IDictionary`2 arguments, CancellationToken cancellationToken)\r\n---
+        End of stack trace from previous location where exception was thrown ---\r\n   at
+        System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()\r\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task
+        task)\r\n   at System.Web.Http.Tracing.ITraceWriterExtensions.<TraceBeginEndAsyncCore>d__18`1.MoveNext()\r\n---
+        End of stack trace from previous location where exception was thrown ---\r\n   at
+        System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()\r\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task
+        task)\r\n   at System.Web.Http.Controllers.ApiControllerActionInvoker.<InvokeActionAsyncCore>d__0.MoveNext()\r\n---
+        End of stack trace from previous location where exception was thrown ---\r\n   at
+        System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()\r\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task
+        task)\r\n   at System.Web.Http.Tracing.ITraceWriterExtensions.<TraceBeginEndAsyncCore>d__18`1.MoveNext()\r\n---
+        End of stack trace from previous location where exception was thrown ---\r\n   at
+        System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()\r\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task
+        task)\r\n   at System.Web.Http.Filters.ActionFilterAttribute.<CallOnActionExecutedAsync>d__5.MoveNext()\r\n---
+        End of stack trace from previous location where exception was thrown ---\r\n   at
+        System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()\r\n   at System.Web.Http.Filters.ActionFilterAttribute.<CallOnActionExecutedAsync>d__5.MoveNext()\r\n---
+        End of stack trace from previous location where exception was thrown ---\r\n   at
+        System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()\r\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task
+        task)\r\n   at System.Web.Http.Filters.ActionFilterAttribute.<ExecuteActionFilterAsyncCore>d__0.MoveNext()\r\n---
+        End of stack trace from previous location where exception was thrown ---\r\n   at
+        System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()\r\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task
+        task)\r\n   at System.Web.Http.Controllers.ActionFilterResult.<ExecuteAsync>d__2.MoveNext()\r\n---
+        End of stack trace from previous location where exception was thrown ---\r\n   at
+        System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()\r\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task
+        task)\r\n   at System.Web.Http.Filters.AuthorizationFilterAttribute.<ExecuteAuthorizationFilterAsyncCore>d__2.MoveNext()\r\n---
+        End of stack trace from previous location where exception was thrown ---\r\n   at
+        System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()\r\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task
+        task)\r\n   at System.Web.Http.Controllers.AuthenticationFilterResult.<ExecuteAsync>d__0.MoveNext()\r\n---
+        End of stack trace from previous location where exception was thrown ---\r\n   at
+        System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()\r\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task
+        task)\r\n   at System.Web.Http.Controllers.ExceptionFilterResult.<ExecuteAsync>d__0.MoveNext()","InnerException":{"Message":"An
+        error has occurred.","ExceptionMessage":"An error occurred while executing
+        the command: EPT_ID_RETRIEVAL_ERROR details: 2:InvalidRecord:RecordNotFound:9999999999;UID.","ExceptionType":"Epic.Core.Communication.EcfCommandException","StackTrace":"   at
+        Epic.Core.Communication.Internal.EcfConnection.HandleErrorPacket(Byte[] response,
+        Int32 packetLength, Int32 startIndex, Command command, Int64 endTime, INetworkStream
+        networkStream)\r\n   at Epic.Core.Communication.Internal.EcfConnection.BuildResponseFromPacket(Int32
+        packetLength, Byte[] response, Command command, INetworkStream networkStream,
+        Int64 endTime, Boolean responseExpected, ProcessState& state, String& pauseMessage)\r\n   at
+        Epic.Core.Communication.Internal.EcfConnection.Execute(Command command, String
+        instrumentationHeader)\r\n   at Epic.Core.Communication.Connection.Execute(Command
+        command, Int32 lockAcquireTimeout)\r\n   at Epic.Core.Communication.Command.Execute(Int32
+        lockAcquireTimeout, EventHandler`1 asyncExecuteCompletedHandler)\r\n   at
+        Epic.Clinical.Generated.Services.Epic_Clinical_PatientController.v2011_ADDFLOWSHEETVALUE(String
+        PatientID, String PatientIDType, String ContactID, String ContactIDType, String
+        UserID, String UserIDType, String FlowsheetID, String FlowsheetIDType, String
+        Value, String Comment, Nullable`1 InstantValueTaken, String FlowsheetTemplateID,
+        String FlowsheetTemplateIDType)"}}'
+    headers:
+      Cache-Control:
+      - no-cache,no-store
+      Content-Length:
+      - '5894'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 19 Jan 2022 20:14:44 GMT
+      Expires:
+      - '-1'
+      Pragma:
+      - no-cache
+      Server:
+      - Microsoft-IIS/8.5
+      X-AspNet-Version:
+      - 4.0.30319
+      X-Powered-By:
+      - ASP.NET
+    status:
+      code: 400
+      message: 'An error occurred while executing the command: EPT_ID_RETRIEVAL_ERROR
+        details: 2:InvalidRecord:RecordNotFound:9999999999;UID.'
+version: 1
