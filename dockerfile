@@ -26,22 +26,15 @@ RUN \
     apt-get -qq autoremove -y --purge && \
     rm -rf /var/lib/apt/lists/*
 
-FROM python:3.9.9-slim-bullseye as epic
-LABEL name="flowsheets"
-WORKDIR /tmp
-ENV FREETDS /etc/freetds
-ENV PATH /root/.local/bin:$PATH
-COPY --from=build /root/.local /root/.local
-COPY --from=build /tmp/assets /tmp/assets
-COPY --from=build /usr/bin/tini /usr/bin
-ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["flowsheets"]
-
 FROM build as test
 ARG IFLAGS
 LABEL name="dsdk.test"
 WORKDIR /tmp
 RUN \
-    pip install ${IFLAGS} ".[all]"
+    pip install ${IFLAGS} ".[all]" && \
+    ln -s /local ./local && \
+    ln -s /secrets ./secrets && \
+    ln -s /model ./model && \
+    ln -s /gold ./gold
 ENTRYPOINT [ "/usr/bin/tini", "--" ]
 CMD [ "pre-commit", "run", "--all-files" ]

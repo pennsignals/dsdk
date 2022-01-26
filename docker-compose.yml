@@ -30,22 +30,12 @@ services:
     build:
       context: .
       target: test
-    depends_on:
-    - postgres
     environment:
-    - CONFIG=/local/test.yaml
-    - ENV=/local/docker.env
+    - CONFIG=./local/test.yaml
+    - ENV=./secrets/example.env
     volumes:
     - ./assets:/assets
+    - ./gold:/gold
     - ./local:/local
-
-  flowsheets:
-    build:
-      context: .
-      target: flowsheets
-    environment:
-    - CONFIG=/local/configuration.yaml
-    - ENV=/local/docker.env
-    restart: always
-    volumes:
-    - ./local:/local
+    - ./model:/model
+    - ./secrets:/secrets
