@@ -18,7 +18,6 @@ Setup:
 
     python3.9 -m venv .venv
 
-    echo "export POSTGRES_HOST=0.0.0.0" >> .venv/bin/activate
     . .venv/bin/activate
     pip install ".[all]"
     pre-commit install
@@ -28,17 +27,12 @@ Session:
     . .env/bin/activate
     docker-compose up --build postgres &
     ...
-    pre-commit run --all-files
+    CONFIG=./local/test.yaml ENV=./secrets/example.env pre-commit run --all-files
     ...
-    git commit -m 'Message'
+    CONFIG=./local/test.yaml ENV=./secrets/example.env git commit -m 'Message'
     ...
     docker-compose down
     deactivate
-
-Test epic egress to production with non-production empi, csn, score, flowsheet_id and flowsheet_template_id:
-
-    epic.notify.api.test -c ./local/notifier.yaml -e ./secrets/staging.env
-    epic.notify.api.test -c ./local/verifier.yaml -e ./secrets/staging.env
 
 Rebuild the postgres container and remove the docker volume if the database schema is changed.
 
