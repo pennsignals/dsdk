@@ -28,6 +28,10 @@ logger = configure_logger(__name__)
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 
+class SaveError(Exception):
+    """Save error."""
+
+
 class Result:  # pylint: disable=too-few-public-methods
     """Rest result."""
 
@@ -72,6 +76,8 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
     JSON_DECODE_ERROR = dumps(
         {"key": "epic.rest.json.decode.error", "prediction": "%s"}
     )
+    SAVE_ERROR_MESSAGE = b"DATA_NOT_SAVED"
+    SAVE_ERROR_BODY = b"There was an error filing data.  Data was not saved.."
     SUCCESS = dumps(
         {
             "key": "epic.rest",
@@ -256,7 +262,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
             status_code=response.status_code,
         )
 
-    @retry((RequestsConnectionError, Timeout))
+    @retry((RequestsConnectionError, Timeout, SaveError))
     def on_rest(  # pylint: disable=no-self-use
         self,
         session: Session,
@@ -265,10 +271,23 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
         timeout: int,
     ):
         """On post."""
-        return session.post(
+        response = session.post(
             url=url,
             json=json,
             timeout=timeout,
+        )
+        if (
+            (response.status_code != 400)
+            or (response.content.count(self.SAVE_ERROR_MESSAGE) == 0)
+            or (response.content.count(self.SAVE_ERROR_BODY) == 0)
+        ):
+            return response
+        try:
+            response.raise_for_status()
+        except HTTPError as e:
+            raise SaveError() from e
+        raise RuntimeError(
+            "Should not get here with raise_for_status and a status of 400."
         )
 
     def test(
