@@ -96,3 +96,34 @@ def test_invalid_empi(mock_flowsheets_service):
         assert result.status is False
         assert result.status_code == 400
         assert result.name == "HTTPError"
+        
+        
+@vcr.use_cassette("./test/flowsheets.data.not.saved.yaml")
+def test_invalid_empi(mock_flowsheets_service):
+    """Test data not saved."""
+    service = mock_flowsheets_service
+
+    postgres = service.postgres
+    postgres.df_from_query.return_value = DataFrame(
+        [
+            {
+                "as_of": service.as_of,
+                "csn": 133713371,
+                "empi": "1337133713",
+                "id": 0,
+                "run_id": 0,
+                "score": 0.5,
+            }
+        ]
+    )
+    expected = (
+        "An error occurred while executing the command: "
+        "DATA_NOT_SAVED details : There was an error "
+        "filing data.  Data was not saved.."
+    )
+
+    for result in service.publish():
+        assert result.description == expected
+        assert result.status is False
+        assert result.status_code == 400
+        assert result.name == "SaveError"
