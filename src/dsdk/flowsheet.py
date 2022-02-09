@@ -42,7 +42,7 @@ class Result:  # pylint: disable=too-few-public-methods
         status: bool,
         description: Optional[str] = None,
         name: Optional[str] = None,
-        status_code: Optional[str] = None,
+        status_code: Optional[int] = None,
         text: Optional[str] = None,
     ):
         """__init__."""
@@ -235,6 +235,15 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
                 status=False,
                 name=type(e).__name__,
                 text=str(e),
+            )
+        except SaveError as e:
+            logger.error(self.HTTP_ERROR, missing["id"])
+            return Result(
+                duration=interval,
+                status=False,
+                description="DATA_NOT_SAVED",
+                name=type(e).__name__,
+                status_code=400,
             )
         except HTTPError as e:
             logger.error(self.HTTP_ERROR, missing["id"])

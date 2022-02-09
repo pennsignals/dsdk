@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Test flowsheets."""
 
+from inspect import unwrap
+
 from pandas import DataFrame
 from vcr import VCR
 
@@ -96,12 +98,20 @@ def test_invalid_empi(mock_flowsheets_service):
         assert result.status is False
         assert result.status_code == 400
         assert result.name == "HTTPError"
-        
-        
+
+
 @vcr.use_cassette("./test/flowsheets.data.not.saved.yaml")
-def test_invalid_empi(mock_flowsheets_service):
+def test_data_not_saved(mock_flowsheets_service):
     """Test data not saved."""
     service = mock_flowsheets_service
+    flowsheets = service.flowsheets
+
+    inner = unwrap(flowsheets.on_rest)
+
+    def outer(*args, **kwargs):
+        return inner(flowsheets, *args, **kwargs)
+
+    service.flowsheets.on_rest = outer
 
     postgres = service.postgres
     postgres.df_from_query.return_value = DataFrame(
@@ -116,14 +126,9 @@ def test_invalid_empi(mock_flowsheets_service):
             }
         ]
     )
-    expected = (
-        "An error occurred while executing the command: "
-        "DATA_NOT_SAVED details : There was an error "
-        "filing data.  Data was not saved.."
-    )
 
     for result in service.publish():
-        assert result.description == expected
+        assert result.description == "DATA_NOT_SAVED"
         assert result.status is False
         assert result.status_code == 400
         assert result.name == "SaveError"
