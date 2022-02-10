@@ -139,9 +139,12 @@ class AbstractPersistor:
             fout.write(rendered)
         cur.execute(rendered)
         rows = cur.fetchall()
-        df = DataFrame(rows)
         columns = (each[0] for each in cur.description)
-        df.columns = columns
+        if rows:
+            df = DataFrame(rows)
+            df.columns = columns
+        else:
+            df = DataFrame(columns=columns)
         return df
 
     @classmethod
