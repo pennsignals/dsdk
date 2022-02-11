@@ -138,8 +138,8 @@ class AbstractPersistor:
         with NamedTemporaryFile("w", delete=False, suffix=".sql") as fout:
             fout.write(rendered)
         cur.execute(rendered)
-        rows = cur.fetchall()
         columns = (each[0] for each in cur.description)
+        rows = cur.fetchall()
         if rows:
             df = DataFrame(rows)
             df.columns = columns
