@@ -60,7 +60,7 @@ class AbstractPersistor:
         if parameters is None:
             parameters = {}
         cur.execute(query, parameters)
-        columns = (each[0] for each in cur.description)
+        columns = tuple(each[0] for each in cur.description)
         rows = cur.fetchall()
         if rows:
             df = DataFrame(rows)
@@ -138,7 +138,7 @@ class AbstractPersistor:
         with NamedTemporaryFile("w", delete=False, suffix=".sql") as fout:
             fout.write(rendered)
         cur.execute(rendered)
-        columns = (each[0] for each in cur.description)
+        columns = tuple(each[0] for each in cur.description)
         rows = cur.fetchall()
         if rows:
             df = DataFrame(rows)
