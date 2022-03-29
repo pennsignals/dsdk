@@ -28,6 +28,7 @@ classifiers = [
 ]
 description = "An opinionated library to help deploy data science projects"
 dynamic = ["dependencies", "version"]
+license = { file = "./license.txt" }
 name = "dsdk"
 requires-python = ">=3.7.4"
 readme = "readme.md"
