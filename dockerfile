@@ -1,6 +1,6 @@
 ARG IFLAGS="--quiet --no-cache-dir --user"
 
-FROM python:3.9.9-slim-bullseye as build
+FROM python:3.10-slim-bullseye as build
 ARG IFLAGS
 ARG TINI_VERSION=v0.19.0
 WORKDIR /tmp
