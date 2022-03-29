@@ -132,8 +132,8 @@ def retry(
         def wrapped(*args, **kwargs):
             try:
                 return func(*args, **kwargs)
-            except exceptions as exception:
-                logger.exception(exception)
+            except exceptions as outer_exception:
+                logger.exception(outer_exception)
                 wait = delay
                 for _ in range(retries):
                     message = f"Retrying in {wait:.2f} seconds..."
@@ -142,8 +142,8 @@ def retry(
                     wait *= backoff
                     try:
                         return func(*args, **kwargs)
-                    except exceptions as exception:
-                        logger.exception(exception)
+                    except exceptions as inner_exception:
+                        logger.exception(inner_exception)
                 raise
 
         return wrapped

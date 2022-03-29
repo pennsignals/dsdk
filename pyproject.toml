@@ -1,26 +1,40 @@
 [build-system]
 requires = [
-    "pip>=21.3.1",
-    "setuptools>=60.3.1",
-    "setuptools_scm[toml]>=4.1.2",
+    "pip>=22.0.4",
+    "setuptools>=61.2.0",
+    "setuptools_scm[toml]>=6.4.2",
     "wheel>=0.37.1",
 ]
 
 [project]
 authors = [
-    "Jason Lubken",
-    "Michael Becker",
-    "Corey Chivers",
+    { name = "Jason Lubken", email = "jlubken@users.noreply.github.com" },
+    { name = "Michael Becker", email = "mdbecker@users.noreply.github.com" },
+    { name = "Corey Chivers", email = "cjbayesian@user.noreply.github.com" },
+    { name = "Penn Signals", email = "pennsignals@pennmedicine.upenn.edu" },
 ]
-license = "MIT"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Unix",
+    "Operating System :: POSIX",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Utilities",
+]
+description = "An opinionated library to help deploy data science projects"
+dynamic = ["dependencies", "version"]
 name = "dsdk"
 requires-python = ">=3.7.4"
-python = "^3.7.4"
 readme = "readme.md"
 
 [tool.black]
 line-length = 79
-target-version = ["py37","py38"]
+target-version = ["py37","py38","py39","py310"]
 
 [tool.coverage.report]
 exclude_lines = [

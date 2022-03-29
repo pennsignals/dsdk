@@ -231,7 +231,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
         except (RequestsConnectionError, Timeout) as e:
             logger.error(self.TIMEOUT, missing["id"])
             return Result(
-                duration=interval,
+                duration=interval,  # pylint: disable=used-before-assignment
                 status=False,
                 name=type(e).__name__,
                 text=str(e),
@@ -239,7 +239,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
         except SaveError as e:
             logger.error(self.HTTP_ERROR, missing["id"])
             return Result(
-                duration=interval,
+                duration=interval,  # pylint: disable=used-before-assignment
                 status=False,
                 description="DATA_NOT_SAVED",
                 name=type(e).__name__,
@@ -250,7 +250,9 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
             return Result(
                 duration=interval,
                 status=False,
-                description=body["ExceptionMessage"],
+                description=body[  # pylint: disable=used-before-assignment
+                    "ExceptionMessage"
+                ],
                 name=type(e).__name__,
                 status_code=response.status_code,
             )
