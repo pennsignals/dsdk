@@ -1,6 +1,7 @@
 [build-system]
 requires = [
     "pip>=22.0.4",
+    "pytest-runner>=6.0.0",
     "setuptools>=61.2.0",
     "setuptools_scm[toml]>=6.4.2",
     "wheel>=0.37.1",
@@ -27,11 +28,16 @@ classifiers = [
     "Topic :: Utilities",
 ]
 description = "An opinionated library to help deploy data science projects"
-dynamic = ["dependencies", "version"]
-license = { file = "./license.txt" }
+dynamic = ["dependencies", "optional-dependencies", "version"]
+license = { file = "license.txt" }
 name = "dsdk"
 requires-python = ">=3.7.4"
 readme = "readme.md"
+
+[project.urls]
+Homepage = "https://github.com/pennsignals/dsdk"
+Source = "https://github.com/pennsignals/dsdk"
+Tracker = "https://github.com/pennsignals/dsdk/issues"
 
 [tool.black]
 line-length = 79

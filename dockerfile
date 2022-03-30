@@ -8,6 +8,7 @@ ENV FREETDS /etc/freetds
 ENV PATH /root/.local/bin:$PATH
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /usr/bin/tini
 COPY freetds.conf /etc/freetds/
+COPY license.txt .
 COPY readme.md .
 COPY setup.cfg .
 COPY setup.py .

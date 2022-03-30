@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""DSDK."""
+"""Data Science Development/Deployment Toolkit."""
 
 from setuptools import find_packages, setup
 
@@ -7,24 +7,20 @@ INSTALL_REQUIRES = (
     (
         "cfgenvy@"
         "git+https://github.com/pennsignals/cfgenvy.git"
-        "@1.3.3#egg=cfgenvy"
+        "@1.3.4#egg=cfgenvy"
     ),
     "numpy>=1.15.4",
     "pandas>=0.23.4",
-    "pip>=21.3.1",
+    "pip>=22.0.4",
     "requests>=2.26.0",
-    "setuptools>=60.3.1",
+    "setuptools>=61.2.0",
+    "setuptools_scm[toml]>=6.4.2",
     "wheel>=0.37.1",
 )
 
 PYMSSQL_REQUIRES = ("cython>=0.29.21", "pymssql>=2.2.3")
 
 PSYCOPG2_REQUIRES = ("psycopg2-binary>=2.8.6",)
-
-SETUP_REQUIRES = (
-    "pytest-runner>=5.2",
-    "setuptools_scm[toml]>=4.1.2",
-)
 
 TEST_REQUIRES = (
     "astroid",
@@ -66,7 +62,5 @@ setup(
     packages=find_packages("src"),
     package_dir={"": "src"},
     python_requires=">=3.7",
-    setup_requires=SETUP_REQUIRES,
-    tests_require=TEST_REQUIRES,
     use_scm_version={"local_scheme": "dirty-tag"},
 )

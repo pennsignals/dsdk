@@ -8,6 +8,7 @@ services:
   postgres:
     build:
       context: ./postgres
+      dockerfile: dockerfile
       target: postgres
     environment:
     - POSTGRES_USER=postgres
@@ -29,6 +30,7 @@ services:
   test:
     build:
       context: .
+      dockerfile: dockerfile
       target: test
     environment:
     - CONFIG=./local/test.yaml
