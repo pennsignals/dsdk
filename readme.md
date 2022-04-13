@@ -1,8 +1,8 @@
 # Overview
 
-[![Release](https://github.com/pennsignals/dsdk/workflows/release/badge.svg)](https://github.com/pennsignals/dsdk/actions?query=workflow%3Arelease)
+[![Release](https://github.com/pennsignals/dsdk/actions/workflows/release.yml/badge.svg)](https://github.com/pennsignals/dsdk/actions/workflows/release.yml)
 
-[![Test](https://github.com/pennsignals/dsdk/workflows/test/badge.svg)](https://github.com/pennsignals/dsdk/actions?query=workflow%3Atest)
+[![Test](https://github.com/pennsignals/dsdk/actions/workflows/test.yml/badge.svg)](https://github.com/pennsignals/dsdk/actions/workflows/test.yml)
 
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
