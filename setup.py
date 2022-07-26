@@ -4,11 +4,7 @@
 from setuptools import find_packages, setup
 
 INSTALL_REQUIRES = (
-    (
-        "cfgenvy@"
-        "git+https://github.com/pennsignals/cfgenvy.git"
-        "@1.3.4#egg=cfgenvy"
-    ),
+    "cfgenvy>=1.3.5",
     "numpy>=1.15.4",
     "pandas>=0.23.4",
     "pip>=22.0.4",

@@ -21,6 +21,7 @@ services:
     - "5432"
     ports:
     - "5432:5432"
+    platform: linux/x86_64
     restart: always
     stop_signal: SIGINT
     volumes:
@@ -35,9 +36,31 @@ services:
     environment:
     - CONFIG=./local/test.yaml
     - ENV=./secrets/example.env
+    platform: linux/x86_64
     volumes:
     - ./assets:/assets
     - ./gold:/gold
     - ./local:/local
     - ./model:/model
     - ./secrets:/secrets
+
+  pre-commit:
+    build:
+      context: .
+      dockerfile: dockerfile
+      target: pre-commit
+    platform: linux/x86_64
+
+  build-wheel:
+    build:
+      context: .
+      dockerfile: dockerfile
+      target: build-wheel
+    platform: linux/x86_64
+
+  install-wheel:
+    build:
+      context: .
+      dockerfile: dockerfile
+      target: install-wheel
+    platform: linux/x86_64
