@@ -1,0 +1,11 @@
+version: "3.8"
+
+services:
+
+  build-wheel:
+    volumes:
+      - ./dist:/tmp/dist:rw
+
+  install-wheel:
+    volumes:
+      - ./dist:/tmp/dist:r

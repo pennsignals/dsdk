@@ -1,17 +1,38 @@
 name: test
 
-on: push
+on:
+  push:
+  schedule:
+    - cron: "0 0 * * *"
 
 jobs:
   test:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        target:
+          - "3.7"
+          - "3.8"
+          - "3.9"
+          - "3.10"
+
     steps:
-    - name: checkout
-      uses: actions/checkout@v2.3.4
+      - name: checkout
+        uses: actions/checkout@v2.3.4
 
-    - name: test
-      run: |
-        echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
+      - name: build
+        run: |
+          docker compose build --build-arg PYTHON_VERSION=${{ matrix.target }}
 
-        docker-compose run test
+      - name: pre-commit
+        run: |
+          docker compose run pre-commit
+
+      - name: build-wheel
+        run: |
+          docker compose run build-wheel
+
+      - name: install-wheel
+        run: |
+          docker compose run install-wheel
