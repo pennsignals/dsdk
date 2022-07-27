@@ -68,7 +68,7 @@ default_section = "THIRDPARTY"
 good-names = '''a,b,c,d,df,do_POST,e,i,id,logger,n,on,ok,tz'''
 
 [tool.pylint.message_control]
-disable = '''duplicate-code,C0330'''
+disable = '''duplicate-code'''
 extension-pkg-allow-list = [
   "pymssql._mssql",
 ]

@@ -274,7 +274,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
         )
 
     @retry((RequestsConnectionError, Timeout, SaveError))
-    def on_rest(  # pylint: disable=no-self-use
+    def on_rest(
         self,
         session: Session,
         url: str,

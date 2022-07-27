@@ -239,7 +239,7 @@ class AbstractPersistor:
         raise NotImplementedError()
 
     @contextmanager
-    def cursor(self, con):  # pylint: disable=no-self-use
+    def cursor(self, con):
         """Yield a cursor that provides dicts."""
         # Replace return type with ContextManager[Any] when mypy is fixed.
         with con.cursor() as cursor:
