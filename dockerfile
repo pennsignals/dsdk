@@ -27,17 +27,6 @@ RUN \
    pip install ".[all]"
 CMD pre-commit run --all-files
 
-#FROM source as test
-#LABEL name="dsdk.test"
-#WORKDIR /tmp
-#RUN \
-#    pip install ".[all]" && \
-#    ln -s /local ./local && \
-#    ln -s /secrets ./secrets && \
-#    ln -s /model ./model && \
-#    ln -s /gold ./gold
-#CMD pytest
-
 FROM source as test
 RUN \
     pip install ".[all]"
