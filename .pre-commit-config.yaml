@@ -26,7 +26,6 @@ repos:
   hooks:
   - id: black
     additional_dependencies: ['click==8.0.4']
-    language_version: python3.10
     types: [python]
 - repo: https://github.com/pycqa/pylint
   rev: v2.13.2
