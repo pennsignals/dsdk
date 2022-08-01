@@ -27,7 +27,7 @@ TEST_REQUIRES = (
     "flake8-commas",
     "flake8-comprehensions",
     "flake8-docstrings",
-    "flake8-logging-format",
+    # "flake8-logging-format",
     "flake8-mutable",
     "flake8-sorted-keys",
     "isort",
