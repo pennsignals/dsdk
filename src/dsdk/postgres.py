@@ -263,7 +263,7 @@ class Persistor(Messages, BasePersistor):
             return self.df_from_query(
                 cur,
                 sql.predictions.gold,
-                {"run_id": run_id},
+                parameters={"run_id": run_id},
             ).score.values  # pylint: disable=no-member
 
     def store_evidence(self, run: Any, *args, **kwargs) -> None:

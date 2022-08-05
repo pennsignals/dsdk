@@ -41,40 +41,9 @@ class AbstractPersistor:
         cls,
         cur,
         query: str,
-        parameters: dict[str, Any] | None,
-    ) -> None:
-        """Query by parameters."""
-        if parameters is None:
-            parameters = {}
-        cur.execute(query, parameters)
-
-    @classmethod
-    def df_from_query(
-        cls,
-        cur,
-        query: str,
-        parameters: dict[str, Any] | None,
-    ) -> DataFrame:
-        """Return DataFrame from query."""
-        if parameters is None:
-            parameters = {}
-        cur.execute(query, parameters)
-        columns = tuple(each[0] for each in cur.description)
-        rows = cur.fetchall()
-        if rows:
-            df = DataFrame(rows)
-            df.columns = columns
-        else:
-            df = DataFrame(columns=columns)
-        return df
-
-    @classmethod
-    def query_by_keys(
-        cls,
-        cur,
-        query: str,
-        keys: dict[str, Sequence[Any]] = None,
+        *,
         parameters: dict[str, Any] | None = None,
+        keys: dict[str, Sequence[Any]] = None,
     ) -> None:
         """Query by key sequences and parameters.
 
@@ -87,7 +56,7 @@ class AbstractPersistor:
         inside string literals produced from the first mogrification pass are
         not interpreted as parameter placeholders in the second pass by
         the pymssql driver.
-        Actual placeholders to by interpolated by the driver are not
+        Actual placeholders to be interpolated by the driver are not
         inside quotes.
         """
         if keys is None:
@@ -104,12 +73,13 @@ class AbstractPersistor:
         cur.execute(rendered)
 
     @classmethod
-    def df_from_query_by_keys(
+    def df_from_query(
         cls,
         cur,
         query: str,
-        keys: dict[str, Sequence[Any]] = None,
+        *,
         parameters: dict[str, Any] | None = None,
+        keys: dict[str, Sequence[Any]] = None,
     ) -> DataFrame:
         """Return df from query by key sequences and parameters.
 

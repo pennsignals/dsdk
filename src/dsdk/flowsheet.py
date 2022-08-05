@@ -146,7 +146,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
         sql = persistor.sql
         with persistor.rollback() as cur:
             missings = persistor.df_from_query(
-                cur, sql.flowsheets.missing, {"dry_run": 0}
+                cur, sql.flowsheets.missing, parameters={"dry_run": 0}
             )
         with self.session() as session:
             for _, missing in missings.iterrows():
@@ -156,7 +156,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
                         persistor.query(
                             cur,
                             sql.flowsheets.insert,
-                            {
+                            parameters={
                                 "dry_run": 0,
                                 "id": missing["id"],
                                 "profile_end": result.duration.end,
@@ -167,7 +167,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
                     persistor.query(
                         cur,
                         sql.flowsheets.errors.insert,
-                        {
+                        parameters={
                             "description": result.description,
                             "dry_run": 0,
                             "name": result.name,
