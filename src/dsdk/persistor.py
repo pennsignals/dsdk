@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Persistor."""
 
 from __future__ import annotations
@@ -9,7 +8,7 @@ from logging import getLogger
 from re import compile as re_compile
 from string import Formatter
 from tempfile import NamedTemporaryFile
-from typing import Any, Dict, Generator, Optional, Sequence, Tuple
+from typing import Any, Generator, Sequence
 
 from cfgenvy import yaml_type
 from pandas import DataFrame
@@ -42,7 +41,7 @@ class AbstractPersistor:
         cls,
         cur,
         query: str,
-        parameters: Optional[Dict[str, Any]],
+        parameters: dict[str, Any] | None,
     ) -> None:
         """Query by parameters."""
         if parameters is None:
@@ -54,7 +53,7 @@ class AbstractPersistor:
         cls,
         cur,
         query: str,
-        parameters: Optional[Dict[str, Any]],
+        parameters: dict[str, Any] | None,
     ) -> DataFrame:
         """Return DataFrame from query."""
         if parameters is None:
@@ -74,8 +73,8 @@ class AbstractPersistor:
         cls,
         cur,
         query: str,
-        keys: Dict[str, Sequence[Any]] = None,
-        parameters: Optional[Dict[str, Any]] = None,
+        keys: dict[str, Sequence[Any]] = None,
+        parameters: dict[str, Any] | None = None,
     ) -> None:
         """Query by key sequences and parameters.
 
@@ -109,8 +108,8 @@ class AbstractPersistor:
         cls,
         cur,
         query: str,
-        keys: Dict[str, Sequence[Any]] = None,
-        parameters: Optional[Dict[str, Any]] = None,
+        keys: dict[str, Sequence[Any]] = None,
+        parameters: dict[str, Any] | None = None,
     ) -> DataFrame:
         """Return df from query by key sequences and parameters.
 
@@ -153,7 +152,7 @@ class AbstractPersistor:
         if parameters is None:
             parameters = {}
         formatter = Formatter()
-        query = "".join((each[0] for each in formatter.parse(query)))
+        query = "".join(each[0] for each in formatter.parse(query))
         return cls.mogrify(cur, query, parameters).decode("utf-8")
 
     @classmethod
@@ -184,8 +183,8 @@ class AbstractPersistor:
 
     def dry_run(
         self,
-        parameters: Dict[str, Any],
-        exceptions: Tuple = (),
+        parameters: dict[str, Any],
+        exceptions: tuple = (),
     ):
         """Execute sql found in asset with dry_run."""
         logger.info(self.ON)
@@ -270,7 +269,7 @@ class Persistor(AbstractPersistor):
     YAML = "!basepersistor"
 
     @classmethod
-    def as_yaml_type(cls, tag: Optional[str] = None) -> None:
+    def as_yaml_type(cls, tag: str | None = None) -> None:
         """As yaml type."""
         Asset.as_yaml_type()
         yaml_type(
@@ -310,7 +309,7 @@ class Persistor(AbstractPersistor):
         self.username = username
         super().__init__(sql)
 
-    def as_yaml(self) -> Dict[str, Any]:
+    def as_yaml(self) -> dict[str, Any]:
         """As yaml."""
         return {
             "database": self.database,

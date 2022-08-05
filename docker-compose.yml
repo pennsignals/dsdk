@@ -4,7 +4,6 @@ volumes:
   postgres_data:
 
 services:
-
   postgres:
     build:
       context: ./postgres

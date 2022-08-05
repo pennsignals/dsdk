@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Asset."""
 
 from __future__ import annotations
@@ -9,7 +8,7 @@ from os import listdir
 from os.path import isdir
 from os.path import join as joinpath
 from os.path import splitext
-from typing import Any, Dict, Optional
+from typing import Any
 
 from cfgenvy import yaml_type
 
@@ -22,7 +21,7 @@ class Asset(Namespace):
     YAML = "!asset"
 
     @classmethod
-    def as_yaml_type(cls, tag: Optional[str] = None):
+    def as_yaml_type(cls, tag: str | None = None):
         """As yaml type."""
         yaml_type(
             cls,
@@ -71,7 +70,7 @@ class Asset(Namespace):
         self._ext = ext
         super().__init__(**kwargs)
 
-    def as_yaml(self) -> Dict[str, Any]:
+    def as_yaml(self) -> dict[str, Any]:
         """As yaml."""
         return {
             "ext": self._ext,

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Profile."""
 
 from contextlib import contextmanager
@@ -7,7 +6,6 @@ from time import perf_counter_ns
 from typing import Any, Dict, Generator, Optional
 
 from cfgenvy import yaml_type
-
 
 logger = getLogger(__name__)
 

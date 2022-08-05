@@ -1,12 +1,14 @@
-# -*- coding: utf-8 -*-
 """Conftest."""
+
+from __future__ import annotations
 
 from contextlib import contextmanager
 from typing import Any, Generator
 from unittest.mock import Mock
 
 from pytest import fixture
-from dsdk import Service, FlowsheetMixin, PostgresMixin
+
+from dsdk import FlowsheetMixin, PostgresMixin, Service
 
 
 @contextmanager

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Mssql."""
 
 from __future__ import annotations
@@ -7,7 +6,7 @@ from abc import ABC
 from contextlib import contextmanager
 from json import dumps
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Dict, Generator
+from typing import TYPE_CHECKING, Any, Generator
 
 from .persistor import Persistor as BasePersistor
 from .service import Service
@@ -95,7 +94,7 @@ class Persistor(Messages, BasePersistor):
 
     def dry_run(
         self,
-        parameters: Dict[str, Any],
+        parameters: dict[str, Any],
         exceptions=(DatabaseError, InterfaceError),
     ):
         """Dry run."""
@@ -116,7 +115,7 @@ class Mixin(BaseMixin):
         self.mssql = mssql
         super().__init__(**kwargs)
 
-    def as_yaml(self) -> Dict[str, Any]:
+    def as_yaml(self) -> dict[str, Any]:
         """As yaml."""
         return {
             "mssql": self.mssql,

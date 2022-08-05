@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Model support."""
 
 from __future__ import annotations
@@ -7,7 +6,7 @@ from abc import ABC
 from contextlib import contextmanager
 from json import dumps
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Dict, Generator, Optional
+from typing import TYPE_CHECKING, Any, Generator
 
 from cfgenvy import yaml_type
 
@@ -37,7 +36,7 @@ class Model:
     )
 
     @classmethod
-    def as_yaml_type(cls, tag: Optional[str] = None) -> None:
+    def as_yaml_type(cls, tag: str | None = None) -> None:
         """As yaml type."""
         yaml_type(
             cls,
@@ -87,7 +86,7 @@ class Batch(Delegate):
         super().__init__(parent)
         self.model_version = model_version
 
-    def as_insert_sql(self) -> Dict[str, Any]:
+    def as_insert_sql(self) -> dict[str, Any]:
         """As insert sql."""
         return {
             "model_version": self.model_version,
@@ -109,7 +108,7 @@ class Mixin(BaseMixin):
         self.model = model
         super().__init__(**kwargs)
 
-    def as_yaml(self) -> Dict[str, Any]:
+    def as_yaml(self) -> dict[str, Any]:
         """As yaml."""
         return {
             "model": self.model,

@@ -3,10 +3,9 @@ name: release
 on:
   release:
     types:
-    - published
+      - published
 
 jobs:
-
   publish:
     runs-on: ubuntu-latest
 
