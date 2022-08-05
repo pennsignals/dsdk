@@ -8,3 +8,11 @@ services:
   install-wheel:
     volumes:
       - ./dist:/tmp/dist:r
+
+  pre-commit:
+    volumes:
+      - ./model:/tmp/model:rw
+
+  test:
+    volumes:
+      - ./model:/tmp/model:rw
