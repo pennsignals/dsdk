@@ -21,7 +21,7 @@ Setup:
     python3.10 -m venv .venv
 
     . .venv/bin/activate
-    pip install ".[all]"
+    pip install ".[dev]"
     pre-commit install
 
 Session:
