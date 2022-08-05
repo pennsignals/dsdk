@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Service."""
 
 from __future__ import annotations
@@ -9,15 +8,7 @@ from contextlib import contextmanager
 from datetime import date, datetime, tzinfo
 from json import dumps
 from logging import getLogger
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Generator,
-    Mapping,
-    Optional,
-    Sequence,
-)
+from typing import Any, Callable, Generator, Mapping, Sequence
 
 from cfgenvy import Parser, YamlMapping
 from numpy import allclose
@@ -114,7 +105,7 @@ class Delegate:
         """Return tzinfo."""
         return self.parent.tz_info
 
-    def as_insert_sql(self) -> Dict[str, Any]:
+    def as_insert_sql(self) -> dict[str, Any]:
         """As insert sql."""
         return self.parent.as_insert_sql()
 
@@ -124,19 +115,19 @@ class Batch:
 
     def __init__(  # pylint: disable=too-many-arguments
         self,
-        as_of: Optional[datetime],
-        duration: Optional[Interval],
-        time_zone: Optional[str],
+        as_of: datetime | None,
+        duration: Interval | None,
+        time_zone: str | None,
         microservice_version: str,
     ) -> None:
         """__init__."""
-        self.id: Optional[int] = None
+        self.id: int | None = None
         self.as_of = as_of
         self.duration = duration
         self.evidence = Evidence()
         self.time_zone = time_zone
         self.microservice_version = microservice_version
-        self.predictions: Optional[DataFrame] = None
+        self.predictions: DataFrame | None = None
 
     @property
     def as_of_local_datetime(self) -> datetime:
@@ -161,7 +152,7 @@ class Batch:
         """Return parent."""
         raise ValueError()
 
-    def as_insert_sql(self) -> Dict[str, Any]:
+    def as_insert_sql(self) -> dict[str, Any]:
         """As insert sql."""
         # duration comes from the database clock.
         return {
@@ -215,8 +206,8 @@ class Service(  # pylint: disable=too-many-instance-attributes
     def context(
         cls,
         key: str,
-        argv: Optional[Sequence[str]] = None,
-        env: Optional[Mapping[str, str]] = None,
+        argv: Sequence[str] | None = None,
+        env: Mapping[str, str] | None = None,
     ):
         """Context."""
         configure_logger("dsdk")
@@ -250,15 +241,15 @@ class Service(  # pylint: disable=too-many-instance-attributes
         self,
         *,
         pipeline: Sequence[Task],
-        as_of: Optional[datetime] = None,
-        gold: Optional[str] = None,
-        time_zone: Optional[str] = None,
+        as_of: datetime | None = None,
+        gold: str | None = None,
+        time_zone: str | None = None,
         batch_cls: Callable = Batch,
     ) -> None:
         """__init__."""
         self.gold = gold
         self.pipeline = pipeline
-        self.duration: Optional[Interval] = None
+        self.duration: Interval | None = None
         self.as_of = as_of
         self.time_zone = time_zone
         self.batch_cls = batch_cls
@@ -311,7 +302,7 @@ class Service(  # pylint: disable=too-many-instance-attributes
         dependency = cls(**kwargs)
         setattr(self, key, dependency)
 
-    def as_yaml(self) -> Dict[str, Any]:
+    def as_yaml(self) -> dict[str, Any]:
         """As yaml."""
         return {
             "as_of": self.as_of,

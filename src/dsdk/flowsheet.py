@@ -1,25 +1,23 @@
-# -*- coding: utf-8 -*-
 """Epic."""
+
+from __future__ import annotations
 
 from abc import ABC
 from base64 import b64encode
 from contextlib import contextmanager
 from datetime import datetime
-from json import dumps, JSONDecodeError
+from json import JSONDecodeError, dumps
 from time import sleep as default_sleep
-from typing import TYPE_CHECKING, Any, Dict, Generator, Optional
+from typing import TYPE_CHECKING, Any, Generator
 from urllib.parse import urlencode
 
 from cfgenvy import YamlMapping
 from requests import Session
-from requests.exceptions import (
-    ConnectionError as RequestsConnectionError,
-    HTTPError,
-    Timeout,
-)
+from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import HTTPError, Timeout
 
-from .profile import Profile, profile
 from .persistor import Persistor
+from .profile import Profile, profile
 from .service import Service
 from .utils import configure_logger, retry
 
@@ -40,10 +38,10 @@ class Result:  # pylint: disable=too-few-public-methods
         *,
         duration: Profile,
         status: bool,
-        description: Optional[str] = None,
-        name: Optional[str] = None,
-        status_code: Optional[int] = None,
-        text: Optional[str] = None,
+        description: str | None = None,
+        name: str | None = None,
+        status_code: int | None = None,
+        text: str | None = None,
     ):
         """__init__."""
         self.duration = duration
@@ -107,7 +105,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
     ):
         """__init__."""
         self.authorization = (
-            b"Basic " + b64encode(f"EMP${username}:{password}".encode("utf-8"))
+            b"Basic " + b64encode(f"EMP${username}:{password}".encode())
         ).decode("utf-8")
         self.client_id = client_id
         self.contact_id_type = contact_id_type
@@ -124,7 +122,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
         self.user_id_type = user_id_type
         self.username = username
 
-    def as_yaml(self) -> Dict[str, Any]:
+    def as_yaml(self) -> dict[str, Any]:
         """As yaml."""
         return {
             "client_id": self.client_id,
@@ -278,7 +276,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
         self,
         session: Session,
         url: str,
-        json: Dict,
+        json: dict[str, Any],
         timeout: int,
     ):
         """On post."""
@@ -363,7 +361,7 @@ class Mixin(BaseMixin):
         self.flowsheets = flowsheets
         super().__init__(**kwargs)
 
-    def as_yaml(self) -> Dict[str, Any]:
+    def as_yaml(self) -> dict[str, Any]:
         """As yaml."""
         return {
             "flowsheets": self.flowsheets,

@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 """Data Science Deployment Kit."""
 
 from .asset import Asset
-from .flowsheet import Mixin as FlowsheetMixin
 from .flowsheet import Flowsheet
+from .flowsheet import Mixin as FlowsheetMixin
 from .interval import Interval
 from .model import Mixin as ModelMixin
 from .model import Model

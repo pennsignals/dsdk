@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test dsdk."""
 
 from io import StringIO

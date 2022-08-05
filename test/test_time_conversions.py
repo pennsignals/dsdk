@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test epoch_ms and utc datetime conversions."""
 
 from dsdk.utils import (

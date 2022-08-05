@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Postgres."""
 
 from __future__ import annotations
@@ -8,7 +7,7 @@ from collections import deque
 from contextlib import contextmanager
 from json import dumps
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Dict, Generator
+from typing import TYPE_CHECKING, Any, Generator
 
 from numpy import integer
 from pandas import DataFrame, NaT, Series, isna
@@ -143,7 +142,7 @@ class Persistor(Messages, BasePersistor):
 
     def dry_run(
         self,
-        parameters: Dict[str, Any],
+        parameters: dict[str, Any],
         exceptions=(DatabaseError, InterfaceError),
     ):
         """Dry run."""
@@ -344,7 +343,7 @@ class Mixin(BaseMixin):
         self.postgres = postgres
         super().__init__(**kwargs)
 
-    def as_yaml(self) -> Dict[str, Any]:
+    def as_yaml(self) -> dict[str, Any]:
         """As yaml."""
         return {
             "postgres": self.postgres,

@@ -8,7 +8,7 @@
 
 An opinionated library to help deploy data science projects
 
-* Free software: MIT license
+- Free software: MIT license
 
 ## Install
 

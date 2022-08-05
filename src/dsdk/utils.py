@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Utils."""
 
 from __future__ import annotations
@@ -12,10 +11,9 @@ from pickle import dump as pickle_dump
 from pickle import load as pickle_load
 from sys import stderr, stdout
 from time import sleep as default_sleep
-from typing import Any, Callable, Type, Sequence
+from typing import Any, Callable, Sequence
 
 from dateutil import parser, tz
-
 
 logger = getLogger(__name__)
 
@@ -91,7 +89,7 @@ def get_tzinfo(key: str) -> tzinfo:
 
 def load_json_file(path: str) -> object:
     """Load json from file."""
-    with open(path, "r", encoding="utf-8") as fin:
+    with open(path, encoding="utf-8") as fin:
         return json_load(fin)
 
 
@@ -107,7 +105,7 @@ def now_utc_datetime() -> datetime:
 
 
 def retry(
-    exceptions: Sequence[Type[Exception]],
+    exceptions: Sequence[type[Exception]],
     retries: int = 60,
     delay: float = 1.0,
     backoff: float = 1.05,
