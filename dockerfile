@@ -13,19 +13,18 @@ RUN \
     apt-get -qq update --yes && \
     apt-get -qq upgrade --yes && \
     apt-get -qq install --yes --no-install-recommends \
-        freetds-dev \
-        gcc \
-        git \
-        libc6-dev \
-        libssl-dev \
-        libyaml-dev \
-        tini \
+	freetds-dev \
+	gcc \
+	git \
+	libc6-dev \
+	libssl-dev \
+	libyaml-dev \
+	tini \
     > /dev/null && \
     apt-get -qq clean && \
     rm -rf /var/lib/apt/lists/* && \
     pip install -U pip setuptools wheel
 ENTRYPOINT ["/usr/bin/tini", "-g", "--"]
-CMD /bin/bash
 
 
 FROM binaries as source
@@ -34,7 +33,7 @@ COPY . .
 
 FROM source as pre-commit
 RUN \
-   pip install ".[all]"
+    pip install ".[dev]"
 CMD pre-commit run --all-files
 
 
