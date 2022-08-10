@@ -47,15 +47,15 @@ def test_no_cache(cls=Persistor):
 
 def test_cache_equal(cls=Persistor):
     """Test cache equal."""
-    a = cls.df_from_query(None, "select 1 as a", cache=True)
-    b = cls.df_from_query(None, "select 1 as a", cache=True)
+    a = cls.df_from_query(None, "select 1 as a", cache="cache")
+    b = cls.df_from_query(None, "select 1 as a", cache="cache")
     assert_frame_equal(a, b)
 
 
 def test_cache_not_equal(cls=Persistor):
     """Test cache not equal."""
-    a = cls.df_from_query(None, "select 1 as a", cache=True)
-    b = cls.df_from_query(None, "select 1 as b", cache=True)
+    a = cls.df_from_query(None, "select 1 as a", cache="cache")
+    b = cls.df_from_query(None, "select 1 as b", cache="cache")
     try:
         assert_frame_equal(a, b)
     except AssertionError:
