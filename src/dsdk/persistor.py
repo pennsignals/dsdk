@@ -3,13 +3,18 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from hashlib import blake2b
 from json import dumps
 from logging import getLogger
+from os.path import join as path_join
+from pickle import HIGHEST_PROTOCOL
+from pickle import dumps as pickle_dumps
+from pickle import loads as pickle_loads
 from re import compile as re_compile
 from string import Formatter
-from tempfile import NamedTemporaryFile
 from typing import Any, Generator, Sequence
 
+from blosc import compress, decompress
 from cfgenvy import yaml_type
 from pandas import DataFrame
 
@@ -68,8 +73,6 @@ class AbstractPersistor:
         }
         query = query.format(**keys)
         rendered = cls.mogrify(cur, query, parameters).decode("utf-8")
-        with NamedTemporaryFile("w", delete=False, suffix=".sql") as fout:
-            fout.write(rendered)
         cur.execute(rendered)
 
     @classmethod
@@ -78,6 +81,7 @@ class AbstractPersistor:
         cur,
         query: str,
         *,
+        cache=False,
         parameters: dict[str, Any] | None = None,
         keys: dict[str, Sequence[Any]] = None,
     ) -> DataFrame:
@@ -104,8 +108,33 @@ class AbstractPersistor:
         }
         query = query.format(**keys)
         rendered = cls.mogrify(cur, query, parameters).decode("utf-8")
-        with NamedTemporaryFile("w", delete=False, suffix=".sql") as fout:
-            fout.write(rendered)
+        if not cache:
+            return cls.df_from_rendered(cur, rendered)
+        name = path_join(
+            "cache",
+            blake2b(rendered.encode("utf-8")).hexdigest()
+            + ".pkl.blosc.sql.cache",
+        )
+        table: dict[str, DataFrame] = {}
+        try:
+            with open(name, "rb") as fin:
+                compressed = fin.read()
+        except FileNotFoundError:
+            pass
+        else:
+            table = pickle_loads(decompress(compressed))
+            df = table.get(rendered)
+            if df is not None:
+                return df
+        table[rendered] = df = cls.df_from_rendered(cur, rendered)
+        compressed = compress(pickle_dumps(table, protocol=HIGHEST_PROTOCOL))
+        with open(name, "wb") as fout:
+            fout.write(compressed)
+        return df
+
+    @classmethod
+    def df_from_rendered(cls, cur, rendered):
+        """Return df from rendered query."""
         cur.execute(rendered)
         columns = tuple(each[0] for each in cur.description)
         rows = cur.fetchall()
@@ -172,7 +201,7 @@ class AbstractPersistor:
 
     def dry_run_query(
         self,
-        query,
+        query: str,
         parameters,
     ) -> None:
         """Dry run query with dry_run parameter set to 1."""
@@ -182,9 +211,7 @@ class AbstractPersistor:
                 query,
                 {**parameters, "dry_run": 1},
             )
-            with NamedTemporaryFile("w", delete=False, suffix=".sql") as fout:
-                fout.write(rendered)
-                cur.execute(rendered)
+            cur.execute(rendered)
 
     @contextmanager
     def commit(self) -> Generator[Any, None, None]:
