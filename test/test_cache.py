@@ -21,7 +21,7 @@ class Persistor(BasePersistor):
         )
 
     @classmethod
-    def mogrify(cls, cur, query: str, parameters: dict[str, Any]):
+    def mogrify(cls, cur, query: str, parameters: Any):
         """Mogrify query."""
         return ((query % (parameters)) + "_rendered").encode("utf-8")
 
