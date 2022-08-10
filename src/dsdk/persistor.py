@@ -81,7 +81,7 @@ class AbstractPersistor:
         cur,
         query: str,
         *,
-        cache=False,
+        cache: str | None = None,
         parameters: dict[str, Any] | None = None,
         keys: dict[str, Sequence[Any]] = None,
     ) -> DataFrame:
@@ -108,10 +108,10 @@ class AbstractPersistor:
         }
         query = query.format(**keys)
         rendered = cls.mogrify(cur, query, parameters).decode("utf-8")
-        if not cache:
+        if cache is None:
             return cls.df_from_rendered(cur, rendered)
         name = path_join(
-            "cache",
+            cache,
             blake2b(rendered.encode("utf-8")).hexdigest()
             + ".pkl.blosc.sql.cache",
         )
