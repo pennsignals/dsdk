@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from hashlib import blake2b
+from itertools import chain
 from json import dumps
 from logging import getLogger
 from os.path import join as path_join
@@ -47,8 +48,8 @@ class AbstractPersistor:
         cur,
         query: str,
         *,
-        parameters: dict[str, Any] | None = None,
         keys: dict[str, Sequence[Any]] = None,
+        parameters: dict[str, Any] | None = None,
     ) -> None:
         """Query by key sequences and parameters.
 
@@ -64,16 +65,7 @@ class AbstractPersistor:
         Actual placeholders to be interpolated by the driver are not
         inside quotes.
         """
-        if keys is None:
-            keys = {}
-        if parameters is None:
-            parameters = {}
-        keys = {
-            key: cls.union_all(cur, sequence) for key, sequence in keys.items()
-        }
-        query = query.format(**keys)
-        rendered = cls.mogrify(cur, query, parameters).decode("utf-8")
-        cur.execute(rendered)
+        cur.execute(cls.render(cur, query, keys=keys, parameters=parameters))
 
     @classmethod
     def df_from_query(
@@ -82,8 +74,8 @@ class AbstractPersistor:
         query: str,
         *,
         cache: str | None = None,
-        parameters: dict[str, Any] | None = None,
         keys: dict[str, Sequence[Any]] = None,
+        parameters: dict[str, Any] | None = None,
     ) -> DataFrame:
         """Return df from query by key sequences and parameters.
 
@@ -99,15 +91,7 @@ class AbstractPersistor:
         Actual placeholders to by interpolated by the driver are not
         inside quotes.
         """
-        if keys is None:
-            keys = {}
-        if parameters is None:
-            parameters = {}
-        keys = {
-            key: cls.union_all(cur, sequence) for key, sequence in keys.items()
-        }
-        query = query.format(**keys)
-        rendered = cls.mogrify(cur, query, parameters).decode("utf-8")
+        rendered = cls.render(cur, query, keys=keys, parameters=parameters)
         if cache is None:
             return cls.df_from_rendered(cur, rendered)
         name = path_join(
@@ -146,8 +130,32 @@ class AbstractPersistor:
         return df
 
     @classmethod
+    def render(
+        cls,
+        cur,
+        query: str,
+        *,
+        keys: dict[str, DataFrame | Sequence] | None = None,
+        parameters: dict[str, Any] | None = None,
+    ) -> str:
+        """Render query with keys and parameters."""
+        if keys is None:
+            keys = {}
+        if parameters is None:
+            parameters = {}
+        resolve = {
+            DataFrame: cls.union_all_df,
+        }
+        keys = {
+            key: resolve.get(sequence.__class__, cls.union_all)(cur, sequence)
+            for key, sequence in keys.items()
+        }
+        query = query.format(**keys)
+        return cls.mogrify(cur, query, parameters).decode("utf-8")
+
+    @classmethod
     def render_without_keys(cls, cur, query, parameters):
-        """Render query without keys."""
+        """Render query with parameters without keys."""
         if parameters is None:
             parameters = {}
         formatter = Formatter()
@@ -168,13 +176,26 @@ class AbstractPersistor:
     def union_all(
         cls,
         cur,
-        keys: Sequence[Any],
+        sequence: Sequence[Any],
     ) -> str:
         """Return 'union all select %s...' clause."""
-        parameters = tuple(keys)
+        parameters = tuple(sequence)
         union = "\n    ".join("union all select %s" for _ in parameters)
-        union = cls.mogrify(cur, union, parameters).decode("utf-8")
-        return union
+        return cls.mogrify(cur, union, parameters).decode("utf-8")
+
+    @classmethod
+    def union_all_df(
+        cls,
+        cur,
+        df: DataFrame,
+    ) -> str:
+        """Return 'union all select %s, %s...' clause."""
+        row = ", ".join("%s" for _ in range(len(df.columns)))
+        union = "\n    ".join(
+            f"union all select {row}" for _ in range(len(df))
+        )
+        parameters = tuple(chain(*df.itertuples(index=False, name=None)))
+        return cls.mogrify(cur, union, parameters).decode("utf-8")
 
     def __init__(self, sql: Asset):
         """__init__."""

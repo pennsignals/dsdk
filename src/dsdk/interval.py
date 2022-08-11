@@ -1,7 +1,8 @@
 """Interval."""
 
-from datetime import datetime
-from typing import Any, Dict, Optional
+from __future__ import annotations
+
+from typing import Any
 
 from cfgenvy import yaml_type
 
@@ -12,7 +13,7 @@ class Interval:
     YAML = "!interval"
 
     @classmethod
-    def as_yaml_type(cls, tag: Optional[str] = None):
+    def as_yaml_type(cls, tag: str | None = None):
         """As yaml type."""
         yaml_type(
             cls,
@@ -31,11 +32,11 @@ class Interval:
         """Yaml repr."""
         return dumper.represent_mapping(tag, self.as_yaml())
 
-    def __init__(self, on: datetime, end: Optional[datetime] = None):
+    def __init__(self, *, on: Any, end: Any = None):
         """__init__."""
         self.on = on
         self.end = end
 
-    def as_yaml(self) -> Dict[str, Any]:
+    def as_yaml(self) -> dict[str, Any]:
         """As yaml."""
         return {"end": self.end, "on": self.on}

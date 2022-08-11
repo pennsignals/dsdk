@@ -15,14 +15,17 @@ class Persistor(BasePersistor):
 
     @classmethod
     def df_from_rendered(cls, cur, rendered):
-        """Dataframer from rendered query."""
+        """Dataframe from rendered query."""
         return DataFrame(
             np.random.randint(0, 100, size=(100, 4)), columns=list("test")
         )
 
     @classmethod
     def mogrify(cls, cur, query: str, parameters: Any):
-        """Mogrify query."""
+        """Mogrify query.
+
+        This mogrify is NOT sql-injection safe, and should not be used.
+        """
         return ((query % (parameters)) + "_rendered").encode("utf-8")
 
     @contextmanager
