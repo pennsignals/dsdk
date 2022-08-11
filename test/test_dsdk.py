@@ -1,7 +1,9 @@
 """Test dsdk."""
 
+from __future__ import annotations
+
 from io import StringIO
-from typing import Any, Callable, Dict, Tuple, Type
+from typing import Any, Callable
 
 from cfgenvy import yaml_dumps
 from pandas import DataFrame
@@ -58,12 +60,6 @@ class MyService(ModelMixin, MssqlMixin, PostgresMixin, Service):
 
     YAML = "!test"
 
-    @classmethod
-    def yaml_types(cls):
-        """Yaml types."""
-        cls.as_yaml_type()
-        super().yaml_types()
-
     def __init__(self, **kwargs):
         """__init__."""
         pipeline = (_Extract, _Transform, _Predict)
@@ -72,6 +68,7 @@ class MyService(ModelMixin, MssqlMixin, PostgresMixin, Service):
 
 CONFIGS = """
 !test
+model: !model ./test/0.0.1.pkl
 mssql: !mssql
   database: test
   host: 0.0.0.0
@@ -80,7 +77,6 @@ mssql: !mssql
     ext: .sql
     path: ./assets/mssql
   username: mssql
-model: !model ./test/0.0.1.pkl
 postgres: !postgres
   database: test
   host: 0.0.0.0
@@ -128,9 +124,9 @@ time_zone: null
 
 
 def build(
-    cls: Type,
+    cls,
     expected: str = EXPECTED,
-) -> Tuple[Callable, Dict[str, Any], str]:
+) -> tuple[Callable, dict[str, Any], str]:
     """Build from parameters."""
     cls.yaml_types()
     model = Model(name="test", path="./test/0.0.1.pkl", version="0.0.1")
@@ -161,11 +157,11 @@ def build(
 
 
 def deserialize(
-    cls: Type,
+    cls,
     configs: str = CONFIGS,
     envs: str = ENVS,
     expected: str = EXPECTED,
-) -> Tuple[Callable, Dict[str, Any], str]:
+) -> tuple[Callable, dict[str, Any], str]:
     """Build from yaml."""
     pickle_file = "./test/0.0.1.pkl"
     dump_pickle_file({"name": "test", "version": "0.0.1"}, pickle_file)
@@ -191,7 +187,7 @@ def deserialize(
 )
 def test_service(
     cls: Callable,  # pylint: disable=redefined-outer-name
-    kwargs: Dict[str, Any],
+    kwargs: dict[str, Any],
     expected: str,
 ):
     """Test parameters, config, and env."""
