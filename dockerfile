@@ -1,4 +1,4 @@
-ARG PYTHON_VERSION="3.9"
+ARG PYTHON_VERSION="3.10"
 ARG ROOT_CONTAINER=python:${PYTHON_VERSION}-slim-bullseye
 
 
@@ -14,11 +14,11 @@ RUN \
     apt-get -qq upgrade --yes && \
     apt-get -qq install --yes --no-install-recommends \
         build-essential \
-	freetds-dev \
-	git \
-	libssl-dev \
-	libyaml-dev \
-	tini \
+        freetds-dev \
+        git \
+        libssl-dev \
+        libyaml-dev \
+        tini \
     > /dev/null && \
     apt-get -qq clean && \
     rm -rf /var/lib/apt/lists/* && \

@@ -68,3 +68,23 @@ select id from cohort"""
         keys={"cohort": DataFrame({"a": (11, 21, 31), "b": (12, 22, 32)})},
     )
     assert actual == expected
+
+
+def test_empy_df(cls=Persistor):
+    """Test empty dataframe."""
+    sql = """
+with cohort as (
+    select cast(null as int) as id, cast(null as int) as pcp_id
+    {cohort}
+)
+select id, pcp_id from cohort"""
+    expected = f"""
+with cohort as (
+    select cast(null as int) as id, cast(null as int) as pcp_id
+    {""}
+)
+select id, pcp_id from cohort"""
+    actual = cls.render(
+        None, sql, keys={"cohort": DataFrame(columns=("pat_id", "pcp_id"))}
+    )
+    assert actual == expected

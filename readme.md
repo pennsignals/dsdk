@@ -16,30 +16,37 @@ An opinionated library to help deploy data science projects
 
 ## Develop, Lint & Test
 
-Setup:
+Setup virtual environment:
 
     python3.10 -m venv .venv
 
+Or setup homebrew virtual environment:
+
+    brew install python@3.10
+    /opt/homebrew/Cellar/python@3.10/.../Frameworks/Python.framework/Versions/Current/bin/python@3.10 -m venv .venv
+
+Once virtual environment is setup:
+
     . .venv/bin/activate
-    pip install ".[dev]"
+    pip install -U pip setuptools wheel
+    pip install -e ".[dev]"
     pre-commit install
 
 Session:
 
-    . .env/bin/activate
-    docker-compose up --build postgres &
+    . .venv/bin/activate
+    pytest
     ...
-    CONFIG=./local/test.yaml ENV=./secrets/example.env pre-commit run --all-files
+    pre-commit run --all-files
     ...
-    CONFIG=./local/test.yaml ENV=./secrets/example.env git commit -m 'Message'
+    git commit -m 'Message'
     ...
-    docker-compose down
     deactivate
-
-Rebuild the postgres container and remove the docker volume if the database schema is changed.
 
 ## CI/CD Lint & Test:
 
-    docker-compose up --build test &
+    docker compose up test
+    docker compose up pre-commit
+    docker compose up build-wheel && docker compose up install-wheel
     ...
-    docker-compose down
+    docker compose down

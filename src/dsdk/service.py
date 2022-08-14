@@ -15,7 +15,6 @@ from numpy import allclose
 from pandas import DataFrame
 from pkg_resources import DistributionNotFound, get_distribution
 
-from .asset import Asset
 from .interval import Interval
 from .utils import configure_logger, get_tzinfo, now_utc_datetime
 
@@ -195,13 +194,6 @@ class Service(  # pylint: disable=too-many-instance-attributes
     VERSION = __version__
 
     @classmethod
-    def yaml_types(cls):
-        """Yaml types."""
-        Asset.as_yaml_type()
-        Interval.as_yaml_type()
-        cls.as_yaml_type()
-
-    @classmethod
     @contextmanager
     def context(
         cls,
@@ -236,6 +228,13 @@ class Service(  # pylint: disable=too-many-instance-attributes
         """Validate gold."""
         with cls.context("validate_gold") as service:
             service.on_validate_gold()
+
+    @classmethod
+    def yaml_types(cls):
+        """Yaml types."""
+        logger.debug("dsdk.Service.yaml_types()")
+        cls.as_yaml_type()
+        super().yaml_types()
 
     def __init__(
         self,

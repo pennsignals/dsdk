@@ -38,6 +38,7 @@ class Model:
     @classmethod
     def as_yaml_type(cls, tag: str | None = None) -> None:
         """As yaml type."""
+        logger.debug("%s.as_yaml_type(tag=%s)", cls.__name__, tag)
         yaml_type(
             cls,
             tag or cls.YAML,
@@ -96,12 +97,6 @@ class Batch(Delegate):
 
 class Mixin(BaseMixin):
     """Mixin."""
-
-    @classmethod
-    def yaml_types(cls) -> None:
-        """As yaml types."""
-        Model.as_yaml_type()
-        super().yaml_types()
 
     def __init__(self, *, model: Model, **kwargs):
         """__init__."""

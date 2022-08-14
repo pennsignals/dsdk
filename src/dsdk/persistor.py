@@ -16,7 +16,7 @@ from string import Formatter
 from typing import Any, Generator, Sequence
 
 from blosc import compress, decompress
-from cfgenvy import yaml_type
+from cfgenvy import YamlMapping, yaml_type
 from pandas import DataFrame
 
 from .asset import Asset
@@ -146,11 +146,13 @@ class AbstractPersistor:
         resolve = {
             DataFrame: cls.union_all_df,
         }
-        keys = {
-            key: resolve.get(sequence.__class__, cls.union_all)(cur, sequence)
-            for key, sequence in keys.items()
+        union_alls = {
+            key: resolve.get(value.__class__, cls.union_all)(cur, value)
+            for key, value in keys.items()
         }
-        query = query.format(**keys)
+        logger.info("Union_alls: %s", union_alls)
+        logger.info("Query: %s", query)
+        query = query.format(**union_alls)
         return cls.mogrify(cur, query, parameters).decode("utf-8")
 
     @classmethod
@@ -281,10 +283,10 @@ class AbstractPersistor:
                 logger.info(self.ROLLBACK)
 
 
-class Persistor(AbstractPersistor):
+class Persistor(YamlMapping, AbstractPersistor):
     """Persistor."""
 
-    YAML = "!basepersistor"
+    YAML = "!persistor"
 
     @classmethod
     def as_yaml_type(cls, tag: str | None = None) -> None:
@@ -296,16 +298,6 @@ class Persistor(AbstractPersistor):
             init=cls._yaml_init,
             repr=cls._yaml_repr,
         )
-
-    @classmethod
-    def _yaml_init(cls, loader, node):
-        """Yaml init."""
-        return cls(**loader.construct_mapping(node, deep=True))
-
-    @classmethod
-    def _yaml_repr(cls, dumper, self, *, tag: str):
-        """Yaml repr."""
-        return dumper.represent_mapping(tag, self.as_yaml())
 
     def __init__(  # pylint: disable=too-many-arguments
         self,

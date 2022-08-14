@@ -17,7 +17,7 @@ def rollback():
     yield Mock()
 
 
-class _MockFlowsheetsService(  # pylint: disable=too-many-ancestors
+class MockFlowsheetsService(  # pylint: disable=too-many-ancestors
     PostgresMixin,
     FlowsheetMixin,
     Service,
@@ -41,4 +41,11 @@ class _MockFlowsheetsService(  # pylint: disable=too-many-ancestors
 @fixture
 def mock_flowsheets_service():
     """Mock flowsheet service."""
-    return _MockFlowsheetsService.parse()
+    return MockFlowsheetsService.parse(
+        argv=[
+            "-c",
+            "./local/test.yaml",
+            "-e",
+            "./secrets/example.env",
+        ]
+    )

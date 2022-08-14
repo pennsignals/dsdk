@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from io import StringIO
+from logging import getLogger
 from typing import Any, Callable
 
 from cfgenvy import yaml_dumps
@@ -23,6 +24,8 @@ from dsdk import (
     dump_pickle_file,
     retry,
 )
+
+logger = getLogger(__name__)
 
 
 class _Extract(Task):  # pylint: disable=too-few-public-methods
@@ -55,12 +58,19 @@ def test_batch_evidence():
     assert batch.evidence["test"] is df
 
 
-class MyService(ModelMixin, MssqlMixin, PostgresMixin, Service):
-    """MyService."""
+class MockService(ModelMixin, MssqlMixin, PostgresMixin, Service):
+    """MockService."""
 
     YAML = "!test"
 
-    def __init__(self, **kwargs):
+    @classmethod
+    def yaml_types(cls):
+        """As yaml type."""
+        logger.debug("MockService.yaml_types()")
+        Model.as_yaml_type()
+        super().yaml_types()
+
+    def __init__(self, **kwargs) -> None:
         """__init__."""
         pipeline = (_Extract, _Transform, _Predict)
         super().__init__(pipeline=pipeline, **kwargs)
@@ -181,8 +191,8 @@ def deserialize(
 @mark.parametrize(
     "cls,kwargs,expected",
     (
-        build(MyService),
-        deserialize(MyService),
+        build(MockService),
+        deserialize(MockService),
     ),
 )
 def test_service(
@@ -192,7 +202,7 @@ def test_service(
 ):
     """Test parameters, config, and env."""
     service = cls(**kwargs)
-    assert service.__class__ is MyService
+    assert service.__class__ is MockService
     assert service.model.__class__ is Model
     assert service.postgres.__class__ is Postgres
     assert service.mssql.__class__ is Mssql

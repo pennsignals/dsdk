@@ -335,6 +335,7 @@ class Mixin(BaseMixin):
     @classmethod
     def yaml_types(cls) -> None:
         """Yaml types."""
+        logger.debug("dsdk.postgres.Mixin.yaml_types()")
         Persistor.as_yaml_type()
         super().yaml_types()
 

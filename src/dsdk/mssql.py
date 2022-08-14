@@ -107,6 +107,7 @@ class Mixin(BaseMixin):
     @classmethod
     def yaml_types(cls) -> None:
         """Yaml types."""
+        logger.debug("dsdk.mssql.Mixin.yaml_types()")
         Persistor.as_yaml_type()
         super().yaml_types()
 

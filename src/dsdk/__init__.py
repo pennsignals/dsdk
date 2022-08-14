@@ -3,7 +3,7 @@
 from .asset import Asset
 from .flowsheet import Flowsheet
 from .flowsheet import Mixin as FlowsheetMixin
-from .interval import Interval
+from .interval import Interval, profile
 from .model import Mixin as ModelMixin
 from .model import Model
 from .mssql import Mixin as MssqlMixin
@@ -11,7 +11,6 @@ from .mssql import Persistor as Mssql
 from .postgres import Mixin as PostgresMixin
 from .postgres import Persistor as Postgres
 from .postgres import PredictionMixin as PostgresPredictionMixin
-from .profile import Profile, profile
 from .service import Batch, Delegate, Service, Task
 from .utils import (
     chunks,
@@ -38,7 +37,6 @@ __all__ = (
     "PostgresPredictionMixin",
     "PostgresMixin",
     "Postgres",
-    "Profile",
     "Service",
     "Task",
     "chunks",

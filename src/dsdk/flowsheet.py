@@ -16,8 +16,8 @@ from requests import Session
 from requests.exceptions import ConnectionError as RequestsConnectionError
 from requests.exceptions import HTTPError, Timeout
 
+from .interval import Interval, profile
 from .persistor import Persistor
-from .profile import Profile, profile
 from .service import Service
 from .utils import configure_logger, retry
 
@@ -36,7 +36,7 @@ class Result:  # pylint: disable=too-few-public-methods
     def __init__(
         self,
         *,
-        duration: Profile,
+        duration: Interval,
         status: bool,
         description: str | None = None,
         name: str | None = None,
@@ -334,8 +334,8 @@ class Mixin(BaseMixin):
     @classmethod
     def yaml_types(cls) -> None:
         """Yaml types."""
-        super().yaml_types()
         Flowsheet.as_yaml_type()
+        super().yaml_types()
 
     @classmethod
     def publish_flowsheets(cls):
