@@ -11,7 +11,7 @@ from .mssql import Persistor as Mssql
 from .postgres import Mixin as PostgresMixin
 from .postgres import Persistor as Postgres
 from .postgres import PredictionMixin as PostgresPredictionMixin
-from .service import Batch, Delegate, Service, Task
+from .service import Batch, CompositeTask, Delegate, Service, Task
 from .utils import (
     chunks,
     configure_logger,
@@ -26,6 +26,7 @@ from .utils import (
 __all__ = (
     "Asset",
     "Batch",
+    "CompositeTask",
     "Delegate",
     "Flowsheet",
     "FlowsheetMixin",

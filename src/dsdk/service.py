@@ -404,3 +404,22 @@ class Task:  # pylint: disable=too-few-public-methods
     def __call__(self, batch: Batch, service: Service) -> None:
         """__call__."""
         raise NotImplementedError()
+
+
+class CompositeTask(Task):  # pylint: disable=too-few-public-methods
+    """Composte Task."""
+
+    SUBTASK_ON = dumps({"key": "subtask.on", "task": "%s"})
+    SUBTASK_END = dumps({"key": "subtask.end", "task": "%s"})
+
+    def __init__(self, pipeline):
+        """__init__."""
+        super().__init__()
+        self.pipeline = pipeline
+
+    def __call__(self, run, service):
+        """__call__."""
+        for task in self.pipeline:
+            logger.info(self.SUBTASK_ON, task.__class__.__name__)
+            task(run, service)
+            logger.info(self.SUBTASK_END, task.__class__.__name__)
