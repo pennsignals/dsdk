@@ -150,8 +150,8 @@ class AbstractPersistor:
             key: resolve.get(value.__class__, cls.union_all)(cur, value)
             for key, value in keys.items()
         }
-        logger.info("Union_alls: %s", union_alls)
-        logger.info("Query: %s", query)
+        logger.debug("Union_alls: %s", union_alls)
+        logger.debug("Query: %s", query)
         query = query.format(**union_alls)
         return cls.mogrify(cur, query, parameters).decode("utf-8")
 
