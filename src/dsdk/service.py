@@ -328,6 +328,7 @@ class Service(  # pylint: disable=too-many-instance-attributes
                     "as_of": run.as_of,
                     "microservice_version": self.VERSION,
                     "model_version": model_version,
+                    "now_utc_datetime": now_utc_datetime(),
                     "scores": scores,
                     "time_zone": run.time_zone,
                 },
