@@ -22,8 +22,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: Unix",
     "Operating System :: POSIX",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: Implementation :: CPython",
@@ -40,7 +38,7 @@ description = "An opinionated library to help deploy data science projects"
 dynamic = ["version"]
 license = { file = "license.txt" }
 name = "dsdk"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 readme = "readme.md"
 
 [project.optional-dependencies]
@@ -89,7 +87,7 @@ Tracker = "https://github.com/pennsignals/dsdk/issues"
 
 [tool.black]
 line-length = 79
-target-version = ["py37","py38","py39","py310"]
+target-version = ["py39","py310"]
 
 [tool.coverage.report]
 exclude_lines = [
@@ -105,7 +103,7 @@ branch = true
 parallel = true
 
 [tool.distutils.bdist_wheel]
-python-tag = "py37.py38.py39.py310"
+python-tag = "py39.py310"
 
 [tool.isort]
 profile = "black"
