@@ -296,7 +296,7 @@ class Persistor(Messages, BasePersistor):
         run_id: int,
         df: DataFrame,
     ):
-        df["run_id"] = run_id
+        df.loc[:, ("run_id")] = run_id
         out = df.to_dict("records")
         try:
             with self.commit() as cur:
