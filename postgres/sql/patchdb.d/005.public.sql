@@ -86,6 +86,7 @@ begin
         id int primary key generated always as identity,
         run_id int not null,
         subject_id int not null,
+	kind varchar not null default "score",
         score double precision not null,
         constraint predictions_require_a_run
             foreign key (run_id) references runs (id)
