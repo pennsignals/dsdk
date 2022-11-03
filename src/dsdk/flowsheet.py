@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from json import JSONDecodeError, dumps
 from time import sleep as default_sleep
-from typing import TYPE_CHECKING, Any, Generator
+from typing import TYPE_CHECKING, Any, Generator, Mapping
 from urllib.parse import urlencode
 
 from cfgenvy import YamlMapping
@@ -56,6 +56,33 @@ class Result:  # pylint: disable=too-few-public-methods
         return str(self.__dict__)
 
 
+class Kind(YamlMapping):
+    """Kind."""
+
+    def __init__(
+        self,
+        *,
+        flowsheet_id: str,
+        flowsheet_template_id: str,
+        flowsheet_id_type: str = "external",
+        flowsheet_template_id_type: str = "external",
+    ):
+        """__init__."""
+        self.flowsheet_id = flowsheet_id
+        self.flowsheet_id_type = flowsheet_id_type
+        self.flowsheet_template_id = flowsheet_template_id
+        self.flowsheet_template_id_type = flowsheet_template_id_type
+
+    def as_yaml(self) -> dict[str, Any]:
+        """As yaml."""
+        return {
+            "flowsheet_id": self.flowsheet_id,
+            "flowsheet_id_type": self.flowsheet_id_type,
+            "flowsheet_template_id": self.flowsheet_template_id,
+            "flowsheet_template_id_type": self.flowsheet_template_id_type,
+        }
+
+
 class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
     """Flowsheet."""
 
@@ -90,14 +117,11 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
         *,
         client_id: str,
         cookie: str,
-        flowsheet_id: str,
-        flowsheet_template_id: str,
+        kinds: Mapping[str, Mapping[str, str]],
         password: str,
         url: str,
         username: str,
         contact_id_type: str = "CSN",
-        flowsheet_id_type: str = "external",
-        flowsheet_template_id_type: str = "external",
         operation_timeout: int = 5,
         patient_id_type: str = "UID",
         user_id: str = "PENNSIGNALS",
@@ -110,10 +134,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
         self.client_id = client_id
         self.contact_id_type = contact_id_type
         self.cookie = cookie
-        self.flowsheet_id = flowsheet_id
-        self.flowsheet_id_type = flowsheet_id_type
-        self.flowsheet_template_id = flowsheet_template_id
-        self.flowsheet_template_id_type = flowsheet_template_id_type
+        self.kinds = {key: Kind(**values) for key, values in kinds.items()}
         self.operation_timeout = operation_timeout
         self.password = password
         self.patient_id_type = patient_id_type
@@ -128,11 +149,9 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
             "client_id": self.client_id,
             "contact_id_type": self.contact_id_type,
             "cookie": self.cookie,
-            "flowsheet_id": self.flowsheet_id,
-            "flowsheet_id_type": self.flowsheet_id_type,
-            "flowsheet_template_id": self.flowsheet_template_id,
-            "flowsheet_template_id_type": self.flowsheet_template_id_type,
-            "operation_timeout": self.operation_timeout,
+            "kinds": {
+                key: value.as_yaml() for key, value in self.kinds.items()
+            },
             "password": self.password,
             "patient_id_type": self.patient_id_type,
             "url": self.url,
@@ -203,14 +222,15 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
         session: Session,
     ) -> Result:
         """Rest."""
+        kind = self.kinds[missing["kind"]]
         query = {
             "Comment": missing["id"],
             "ContactID": missing["csn"],
             "ContactIDType": self.contact_id_type,
-            "FlowsheetID": self.flowsheet_id,
-            "FlowsheetIDType": self.flowsheet_id_type,
-            "FlowsheetTemplateID": self.flowsheet_template_id,
-            "FlowsheetTemplateIDType": self.flowsheet_template_id_type,
+            "FlowsheetID": kind.flowsheet_id,
+            "FlowsheetIDType": kind.flowsheet_id_type,
+            "FlowsheetTemplateID": kind.flowsheet_template_id,
+            "FlowsheetTemplateIDType": kind.flowsheet_template_id_type,
             "InstantValueTaken": missing["as_of"].strftime(DATETIME_FORMAT),
             "PatientID": missing["empi"],
             "PatientIDType": self.patient_id_type,
@@ -299,7 +319,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
             "Should not get here with raise_for_status and a status of 400."
         )
 
-    def test(
+    def test(  # pylint: disable=too-many-arguments
         self,
         # csn=278820881,
         csn=218202909,  # inpatient admission date is 2019-02-06 at PAH
@@ -307,6 +327,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
         empi="8330651951",
         # empi="BAD2345678",
         id=0,  # pylint: disable=redefined-builtin
+        kind="score",
         score="0.5",
     ):
         """Test epic API."""
@@ -315,6 +336,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
             "csn": csn,
             "empi": empi,
             "id": id,
+            "kind": kind,
             "score": score,
         }
         with self.session() as session:

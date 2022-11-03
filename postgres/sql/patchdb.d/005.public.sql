@@ -86,6 +86,7 @@ begin
         id int primary key generated always as identity,
         run_id int not null,
         subject_id int not null,
+	kind varchar not null default "score",
         score double precision not null,
         constraint predictions_require_a_run
             foreign key (run_id) references runs (id)
@@ -94,8 +95,8 @@ begin
         -- document your assumptions about how many predictions are made per subject
         -- per visit?
         -- per run?
-        constraint only_one_prediction_per_subject_and_run
-            unique (run_id, subject_id),
+        constraint only_one_prediction_per_subject_kind_and_run
+            unique (run_id, subject_id, kind),
         -- pick one of the following two constaints
         constraint prediction_score_must_be_a_normal
             check (0.0 <= score and score <= 1.0),

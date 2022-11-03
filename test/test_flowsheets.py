@@ -28,6 +28,7 @@ def test_valid(mock_flowsheets_service):
                 "csn": 218202909,
                 "empi": "8330651951",
                 "id": 0,
+                "kind": "score",
                 "run_id": 0,
                 "score": 0.5,
             }
@@ -51,6 +52,7 @@ def test_invalid_csn(mock_flowsheets_service):
                 "csn": 999999999,
                 "empi": "8330651951",
                 "id": 0,
+                "kind": "score",
                 "run_id": 0,
                 "score": 0.5,
             }
@@ -81,6 +83,7 @@ def test_invalid_empi(mock_flowsheets_service):
                 "csn": 218202909,
                 "empi": "9999999999",
                 "id": 0,
+                "kind": "score",
                 "run_id": 0,
                 "score": 0.5,
             }
@@ -120,6 +123,7 @@ def test_data_not_saved(mock_flowsheets_service):
                 "csn": 133713371,
                 "empi": "1337133713",
                 "id": 0,
+                "kind": "score",
                 "run_id": 0,
                 "score": 0.5,
             }

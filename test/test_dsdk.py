@@ -13,6 +13,8 @@ from pytest import mark
 from dsdk import (
     Asset,
     Batch,
+    Flowsheet,
+    FlowsheetMixin,
     Model,
     ModelMixin,
     Mssql,
@@ -58,7 +60,9 @@ def test_batch_evidence():
     assert batch.evidence["test"] is df
 
 
-class MockService(ModelMixin, MssqlMixin, PostgresMixin, Service):
+class MockService(  # pylint: disable=too-many-ancestors
+    FlowsheetMixin, ModelMixin, MssqlMixin, PostgresMixin, Service
+):
     """MockService."""
 
     YAML = "!test"
@@ -78,6 +82,16 @@ class MockService(ModelMixin, MssqlMixin, PostgresMixin, Service):
 
 CONFIGS = """
 !test
+flowsheets: !flowsheets
+  client_id: 00000000-0000-0000-0000-000000000000
+  cookie: ASP.NET_SessionId=000000000000000000000000
+  kinds:
+    score:
+      flowsheet_id: '0000000000'
+      flowsheet_template_id: '0000000000'
+  password: ${EPIC_PASSWORD}
+  url: https://interconnectbgprod.uphs.upenn.edu/interconnect-prd-web/
+  username: epic
 model: !model ./test/0.0.1.pkl
 mssql: !mssql
   database: test
@@ -99,6 +113,7 @@ postgres: !postgres
 """.strip()
 
 ENVS = """
+EPIC_PASSWORD=password
 MSSQL_PASSWORD=password
 POSTGRES_PASSWORD=password
 """.strip()
@@ -107,6 +122,22 @@ EXPECTED = """
 !test
 as_of: null
 duration: null
+flowsheets: !flowsheets
+  client_id: 00000000-0000-0000-0000-000000000000
+  contact_id_type: CSN
+  cookie: ASP.NET_SessionId=000000000000000000000000
+  kinds:
+    score:
+      flowsheet_id: '0000000000'
+      flowsheet_id_type: external
+      flowsheet_template_id: '0000000000'
+      flowsheet_template_id_type: external
+  password: password
+  patient_id_type: UID
+  url: https://interconnectbgprod.uphs.upenn.edu/interconnect-prd-web/
+  user_id: PENNSIGNALS
+  user_id_type: external
+  username: epic
 gold: null
 model: !model ./test/0.0.1.pkl
 mssql: !mssql
@@ -119,6 +150,7 @@ mssql: !mssql
     ext: .sql
     path: ./assets/mssql
   username: mssql
+poll_interval: 60
 postgres: !postgres
   database: test
   host: 0.0.0.0
@@ -139,6 +171,19 @@ def build(
 ) -> tuple[Callable, dict[str, Any], str]:
     """Build from parameters."""
     cls.yaml_types()
+    flowsheets = Flowsheet(
+        client_id="00000000-0000-0000-0000-000000000000",
+        cookie="ASP.NET_SessionId=000000000000000000000000",
+        kinds={
+            "score": {
+                "flowsheet_id": "0000000000",
+                "flowsheet_template_id": "0000000000",
+            },
+        },
+        password="password",
+        url="https://interconnectbgprod.uphs.upenn.edu/interconnect-prd-web/",
+        username="epic",
+    )
     model = Model(name="test", path="./test/0.0.1.pkl", version="0.0.1")
     mssql = Mssql(
         database="test",
@@ -158,6 +203,7 @@ def build(
     return (
         cls,
         {
+            "flowsheets": flowsheets,
             "model": model,
             "mssql": mssql,
             "postgres": postgres,
@@ -176,7 +222,11 @@ def deserialize(
     pickle_file = "./test/0.0.1.pkl"
     dump_pickle_file({"name": "test", "version": "0.0.1"}, pickle_file)
 
-    env = {"POSTGRES_PASSWORD": "oops!", "MSSQL_PASSWORD": "oops!"}
+    env = {
+        "EPIC_PASSWORD": "oops!",
+        "MSSQL_PASSWORD": "oops!",
+        "POSTGRES_PASSWORD": "oops!",
+    }
     return (
         cls.loads,
         {
