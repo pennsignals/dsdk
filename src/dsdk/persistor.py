@@ -48,7 +48,7 @@ class AbstractPersistor:
         cur,
         query: str,
         *,
-        keys: dict[str, Sequence[Any]] = None,
+        keys: dict[str, Sequence[Any]] | None = None,
         parameters: dict[str, Any] | None = None,
     ) -> None:
         """Query by key sequences and parameters.
@@ -74,7 +74,7 @@ class AbstractPersistor:
         query: str,
         *,
         cache: str | None = None,
-        keys: dict[str, Sequence[Any]] = None,
+        keys: dict[str, Sequence[Any]] | None = None,
         parameters: dict[str, Any] | None = None,
     ) -> DataFrame:
         """Return df from query by key sequences and parameters.

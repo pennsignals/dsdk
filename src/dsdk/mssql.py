@@ -111,7 +111,7 @@ class Mixin(BaseMixin):
         Persistor.as_yaml_type()
         super().yaml_types()
 
-    def __init__(self, *, mssql: Persistor = None, **kwargs):
+    def __init__(self, *, mssql: Persistor | None = None, **kwargs):
         """__init__."""
         self.mssql = mssql
         super().__init__(**kwargs)
