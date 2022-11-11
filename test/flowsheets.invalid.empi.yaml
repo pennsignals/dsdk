@@ -11,7 +11,7 @@ interactions:
         Content-Length:
           - "2"
         User-Agent:
-          - python-requests/2.27.1
+          - USER_AGENT
         authorization:
           - EPIC_AUTHORIZATION
         content-type:

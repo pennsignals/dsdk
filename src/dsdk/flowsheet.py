@@ -182,21 +182,21 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
                                 "profile_on": result.duration.on,
                             },
                         )
-                        continue
-                    persistor.query(
-                        cur,
-                        sql.flowsheets.errors.insert,
-                        parameters={
-                            "description": result.description,
-                            "dry_run": 0,
-                            "name": result.name,
-                            "prediction_id": missing.id,
-                            "profile_end": result.duration.end,
-                            "profile_on": result.duration.on,
-                            "status_code": result.status_code,
-                            "text": result.text,
-                        },
-                    )
+                    else:
+                        persistor.query(
+                            cur,
+                            sql.flowsheets.errors.insert,
+                            parameters={
+                                "description": result.description,
+                                "dry_run": 0,
+                                "name": result.name,
+                                "prediction_id": missing.id,
+                                "profile_end": result.duration.end,
+                                "profile_on": result.duration.on,
+                                "status_code": result.status_code,
+                                "text": result.text,
+                            },
+                        )
                 yield result
 
     @contextmanager

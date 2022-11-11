@@ -7,9 +7,8 @@ from typing import Any, Generator, Sequence
 
 from pandas import DataFrame
 from pytest import fixture
-from requests import Session
 
-from dsdk import FlowsheetMixin, Postgres, PostgresMixin, Service, FlowsheetResult
+from dsdk import FlowsheetMixin, Postgres, PostgresMixin, Service
 
 
 class StubPostgres(Postgres):
@@ -37,7 +36,20 @@ class StubPostgres(Postgres):
         keys: dict[str, Sequence[Any]] | None = None,
         parameters: dict[str, Any] | None = None,
     ) -> DataFrame:
+        """Dataframe From Query."""
         return cls.return_value
+
+    @classmethod
+    def query(
+        cls,
+        cur,
+        query: str,
+        *,
+        cache: str | None = None,
+        keys: dict[str, Sequence[Any]] | None = None,
+        parameters: dict[str, Any] | None = None,
+    ) -> None:
+        """Query."""
 
 
 class StubFlowsheetsService(  # pylint: disable=too-many-ancestors
@@ -48,15 +60,6 @@ class StubFlowsheetsService(  # pylint: disable=too-many-ancestors
     """Stub Flowsheets Service."""
 
     YAML = "!example"
-
-    def rest(
-        self,
-        missing,
-        session: Session,
-    ) -> FlowsheetResult:
-        """Rest."""
-        print("rest")
-        return super().rest(missing, session)
 
     @classmethod
     def yaml_types(cls):
