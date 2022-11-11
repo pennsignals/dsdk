@@ -2,7 +2,7 @@
 
 from .asset import Asset
 from .flowsheet import Flowsheet
-from .flowsheet import Mixin as FlowsheetMixin
+from .flowsheet import Mixin as FlowsheetMixin, Result as FlowsheetResult
 from .interval import Interval, profile
 from .model import Mixin as ModelMixin
 from .model import Model
@@ -30,6 +30,7 @@ __all__ = (
     "Delegate",
     "Flowsheet",
     "FlowsheetMixin",
+    "FlowsheetResult",
     "Interval",
     "Model",
     "ModelMixin",

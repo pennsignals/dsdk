@@ -168,7 +168,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
                 cur, sql.flowsheets.missing, parameters={"dry_run": 0}
             )
         with self.session() as session:
-            for _, missing in missings.iterrows():
+            for missing in missings.itertuples():
                 result = self.rest(missing, session)
                 with persistor.commit() as cur:
                     if result.status:
@@ -177,7 +177,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
                             sql.flowsheets.insert,
                             parameters={
                                 "dry_run": 0,
-                                "id": missing["id"],
+                                "id": missing.id,
                                 "profile_end": result.duration.end,
                                 "profile_on": result.duration.on,
                             },
@@ -190,7 +190,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
                             "description": result.description,
                             "dry_run": 0,
                             "name": result.name,
-                            "prediction_id": missing["id"],
+                            "prediction_id": missing.id,
                             "profile_end": result.duration.end,
                             "profile_on": result.duration.on,
                             "status_code": result.status_code,
@@ -222,21 +222,21 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
         session: Session,
     ) -> Result:
         """Rest."""
-        kind = self.kinds[missing["kind"]]
+        kind = self.kinds[missing.kind]
         query = {
-            "Comment": missing["id"],
-            "ContactID": missing["csn"],
+            "Comment": missing.id,
+            "ContactID": missing.csn,
             "ContactIDType": self.contact_id_type,
             "FlowsheetID": kind.flowsheet_id,
             "FlowsheetIDType": kind.flowsheet_id_type,
             "FlowsheetTemplateID": kind.flowsheet_template_id,
             "FlowsheetTemplateIDType": kind.flowsheet_template_id_type,
-            "InstantValueTaken": missing["as_of"].strftime(DATETIME_FORMAT),
-            "PatientID": missing["empi"],
+            "InstantValueTaken": missing.as_of.strftime(DATETIME_FORMAT),
+            "PatientID": missing.empi,
             "PatientIDType": self.patient_id_type,
             "UserID": self.user_id,
             "UserIDType": self.user_id_type,
-            "Value": missing["score"],
+            "Value": missing.score,
         }
         url = self.url + "?" + urlencode(query)
         try:
@@ -247,7 +247,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
             body = response.json()
             response.raise_for_status()
         except (RequestsConnectionError, Timeout) as e:
-            logger.error(self.TIMEOUT, missing["id"])
+            logger.error(self.TIMEOUT, missing.id)
             return Result(
                 duration=interval,  # pylint: disable=used-before-assignment
                 status=False,
@@ -255,7 +255,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
                 text=str(e),
             )
         except SaveError as e:
-            logger.error(self.HTTP_ERROR, missing["id"])
+            logger.error(self.HTTP_ERROR, missing.id)
             return Result(
                 duration=interval,  # pylint: disable=used-before-assignment
                 status=False,
@@ -264,7 +264,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
                 status_code=400,
             )
         except HTTPError as e:
-            logger.error(self.HTTP_ERROR, missing["id"])
+            logger.error(self.HTTP_ERROR, missing.id)
             return Result(
                 duration=interval,
                 status=False,
@@ -275,7 +275,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
                 status_code=response.status_code,
             )
         except JSONDecodeError as e:
-            logger.error(self.JSON_DECODE_ERROR, missing["id"])
+            logger.error(self.JSON_DECODE_ERROR, missing.id)
             return Result(
                 duration=interval,
                 status=False,
@@ -283,7 +283,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
                 status_code=response.status_code,
                 text=response.text,  # this is also very verbose
             )
-        logger.info(self.SUCCESS, missing["id"])
+        logger.info(self.SUCCESS, missing.id)
         return Result(
             duration=interval,
             status=True,

@@ -15,12 +15,12 @@ vcr = VCR(
 
 
 @vcr.use_cassette("./test/flowsheets.valid.yaml")
-def test_valid(mock_flowsheets_service):
+def test_valid(stub_flowsheets_service):
     """Test valid flowsheet."""
-    service = mock_flowsheets_service
+    service = stub_flowsheets_service
 
     postgres = service.postgres
-    postgres.df_from_query.return_value = DataFrame(
+    postgres.return_value = DataFrame(
         [
             # inpatient admission date is 2019-02-06 at PAH
             {
@@ -34,18 +34,24 @@ def test_valid(mock_flowsheets_service):
             }
         ]
     )
+    expected = ""
     for result in service.publish():
         assert result.status is True
         assert result.status_code == 200
+        actual = str(result)
+        assert expected == actual
+        break
+    else:
+        raise AssertionError("Atleast one result expected")
 
 
 @vcr.use_cassette("./test/flowsheets.invalid.csn.yaml")
-def test_invalid_csn(mock_flowsheets_service):
+def test_invalid_csn(stub_flowsheets_service):
     """Test invalid csn."""
-    service = mock_flowsheets_service
+    service = stub_flowsheets_service
 
     postgres = service.postgres
-    postgres.df_from_query.return_value = DataFrame(
+    postgres.return_value = DataFrame(
         [
             {
                 "as_of": service.as_of,
@@ -71,12 +77,12 @@ def test_invalid_csn(mock_flowsheets_service):
 
 
 @vcr.use_cassette("./test/flowsheets.invalid.empi.yaml")
-def test_invalid_empi(mock_flowsheets_service):
+def test_invalid_empi(stub_flowsheets_service):
     """Test invalid empi."""
-    service = mock_flowsheets_service
+    service = stub_flowsheets_service
 
     postgres = service.postgres
-    postgres.df_from_query.return_value = DataFrame(
+    postgres.return_value = DataFrame(
         [
             {
                 "as_of": service.as_of,
@@ -103,9 +109,9 @@ def test_invalid_empi(mock_flowsheets_service):
 
 
 @vcr.use_cassette("./test/flowsheets.data.not.saved.yaml")
-def test_data_not_saved(mock_flowsheets_service):
+def test_data_not_saved(stub_flowsheets_service):
     """Test data not saved."""
-    service = mock_flowsheets_service
+    service = stub_flowsheets_service
     flowsheets = service.flowsheets
 
     inner = unwrap(flowsheets.on_rest)
@@ -116,7 +122,7 @@ def test_data_not_saved(mock_flowsheets_service):
     service.flowsheets.on_rest = outer
 
     postgres = service.postgres
-    postgres.df_from_query.return_value = DataFrame(
+    postgres.return_value = DataFrame(
         [
             {
                 "as_of": service.as_of,

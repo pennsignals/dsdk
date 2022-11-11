@@ -258,7 +258,7 @@ class AbstractPersistor:
         raise NotImplementedError()
 
     @contextmanager
-    def cursor(self, con):
+    def cursor(self, con) -> Generator[Any, None, None]:
         """Yield a cursor that provides dicts."""
         # Replace return type with ContextManager[Any] when mypy is fixed.
         with con.cursor() as cursor:
