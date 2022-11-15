@@ -345,7 +345,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
 
 
 if TYPE_CHECKING:
-    BaseMixin = Service # pragma: nocover
+    BaseMixin = Service  # pragma: nocover
 else:
     BaseMixin = ABC
 
