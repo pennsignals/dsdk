@@ -315,7 +315,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
             response.raise_for_status()
         except HTTPError as e:
             raise SaveError() from e
-        raise RuntimeError(
+        raise RuntimeError(  # pragma: nocover
             "Should not get here with raise_for_status and a status of 400."
         )
 
@@ -345,7 +345,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
 
 
 if TYPE_CHECKING:
-    BaseMixin = Service
+    BaseMixin = Service # pragma: nocover
 else:
     BaseMixin = ABC
 
@@ -368,7 +368,7 @@ class Mixin(BaseMixin):
     @classmethod
     def publish_flowsheet(cls):
         """Flowsheets test."""
-        with cls.context("flowsheets.publish") as service:
+        with cls.context("flowsheet.publish.test") as service:
             service.on_publish_flowsheet()
 
     def __init__(
