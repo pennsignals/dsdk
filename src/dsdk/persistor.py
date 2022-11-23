@@ -216,7 +216,7 @@ class AbstractPersistor:
             try:
                 self.dry_run_query(query, parameters)
             except exceptions as error:
-                errors.append(error),
+                errors.append(error)
                 logger.warning(self.ERROR, path)
         if bool(errors):
             raise RuntimeError(self.ERRORS, errors)
