@@ -77,7 +77,7 @@ except ImportError as import_error:
 
 
 if TYPE_CHECKING:
-    BaseMixin = Service
+    BaseMixin = Service  # pragma: nocover
 else:
     BaseMixin = ABC
 

@@ -20,7 +20,7 @@ from .utils import configure_logger, get_tzinfo, now_utc_datetime
 
 try:
     __version__ = get_distribution("dsdk").version
-except DistributionNotFound:
+except DistributionNotFound:  # pragma: nocover
     # package is not installed
     pass
 
