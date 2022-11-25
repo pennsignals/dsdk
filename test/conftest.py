@@ -8,7 +8,14 @@ from typing import Any, Generator, Sequence
 from pandas import DataFrame
 from pytest import fixture
 
-from dsdk import FlowsheetMixin, Postgres, PostgresMixin, Service
+from dsdk import (
+    FlowsheetMixin,
+    Model,
+    ModelMixin,
+    Postgres,
+    PostgresMixin,
+    Service,
+)
 
 
 class StubPostgres(Postgres):
@@ -84,6 +91,38 @@ def stub_flowsheets_service():
         argv=[
             "-c",
             "./local/test.yaml",
+            "-e",
+            "./secrets/example.env",
+        ]
+    )
+
+
+class StubModelService(  # pylint: disable=too-many-ancestors
+    ModelMixin,
+    Service,
+):
+    """Stub Model Service."""
+
+    YAML = "!example"
+
+    @classmethod
+    def yaml_types(cls):
+        """Yaml types."""
+        super().yaml_types()
+        Model.as_yaml_type()
+
+    def __init__(self, **kwargs):
+        """__init__."""
+        super().__init__(pipeline=None, **kwargs)
+
+
+@fixture
+def stub_model_service():
+    """Stub model service."""
+    return StubModelService.parse(
+        argv=[
+            "-c",
+            "./local/test.model.yaml",
             "-e",
             "./secrets/example.env",
         ]

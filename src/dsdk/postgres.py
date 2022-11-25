@@ -66,7 +66,7 @@ try:
         # columns to float when np.nan is used.
         pass
 
-except ImportError as import_error:
+except ImportError as import_error:  # pragma: nocover
     logger.warning(import_error)
 
     DatabaseError = InterfaceError = OperationalError = StubError
@@ -145,7 +145,11 @@ class Persistor(Messages, BasePersistor):
         parameters: dict[str, Any],
         exceptions=(DatabaseError, InterfaceError),
     ):
-        """Dry run."""
+        """Dry run.
+
+        Default exceptions provided by postgres driver
+        to catch syntax errors before real run.
+        """
         super().dry_run(parameters, exceptions)
 
     @contextmanager
