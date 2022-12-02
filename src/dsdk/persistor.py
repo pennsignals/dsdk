@@ -8,19 +8,15 @@ from itertools import chain
 from json import dumps
 from logging import getLogger
 from pathlib import Path
-from pickle import HIGHEST_PROTOCOL
-from pickle import dumps as pickle_dumps
-from pickle import loads as pickle_loads
 from re import compile as re_compile
 from string import Formatter
 from typing import Any, Generator, Sequence
 
-from blosc import compress, decompress
 from cfgenvy import YamlMapping, yaml_type
 from pandas import DataFrame, concat
 
 from .asset import Asset
-from .utils import chunks
+from .utils import chunks, path_get, path_put
 
 logger = getLogger(__name__)
 
@@ -66,6 +62,7 @@ class AbstractPersistor:
     ) -> DataFrame:
         """Return df from query by key sequences, parameters, chunked by size.
 
+        Chunking is by the "by" key in keys.
         Query is expected to use {name} for key sequences and %(name)s
         for parameters.
         The mogrified fragments produced by union_all are mogrified again.
@@ -119,23 +116,17 @@ class AbstractPersistor:
         rendered = cls.render(cur, query, keys=keys, parameters=parameters)
         if path is None:
             return cls.df_from_rendered(cur, rendered)
-        uid = blake2b(rendered.encode("utf-8")).hexdigest()
-        name = path / f"{uid}.pkl.blosc.sql.cache"
+        key = blake2b(rendered.encode("utf-8")).hexdigest()
+        ext = "sql.df.pkl.blosc.cache"
         table: dict[str, DataFrame] = {}
-        try:
-            with open(name, "rb") as fin:
-                compressed = fin.read()
-        except FileNotFoundError:
-            pass
-        else:
-            table = pickle_loads(decompress(compressed))
+        hit = path_get(path, key, ext=ext)
+        if hit is not None:
+            table = hit
             df = table.get(rendered)
             if df is not None:
                 return df
         table[rendered] = df = cls.df_from_rendered(cur, rendered)
-        compressed = compress(pickle_dumps(table, protocol=HIGHEST_PROTOCOL))
-        with open(name, "wb") as fout:
-            fout.write(compressed)
+        path_put(path, key, table, ext=ext)
         return df
 
     @classmethod
