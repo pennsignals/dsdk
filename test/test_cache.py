@@ -3,6 +3,8 @@
 Refactor so lookups are part of each test function a mark parametrized.
 """
 
+from __future__ import annotations
+
 from contextlib import contextmanager
 from typing import Any, Generator
 
