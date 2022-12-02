@@ -7,7 +7,7 @@ from hashlib import blake2b
 from itertools import chain
 from json import dumps
 from logging import getLogger
-from os.path import join as path_join
+from pathlib import Path
 from pickle import HIGHEST_PROTOCOL
 from pickle import dumps as pickle_dumps
 from pickle import loads as pickle_loads
@@ -17,9 +17,10 @@ from typing import Any, Generator, Sequence
 
 from blosc import compress, decompress
 from cfgenvy import YamlMapping, yaml_type
-from pandas import DataFrame
+from pandas import DataFrame, concat
 
 from .asset import Asset
+from .utils import chunks
 
 logger = getLogger(__name__)
 
@@ -43,29 +44,13 @@ class AbstractPersistor:
     ROLLBACK = dumps({"key": f"{KEY}.rollback"})
 
     @classmethod
-    def query(
+    def execute(
         cls,
-        cur,
-        query: str,
-        *,
-        keys: dict[str, Sequence[Any]] | None = None,
-        parameters: dict[str, Any] | None = None,
-    ) -> None:
-        """Query by key sequences and parameters.
-
-        Query is expected to use {name} for key sequences and %(name)s
-        for parameters.
-        The mogrified fragments produced by union_all are mogrified again.
-        There is a chance that python placeholders could be injected by the
-        first pass from sequence data.
-        However, it seems that percent in `'...%s...'` or `'...'%(name)s...'`
-        inside string literals produced from the first mogrification pass are
-        not interpreted as parameter placeholders in the second pass by
-        the pymssql driver.
-        Actual placeholders to be interpolated by the driver are not
-        inside quotes.
-        """
-        cur.execute(cls.render(cur, query, keys=keys, parameters=parameters))
+        cur: Any,
+        rendered: str,
+    ):
+        """Execute rendered sql with cur."""
+        cur.execute(rendered)
 
     @classmethod
     def df_from_query(
@@ -74,10 +59,12 @@ class AbstractPersistor:
         query: str,
         *,
         cache: str | None = None,
+        by: str | None = None,
         keys: dict[str, Sequence[Any]] | None = None,
         parameters: dict[str, Any] | None = None,
+        size: int = 1000,
     ) -> DataFrame:
-        """Return df from query by key sequences and parameters.
+        """Return df from query by key sequences, parameters, chunked by size.
 
         Query is expected to use {name} for key sequences and %(name)s
         for parameters.
@@ -87,18 +74,53 @@ class AbstractPersistor:
         However, it seems that percent in `'...%s...'` or `'...'%(name)s...'`
         inside string literals produced from the first mogrification pass are
         not interpreted as parameter placeholders in the second pass by
-        the pymssql driver.
-        Actual placeholders to by interpolated by the driver are not
+        the drivers.
+        Actual placeholders to be interpolated by the driver are not
         inside quotes.
         """
+        path: Path | None = None
+        if cache is not None:
+            path = Path(cache)
+            path.mkdir(parents=True, exist_ok=True)
+        if by is None:
+            return cls._df_from_query(
+                cur,
+                query,
+                keys=keys,
+                parameters=parameters,
+                path=path,
+            )
+        if keys is None:
+            raise ValueError("Keys must not be None")
+        dfs = []
+        for chunk in chunks(keys[by], size):
+            dfs.append(
+                cls._df_from_query(
+                    cur,
+                    query,
+                    keys={**keys, by: chunk},
+                    parameters=parameters,
+                    path=path,
+                )
+            )
+        return concat(dfs, ignore_index=True)
+
+    @classmethod
+    def _df_from_query(
+        cls,
+        cur,
+        query: str,
+        *,
+        keys: dict[str, Sequence[Any]] | None = None,
+        parameters: dict[str, Any] | None = None,
+        path: Path | None = None,
+    ) -> DataFrame:
+        """Refurn df from query by key sequences and parameters."""
         rendered = cls.render(cur, query, keys=keys, parameters=parameters)
-        if cache is None:
+        if path is None:
             return cls.df_from_rendered(cur, rendered)
-        name = path_join(
-            cache,
-            blake2b(rendered.encode("utf-8")).hexdigest()
-            + ".pkl.blosc.sql.cache",
-        )
+        uid = blake2b(rendered.encode("utf-8")).hexdigest()
+        name = path / f"{uid}.pkl.blosc.sql.cache"
         table: dict[str, DataFrame] = {}
         try:
             with open(name, "rb") as fin:
@@ -119,7 +141,7 @@ class AbstractPersistor:
     @classmethod
     def df_from_rendered(cls, cur, rendered):
         """Return df from rendered query."""
-        cur.execute(rendered)
+        cls.execute(cur, rendered)
         columns = tuple(each[0] for each in cur.description)
         rows = cur.fetchall()
         if rows:
@@ -128,6 +150,43 @@ class AbstractPersistor:
         else:
             df = DataFrame(columns=columns)
         return df
+
+    @classmethod
+    def query(
+        cls,
+        cur,
+        query: str,
+        *,
+        by: str | None = None,
+        keys: dict[str, Sequence[Any]] | None = None,
+        parameters: dict[str, Any] | None = None,
+        size: int = 1000,
+    ) -> None:
+        """Query by key sequences and parameters.
+
+        Query is expected to use {name} for key sequences and %(name)s
+        for parameters.
+        The mogrified fragments produced by union_all are mogrified again.
+        There is a chance that python placeholders could be injected by the
+        first pass from sequence data.
+        However, it seems that percent in `'...%s...'` or `'...'%(name)s...'`
+        inside string literals produced from the first mogrification pass are
+        not interpreted as parameter placeholders in the second pass by
+        the pymssql driver.
+        Actual placeholders to be interpolated by the driver are not
+        inside quotes.
+        """
+        if by is None:
+            rendered = cls.render(cur, query, keys=keys, parameters=parameters)
+            cls.execute(cur, rendered)
+            return
+        if keys is None:
+            raise ValueError("Keys must not be None")
+        for chunk in chunks(keys[by], size):
+            rendered = cls.render(
+                cur, query, keys={**keys, by: chunk}, parameters=parameters
+            )
+            cls.execute(cur, rendered)
 
     @classmethod
     def render(
@@ -234,7 +293,7 @@ class AbstractPersistor:
                 query,
                 {**parameters, "dry_run": 1},
             )
-            cur.execute(rendered)
+            self.execute(cur, rendered)
 
     @contextmanager
     def commit(self) -> Generator[Any, None, None]:
