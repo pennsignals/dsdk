@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-
+from pathlib import Path
 from typing import Any, Generator, Sequence
 
 from pandas import DataFrame
-from pathlib import Path
 from pytest import fixture, yield_fixture
 
 from dsdk import (
@@ -41,9 +40,11 @@ class StubPostgres(Postgres):
         cur,
         query: str,
         *,
+        by: str | None = None,
         cache: str | None = None,
         keys: dict[str, Sequence[Any]] | None = None,
         parameters: dict[str, Any] | None = None,
+        size: int = 1000,
     ) -> DataFrame:
         """Dataframe From Query."""
         return cls.return_value
@@ -54,9 +55,11 @@ class StubPostgres(Postgres):
         cur,
         query: str,
         *,
+        by: str | None = None,
         cache: str | None = None,
         keys: dict[str, Sequence[Any]] | None = None,
         parameters: dict[str, Any] | None = None,
+        size: int = 1000,
     ) -> None:
         """Query."""
 
