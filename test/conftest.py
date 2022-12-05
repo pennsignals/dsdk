@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Generator, Sequence
 
 from pandas import DataFrame
-from pytest import fixture, yield_fixture
+from pytest import fixture
 
 from dsdk import (
     FlowsheetMixin,
@@ -134,7 +134,7 @@ def stub_model_service():
     )
 
 
-@yield_fixture(autouse=True, scope="session")
+@fixture(autouse=True, scope="session")
 def cleanup_cache_test():
     """Cleanup cache test."""
     path = Path("cache/test")
