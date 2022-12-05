@@ -4,12 +4,10 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 
-from typing import Sequence
+from typing import Any, Generator, Sequence
 
 from pandas import DataFrame
 from pathlib import Path
-from typing import Any, Generator
-
 from pytest import fixture, yield_fixture
 
 from dsdk import (
