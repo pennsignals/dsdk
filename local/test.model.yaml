@@ -1,0 +1,5 @@
+!example
+as_of: 2019-09-18 17:19:23.873398+00
+gold: ./predict/gold/gold.pkl
+model: !model ./test/0.0.1.pkl
+time_zone: America/New_York
