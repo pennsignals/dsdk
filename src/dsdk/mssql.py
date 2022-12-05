@@ -17,7 +17,7 @@ logger = getLogger(__name__)
 
 try:
     from pymssql import DatabaseError, InterfaceError, _mssql, connect
-except ImportError as import_error:
+except ImportError as import_error:  # pragma: nocover
     logger.warning(import_error)
 
     DatabaseError = InterfaceError = StubError
@@ -28,7 +28,7 @@ except ImportError as import_error:
 
 
 if TYPE_CHECKING:
-    BaseMixin = Service
+    BaseMixin = Service  # pragma: nocover
 else:
     BaseMixin = ABC
 
@@ -97,7 +97,11 @@ class Persistor(Messages, BasePersistor):
         parameters: dict[str, Any],
         exceptions=(DatabaseError, InterfaceError),
     ):
-        """Dry run."""
+        """Dry run.
+
+        Default exceptions provided by mssql driver
+        to catch syntax errors before real run.
+        """
         super().dry_run(parameters, exceptions)
 
 

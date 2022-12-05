@@ -17,7 +17,7 @@ logger = getLogger(__name__)
 
 
 if TYPE_CHECKING:
-    BaseMixin = Service
+    BaseMixin = Service  # pragma: no cover
 else:
     BaseMixin = ABC
 
