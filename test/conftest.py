@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from typing import Any, Generator, Sequence
+
+from typing import Sequence
 
 from pandas import DataFrame
-from pytest import fixture
+from pathlib import Path
+from typing import Any, Generator
+
+from pytest import fixture, yield_fixture
 
 from dsdk import (
     FlowsheetMixin,
@@ -127,3 +131,12 @@ def stub_model_service():
             "./secrets/example.env",
         ]
     )
+
+
+@yield_fixture(autouse=True, scope="session")
+def cleanup_cache_test():
+    """Cleanup cache test."""
+    path = Path("cache/test")
+    yield
+    for child in path.iterdir():
+        child.unlink()

@@ -11,15 +11,10 @@ jobs:
 
     strategy:
       matrix:
-        target:
-          - "3.7"
-          - "3.8"
-          - "3.9"
-          - "3.10.6"
-
+        target: ["3.7", "3.8", "3.9", "3.10.6"]
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
 
       - name: build
         run: |
@@ -36,3 +31,12 @@ jobs:
       - name: install-wheel
         run: |
           docker compose run install-wheel
+
+  results:
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - name: results
+        if: ${{ needs.test.result != 'success' }}
+        run: exit 1

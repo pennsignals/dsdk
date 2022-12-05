@@ -7,12 +7,17 @@ from functools import wraps
 from json import dump as json_dump
 from json import load as json_load
 from logging import ERROR, INFO, Formatter, StreamHandler, getLogger
+from pathlib import Path
+from pickle import HIGHEST_PROTOCOL
 from pickle import dump as pickle_dump
+from pickle import dumps as pickle_dumps
 from pickle import load as pickle_load
+from pickle import loads as pickle_loads
 from sys import stderr, stdout
 from time import sleep as default_sleep
-from typing import Any, Callable, Sequence
+from typing import Any, Callable, Generator, Sequence
 
+from blosc import compress, decompress
 from dateutil import parser, tz
 
 logger = getLogger(__name__)
@@ -57,7 +62,64 @@ def configure_logger(name, level=INFO):
     return result
 
 
-def chunks(sequence: Sequence[Any], n: int):
+def cache_get(
+    cache: str,
+    key: str,
+    *,
+    ext: str = "pkl.blosc.cache",
+) -> Any:
+    """Get from cache directory."""
+    path = Path(cache)
+    path.mkdir(parents=True, exist_ok=True)
+    return path_get(path, key, ext=ext)
+
+
+def cache_put(
+    cache: str,
+    key: str,
+    value: Any,
+    *,
+    ext: str = "pkl.blosc.cache",
+) -> None:
+    """Put to cache directory."""
+    path = Path(cache)
+    path.mkdir(parents=True, exist_ok=True)
+    path_put(path, key, value, ext=ext)
+
+
+def path_get(
+    path: Path,
+    key: str,
+    *,
+    ext: str = "pkl.blosc.cache",
+) -> Any:
+    """Get from path directory."""
+    name = path / f"{key}.{ext}"
+    try:
+        with open(name, "rb") as fin:
+            compressed = fin.read()
+    except FileNotFoundError:
+        return None
+    return pickle_loads(decompress(compressed))
+
+
+def path_put(
+    path: Path,
+    key: str,
+    value: Any,
+    *,
+    ext: str = ".pkl.blosc.cache",
+) -> None:
+    """Put to path directory."""
+    name = path / f"{key}.{ext}"
+    compressed = compress(pickle_dumps(value, protocol=HIGHEST_PROTOCOL))
+    with open(name, "wb") as fout:
+        fout.write(compressed)
+
+
+def chunks(
+    sequence: Sequence[Any], n: int
+) -> Generator[Sequence[Any], None, None]:
     """Yield successive n-sized chunks from l."""
     for i in range(0, len(sequence), n):
         yield sequence[i : i + n]
