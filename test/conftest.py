@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Any, Generator
 from unittest.mock import Mock
 
-from pytest import fixture
+from pytest import fixture, yield_fixture
 
 from dsdk import FlowsheetMixin, PostgresMixin, Service
 
@@ -49,3 +50,12 @@ def mock_flowsheets_service():
             "./secrets/example.env",
         ]
     )
+
+
+@yield_fixture(autouse=True, scope="session")
+def cleanup_cache_test():
+    """Cleanup cache test."""
+    path = Path("cache/test")
+    yield
+    for child in path.iterdir():
+        child.unlink()
