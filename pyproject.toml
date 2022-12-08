@@ -30,7 +30,7 @@ classifiers = [
     "Topic :: Utilities",
 ]
 dependencies = [
-    "blosc>=1.10.6",
+    "blosc==1.10.6",
     "cfgenvy>=1.4.2",
     "numpy>=1.15.4",
     "pandas>=0.23.4",
