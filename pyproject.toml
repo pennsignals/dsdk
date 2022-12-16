@@ -26,6 +26,7 @@ classifiers = [
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: Implementation :: CPython",
     "Topic :: Utilities",
 ]
@@ -89,7 +90,7 @@ Tracker = "https://github.com/pennsignals/dsdk/issues"
 
 [tool.black]
 line-length = 79
-target-version = ["py37","py38","py39","py310"]
+target-version = ["py37","py38","py39","py310","py311"]
 
 [tool.coverage.report]
 exclude_lines = [
