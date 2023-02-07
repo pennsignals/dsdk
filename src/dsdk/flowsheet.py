@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from abc import ABC
 from base64 import b64encode
+from collections.abc import Generator, Mapping
 from contextlib import contextmanager
 from datetime import datetime
 from json import JSONDecodeError, dumps
 from time import sleep as default_sleep
-from typing import TYPE_CHECKING, Any, Generator, Mapping
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlencode
 
 from cfgenvy import YamlMapping

@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from contextlib import contextmanager
 from logging import getLogger
 from time import perf_counter_ns
-from typing import Any, Generator
+from typing import Any
 
 from cfgenvy import YamlMapping
 

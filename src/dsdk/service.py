@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import pickle
 from collections import OrderedDict
+from collections.abc import Generator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import date, datetime, tzinfo
 from json import dumps
 from logging import getLogger
-from typing import Any, Callable, Generator, Mapping, Sequence
+from typing import Any, Callable
 
 from cfgenvy import Parser, YamlMapping
 from numpy import allclose
@@ -256,7 +257,6 @@ class Service(  # pylint: disable=too-many-instance-attributes
     def __call__(self) -> Batch:
         """Run."""
         with self.open_batch() as batch:
-
             # if one of the mixins didn't set these properties...
             if batch.as_of is None:
                 batch.as_of = now_utc_datetime()

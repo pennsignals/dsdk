@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Generator, Sequence
+from typing import Any
 
 from pandas import DataFrame
 from pytest import fixture
