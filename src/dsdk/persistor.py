@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from hashlib import blake2b
 from itertools import chain
@@ -10,7 +11,7 @@ from logging import getLogger
 from pathlib import Path
 from re import compile as re_compile
 from string import Formatter
-from typing import Any, Generator, Sequence
+from typing import Any
 
 from cfgenvy import YamlMapping, yaml_type
 from pandas import DataFrame, concat

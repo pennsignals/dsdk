@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator, Sequence
 from datetime import datetime, timezone, tzinfo
 from functools import wraps
 from json import dump as json_dump
@@ -15,7 +16,7 @@ from pickle import load as pickle_load
 from pickle import loads as pickle_loads
 from sys import stderr, stdout
 from time import sleep as default_sleep
-from typing import Any, Callable, Generator, Sequence
+from typing import Any, Callable
 
 from blosc import compress, decompress
 from dateutil import parser, tz

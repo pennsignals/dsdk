@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from abc import ABC
 from collections import deque
+from collections.abc import Generator
 from contextlib import contextmanager
 from json import dumps
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Generator
+from typing import TYPE_CHECKING, Any
 
 from numpy import integer
 from pandas import DataFrame, NaT, Series, isna
