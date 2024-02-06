@@ -7,6 +7,7 @@ from collections import OrderedDict
 from collections.abc import Generator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import date, datetime, tzinfo
+from importlib.metadata import distribution, PackageNotFoundError
 from json import dumps
 from logging import getLogger
 from typing import Any, Callable
@@ -14,15 +15,14 @@ from typing import Any, Callable
 from cfgenvy import Parser, YamlMapping
 from numpy import allclose
 from pandas import DataFrame
-from pkg_resources import DistributionNotFound, get_distribution
 
 from .interval import Interval
 from .utils import configure_logger, get_tzinfo, now_utc_datetime
 
 try:
-    __version__ = get_distribution("dsdk").version
-except DistributionNotFound:  # pragma: nocover
-    # package is not installed
+    __version__ = distribution("dsdk").version
+except PackageNotFoundError:  # pragma: nocover
+    # package not found
     pass
 
 logger = getLogger(__name__)
