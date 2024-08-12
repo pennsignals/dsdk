@@ -1,8 +1,8 @@
-ARG PYTHON_VERSION="3.10"
+ARG PYTHON_VERSION="3.9"
 ARG ROOT_CONTAINER=python:${PYTHON_VERSION}-slim-bullseye
 
 
-FROM ${ROOT_CONTAINER} as binaries
+FROM ${ROOT_CONTAINER} AS binaries
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 USER root
 WORKDIR /tmp
@@ -26,25 +26,25 @@ RUN \
 ENTRYPOINT ["/usr/bin/tini", "-g", "--"]
 
 
-FROM binaries as source
+FROM binaries AS source
 COPY . .
 
 
-FROM source as pre-commit
+FROM source AS pre-commit
 RUN \
     pip install ".[dev]"
 CMD pre-commit run --all-files
 
 
-FROM source as test
+FROM source AS test
 RUN \
     pip install ".[dev]"
 CMD pytest
 
 
-FROM source as build-wheel
+FROM source AS build-wheel
 CMD pip wheel --no-deps -w ./dist .
 
 
-FROM binaries as install-wheel
+FROM binaries AS install-wheel
 CMD pip install --find-links=./dist dsdk[dev]
