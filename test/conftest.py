@@ -36,7 +36,7 @@ class StubPostgres(Postgres):
         yield None
 
     @classmethod
-    def df_from_query(
+    def df_from_query(  # pylint: disable=too-many-arguments
         cls,
         cur,
         query: str,
@@ -51,7 +51,7 @@ class StubPostgres(Postgres):
         return cls.return_value
 
     @classmethod
-    def query(
+    def query(  # pylint: disable=too-many-arguments
         cls,
         cur,
         query: str,

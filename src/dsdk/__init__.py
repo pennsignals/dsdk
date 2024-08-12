@@ -12,7 +12,7 @@ from .mssql import Persistor as Mssql
 from .postgres import Mixin as PostgresMixin
 from .postgres import Persistor as Postgres
 from .postgres import PredictionMixin as PostgresPredictionMixin
-from .service import Batch, CompositeTask, Delegate, Service, Task
+from .service import Batch, CompositeTask, Delegate, Service, Task, __version__
 from .utils import (
     chunks,
     configure_logger,
@@ -25,6 +25,7 @@ from .utils import (
 )
 
 __all__ = (
+    "__version__",
     "Asset",
     "Batch",
     "CompositeTask",
@@ -51,4 +52,5 @@ __all__ = (
     "profile",
     "now_utc_datetime",
     "retry",
+    "__version__",
 )

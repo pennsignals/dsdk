@@ -7,23 +7,20 @@ from collections import OrderedDict
 from collections.abc import Generator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import date, datetime, tzinfo
+from importlib.metadata import version
 from json import dumps
 from logging import getLogger
+from pathlib import Path
 from typing import Any, Callable
 
 from cfgenvy import Parser, YamlMapping
 from numpy import allclose
 from pandas import DataFrame
-from pkg_resources import DistributionNotFound, get_distribution
 
 from .interval import Interval
 from .utils import configure_logger, get_tzinfo, now_utc_datetime
 
-try:
-    __version__ = get_distribution("dsdk").version
-except DistributionNotFound:  # pragma: nocover
-    # package is not installed
-    pass
+__version__ = version(Path(__file__).resolve().parent.name)
 
 logger = getLogger(__name__)
 
@@ -237,7 +234,7 @@ class Service(  # pylint: disable=too-many-instance-attributes
         cls.as_yaml_type()
         super().yaml_types()
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         *,
         pipeline: Sequence[Task],
@@ -386,12 +383,16 @@ class Service(  # pylint: disable=too-many-instance-attributes
             self.as_of,
             self.time_zone,
         )
-        yield self.batch_cls(
-            as_of=self.as_of,
-            duration=self.duration,
-            microservice_version=self.VERSION,
-            time_zone=self.time_zone,
-        )
+        try:
+            yield self.batch_cls(
+                as_of=self.as_of,
+                duration=self.duration,
+                microservice_version=self.VERSION,
+                time_zone=self.time_zone,
+            )
+        except BaseException as e:
+            logger.error(e)
+            raise
         logger.info(self.BATCH_CLOSE)
 
     def scores(self, run_id):

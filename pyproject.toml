@@ -24,15 +24,20 @@ classifiers = [
     "Operating System :: POSIX",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: Implementation :: CPython",
     "Topic :: Utilities",
 ]
 dependencies = [
     "blosc==1.10.6",
-    "cfgenvy>=2.0.0",
+    "cfgenvy>=2.2.0",
     "numpy>=1.15.4",
     "pandas>=0.23.4",
-    "requests>=2.26.0",
+    "requests>=2.26.0, < 3; python_version < '3.10'",
+    "requests>=3; python_version >= '3.10'",
+    "urllib3<2; python_version < '3.10'",
+    "urllib3>=2; python_version >= '3.10'",
 ]
 description = "An opinionated library to help deploy data science projects"
 dynamic = ["version"]
@@ -64,7 +69,6 @@ dev = [
     "pymssql>=2.2.3",
     "pytest",
     "pytest-cov",
-    "types-pkg-resources",
     "types-pymssql",
     "types-python-dateutil",
     "types-pymssql",
@@ -87,7 +91,7 @@ Tracker = "https://github.com/pennsignals/dsdk/issues"
 
 [tool.black]
 line-length = 79
-target-version = ["py39","py310"]
+target-version = ["py39","py310","py311"]
 
 [tool.coverage.report]
 exclude_lines = [
@@ -104,7 +108,7 @@ branch = true
 parallel = true
 
 [tool.distutils.bdist_wheel]
-python-tag = "py39.py310"
+python-tag = "py39.py310.py311.py312"
 
 [tool.isort]
 profile = "black"
@@ -122,7 +126,7 @@ ignore_missing_imports = false
 good-names = '''a,b,c,d,df,do_POST,e,i,id,logger,n,on,ok,tz'''
 
 [tool.pylint.message_control]
-disable = '''duplicate-code'''
+disable = '''duplicate-code,contextmanager-generator-missing-cleanup'''
 extension-pkg-allow-list = [
   "pymssql._mssql",
 ]

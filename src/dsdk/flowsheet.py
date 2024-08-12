@@ -34,7 +34,7 @@ class SaveError(Exception):
 class Result:  # pylint: disable=too-few-public-methods
     """Rest result."""
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         *,
         duration: Interval,
@@ -113,7 +113,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
 
     YAML = "!flowsheets"
 
-    def __init__(  # pylint: disable=too-many-locals
+    def __init__(  # pylint: disable=too-many-locals,too-many-arguments,line-too-long # noqa: E501
         self,
         *,
         client_id: str,

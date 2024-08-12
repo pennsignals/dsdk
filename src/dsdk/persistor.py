@@ -1,5 +1,4 @@
 """Persistor."""
-
 from __future__ import annotations
 
 from collections.abc import Generator, Sequence
@@ -50,7 +49,7 @@ class AbstractPersistor:
         cur.execute(rendered)
 
     @classmethod
-    def df_from_query(
+    def df_from_query(  # pylint: disable=too-many-arguments
         cls,
         cur,
         query: str,
@@ -104,7 +103,7 @@ class AbstractPersistor:
         return concat(dfs, ignore_index=True)
 
     @classmethod
-    def _df_from_query(
+    def _df_from_query(  # pylint: disable=too-many-arguments
         cls,
         cur,
         query: str,
@@ -144,7 +143,7 @@ class AbstractPersistor:
         return df
 
     @classmethod
-    def query(
+    def query(  # pylint: disable=too-many-arguments
         cls,
         cur,
         query: str,
