@@ -60,7 +60,7 @@ def test_valid(stub_flowsheets_service):
         result.duration = Interval(end=0, on=0)
         actual = str(result)
         assert expected == actual
-    assert i == 0, f"At least one value Expected. Got: {i+1}"
+    assert i == 0, f"At least one value Expected. Got: {i + 1}"
 
 
 @vcr.use_cassette("./test/flowsheets.invalid.csn.yaml")
@@ -93,7 +93,7 @@ def test_invalid_csn(stub_flowsheets_service):
         assert result.status is False
         assert result.status_code == 400
         assert result.name == "HTTPError"
-    assert i == 0, f"At least one value Expected. Got: {i+1}"
+    assert i == 0, f"At least one value Expected. Got: {i + 1}"
 
 
 @vcr.use_cassette("./test/flowsheets.invalid.empi.yaml")
@@ -127,7 +127,7 @@ def test_invalid_empi(stub_flowsheets_service):
         assert result.status is False
         assert result.status_code == 400
         assert result.name == "HTTPError"
-    assert i == 0, f"At least one value Expected. Got: {i+1}"
+    assert i == 0, f"At least one value Expected. Got: {i + 1}"
 
 
 @vcr.use_cassette("./test/flowsheets.data.not.saved.yaml")
@@ -164,4 +164,4 @@ def test_data_not_saved(stub_flowsheets_service):
         assert result.status is False
         assert result.status_code == 400
         assert result.name == "SaveError"
-    assert i == 0, f"At least one value Expected. Got: {i+1}"
+    assert i == 0, f"At least one value Expected. Got: {i + 1}"
