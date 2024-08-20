@@ -50,7 +50,7 @@ dev = [
     "astroid",
     "black",
     "coverage[toml]",
-    "cython>=0.29.21",
+    "cython>=3.0.11",
     "flake8",
     "flake8-bugbear",
     "flake8-commas",
@@ -63,9 +63,9 @@ dev = [
     "mypy",
     "pep8-naming",
     "pre-commit",
-    "psycopg2-binary>=2.8.6",
+    "psycopg2-binary>=2.9.9",
     "pylint",
-    "pymssql>=2.2.3",
+    "pymssql>=2.3.0",
     "pytest",
     "pytest-cov",
     "types-pymssql",
@@ -76,11 +76,11 @@ dev = [
     "vcrpy",
 ]
 pymssql = [
-    "cython>=0.29.21",
-    "pymssql>=2.2.3",
+    "cython>=3.0.11",
+    "pymssql>=2.3.0",
 ]
 psycopg2 = [
-    "psycopg2-binary>=2.8.6",
+    "psycopg2-binary>=2.9.9",
 ]
 
 [project.urls]
