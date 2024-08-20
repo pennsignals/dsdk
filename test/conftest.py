@@ -26,12 +26,12 @@ class StubPostgres(Postgres):
     return_value = DataFrame()
 
     @contextmanager
-    def commit(self) -> Generator[Any, None, None]:
+    def commit(self) -> Generator[Any]:
         """Commit."""
         yield None
 
     @contextmanager
-    def rollback(self) -> Generator[Any, None, None]:
+    def rollback(self) -> Generator[Any]:
         """Rollback."""
         yield None
 
@@ -84,7 +84,7 @@ class StubFlowsheetsService(  # pylint: disable=too-many-ancestors
         """__init__."""
         super().__init__(pipeline=None, **kwargs)
 
-    def publish(self) -> Generator[Any, None, None]:
+    def publish(self) -> Generator[Any]:
         """Publish."""
         print("publish")
         yield from self.flowsheets.publish(self.postgres)

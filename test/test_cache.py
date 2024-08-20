@@ -124,7 +124,7 @@ class Persistor(BasePersistor):
         return (query % (parameters)).encode("utf-8")
 
     @contextmanager
-    def connect(self) -> Generator[Any, None, None]:
+    def connect(self) -> Generator[Any]:
         """Connect."""
         # Replace return type with ContextManager[Any] when mypy is fixed.
         raise NotImplementedError()

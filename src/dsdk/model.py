@@ -112,7 +112,7 @@ class Mixin(BaseMixin):
         }
 
     @contextmanager
-    def open_batch(self) -> Generator[Any, None, None]:
+    def open_batch(self) -> Generator[Any]:
         """Open batch."""
         with super().open_batch() as parent:
             batch = Batch(self.model.version, parent)

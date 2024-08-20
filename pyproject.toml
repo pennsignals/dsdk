@@ -121,14 +121,12 @@ default_section = "THIRDPARTY"
 follow_imports = "normal"
 ignore_missing_imports = false
 
+
 [tool.pylint.basic]
 good-names = '''a,b,c,d,df,do_POST,e,i,id,logger,n,on,ok,tz'''
 
 [tool.pylint.message_control]
 disable = '''duplicate-code,contextmanager-generator-missing-cleanup'''
-extension-pkg-allow-list = [
-  "pymssql._mssql",
-]
 
 [tool.pylint.miscellaneous]
 notes = '''FIXME,XXX'''

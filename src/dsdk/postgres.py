@@ -154,14 +154,14 @@ class Persistor(Messages, BasePersistor):
         super().dry_run(parameters, exceptions)
 
     @contextmanager
-    def commit(self) -> Generator[Any, None, None]:
+    def commit(self) -> Generator[Any]:
         """Commit."""
         with super().commit() as cur:
             cur.execute(f"set search_path={self.schema};")
             yield cur
 
     @contextmanager
-    def connect(self) -> Generator[Any, None, None]:
+    def connect(self) -> Generator[Any]:
         """Connect."""
         # Replace return type with ContextManager[Any] when mypy is fixed.
         # The `with ... as con:` formulation does not close the connection:
@@ -175,7 +175,7 @@ class Persistor(Messages, BasePersistor):
             logger.info(self.CLOSE)
 
     @contextmanager
-    def listen(self, *listens: str) -> Generator[Any, None, None]:
+    def listen(self, *listens: str) -> Generator[Any]:
         """Listen."""
         con = self.retry_connect()
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
@@ -195,7 +195,7 @@ class Persistor(Messages, BasePersistor):
             logger.info(self.CLOSE)
 
     @contextmanager
-    def open_run(self, parent: Any) -> Generator[Run, None, None]:
+    def open_run(self, parent: Any) -> Generator[Run]:
         """Open batch."""
         # Replace return type with ContextManager[Run] when mypy is fixed.
         sql = self.sql
@@ -255,7 +255,7 @@ class Persistor(Messages, BasePersistor):
         )
 
     @contextmanager
-    def rollback(self) -> Generator[Any, None, None]:
+    def rollback(self) -> Generator[Any]:
         """Rollback."""
         with super().rollback() as cur:
             cur.execute(f"set search_path={self.schema};")
@@ -382,7 +382,7 @@ class PredictionMixin(Mixin):  # pylint: disable=too-few-public-methods.
     """Prediction Mixin."""
 
     @contextmanager
-    def open_batch(self) -> Generator[Run, None, None]:
+    def open_batch(self) -> Generator[Run]:
         """Open batch."""
         # Replace return type with ContextManager[Run] when mypy is fixed.
         with super().open_batch() as parent:

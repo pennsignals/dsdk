@@ -21,6 +21,8 @@ try:
 except ImportError as import_error:  # pragma: nocover
     logger.warning(import_error)
 
+    _mssql = None
+
     DatabaseError = InterfaceError = StubError
 
     def connect(*args, **kwargs):
@@ -75,7 +77,7 @@ class Persistor(Messages, BasePersistor):
         super().__init__(port=port, schema=schema, **kwargs)
 
     @contextmanager
-    def connect(self) -> Generator[Any, None, None]:
+    def connect(self) -> Generator[Any]:
         """Connect."""
         # Replace return type with ContextManager[Any] when mypy is fixed.
         con = connect(

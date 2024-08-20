@@ -376,7 +376,7 @@ class Service(  # pylint: disable=too-many-instance-attributes
         return run
 
     @contextmanager
-    def open_batch(self) -> Generator[Any, None, None]:
+    def open_batch(self) -> Generator[Any]:
         """Open batch."""
         logger.info(
             self.BATCH_OPEN,
