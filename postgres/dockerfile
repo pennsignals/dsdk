@@ -1,6 +1,6 @@
 ARG ROOT_CONTAINER=timescale/timescaledb:2.7.2-pg14-oss
 
-FROM ${ROOT_CONTAINER} as postgres
+FROM ${ROOT_CONTAINER} AS postgres
 LABEL name=postgres
 COPY ./docker-entrypoint.sh /usr/local/bin/
 COPY ./sql/initdb.d/*.sql /docker-entrypoint-initdb.d/
