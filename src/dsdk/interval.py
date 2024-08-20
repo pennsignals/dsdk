@@ -48,7 +48,7 @@ class Interval(YamlMapping):
 
 
 @contextmanager
-def profile(key: str) -> Generator[Interval, None, None]:
+def profile(key: str) -> Generator[Interval]:
     """Profile."""
     # Replace return type with ContextManager[Interval] when mypy is fixed.
     i = Interval(on=perf_counter_ns())

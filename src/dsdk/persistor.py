@@ -1,4 +1,5 @@
 """Persistor."""
+
 from __future__ import annotations
 
 from collections.abc import Generator, Sequence
@@ -287,7 +288,7 @@ class AbstractPersistor:
             self.execute(cur, rendered)
 
     @contextmanager
-    def commit(self) -> Generator[Any, None, None]:
+    def commit(self) -> Generator[Any]:
         """Commit."""
         # Replace return type with ContextManager[Any] when mypy is fixed.
         with self.connect() as con:
@@ -302,13 +303,13 @@ class AbstractPersistor:
                 raise
 
     @contextmanager
-    def connect(self) -> Generator[Any, None, None]:
+    def connect(self) -> Generator[Any]:
         """Connect."""
         # Replace return type with ContextManager[Any] when mypy is fixed.
         raise NotImplementedError()
 
     @contextmanager
-    def cursor(self, con) -> Generator[Any, None, None]:
+    def cursor(self, con) -> Generator[Any]:
         """Yield a cursor that provides dicts."""
         # Replace return type with ContextManager[Any] when mypy is fixed.
         with con.cursor() as cursor:
@@ -321,7 +322,7 @@ class AbstractPersistor:
         return self.sql.extant.format(table=table)
 
     @contextmanager
-    def rollback(self) -> Generator[Any, None, None]:
+    def rollback(self) -> Generator[Any]:
         """Rollback."""
         # Replace return type with ContextManager[Any] when mypy is fixed.
         with self.connect() as con:
@@ -382,7 +383,7 @@ class Persistor(YamlMapping, AbstractPersistor):
         }
 
     @contextmanager
-    def connect(self) -> Generator[Any, None, None]:
+    def connect(self) -> Generator[Any]:
         """Connect."""
         # Replace return type with ContextManager[Any] when mypy is fixed.
         raise NotImplementedError()

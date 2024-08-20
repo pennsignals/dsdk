@@ -25,6 +25,9 @@ sdist
 .venv
 venv
 .py39
+.py310
+.py311
+.py312
 
 # mac
 .DS_Store

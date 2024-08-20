@@ -118,9 +118,7 @@ def path_put(
         fout.write(compressed)
 
 
-def chunks(
-    sequence: Sequence[Any], n: int
-) -> Generator[Sequence[Any], None, None]:
+def chunks(sequence: Sequence[Any], n: int) -> Generator[Sequence[Any]]:
     """Yield successive n-sized chunks from l."""
     for i in range(0, len(sequence), n):
         yield sequence[i : i + n]

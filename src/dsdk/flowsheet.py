@@ -201,7 +201,7 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
                 yield result
 
     @contextmanager
-    def session(self) -> Generator[Any, None, None]:
+    def session(self) -> Generator[Any]:
         """Session."""
         session = Session()
         session.verify = False
@@ -403,6 +403,6 @@ class Mixin(BaseMixin):
                 pass
             sleep(self.poll_interval)
 
-    def publish(self) -> Generator[Any, None, None]:
+    def publish(self) -> Generator[Any]:
         """Publish."""
         raise NotImplementedError()
