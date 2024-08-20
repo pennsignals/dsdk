@@ -1,22 +1,6 @@
 ARG ROOT_CONTAINER=timescale/timescaledb:2.7.2-pg14-oss
-ARG PGTAP_VERSION=1.2.0
-
-FROM ${ROOT_CONTAINER} as build
-ARG PGTAP_VERSION
-WORKDIR /tmp
-ADD https://github.com/theory/pgtap/releases/download/v${PGTAP_VERSION}/pgTAP-${PGTAP_VERSION}.zip .
-RUN \
-    apk -U add \
-        alpine-sdk \
-        perl \
-    && unzip pgTAP-${PGTAP_VERSION}.zip \
-    && cd pgTAP-${PGTAP_VERSION} \
-    && make \
-    && make install
-
 
 FROM ${ROOT_CONTAINER} as postgres
-COPY --from=build /usr/local/share/postgresql/extension/pgtap* /usr/local/share/postgresql/extension/
 LABEL name=postgres
 COPY ./docker-entrypoint.sh /usr/local/bin/
 COPY ./sql/initdb.d/*.sql /docker-entrypoint-initdb.d/
