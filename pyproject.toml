@@ -90,7 +90,7 @@ Tracker = "https://github.com/pennsignals/dsdk/issues"
 
 [tool.black]
 line-length = 79
-target-version = ["py39","py310","py311"]
+target-version = ["py39","py310","py311","py312"]
 
 [tool.coverage.report]
 exclude_lines = [

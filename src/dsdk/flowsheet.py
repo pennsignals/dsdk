@@ -320,7 +320,8 @@ class Flowsheet(YamlMapping):  # pylint: disable=too-many-instance-attributes
             "Should not get here with raise_for_status and a status of 400."
         )
 
-    def test(  # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
+    def test(
         self,
         # csn=278820881,
         csn=218202909,  # inpatient admission date is 2019-02-06 at PAH
